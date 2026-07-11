@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Fold-aware Beszel dashboard"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Heszel monitoring dashboard"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Heszel"
+    }
+  ]
+}
