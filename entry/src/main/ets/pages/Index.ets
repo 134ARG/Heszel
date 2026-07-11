@@ -47,14 +47,11 @@ struct Index {
       } else {
         DashboardView({
           systems: this.systems,
-          selectedId: this.selectedId,
+          selectedId: $selectedId,
           loading: this.refreshing,
           errorMessage: this.dashboardError,
           lastRefresh: this.lastRefresh,
           expanded: this.expanded,
-          onSelect: (id: string) => {
-            this.selectedId = id
-          },
           onRefresh: () => {
             this.refreshSystems(true)
           },

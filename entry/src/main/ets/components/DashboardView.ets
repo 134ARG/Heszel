@@ -1,15 +1,16 @@
 import { SystemSummary } from '../model/BeszelModels'
 import { SystemCard } from './SystemCard'
+import { SystemDetail } from './SystemDetail'
 
 @Component
 export struct DashboardView {
   @Prop systems: SystemSummary[] = []
-  @Prop selectedId: string = ''
+  @Link selectedId: string
   @Prop loading: boolean = false
   @Prop errorMessage: string = ''
   @Prop lastRefresh: string = ''
   @Prop expanded: boolean = false
-  onSelect: (id: string) => void = () => {}
+  @State private compactDetailVisible: boolean = false
   onRefresh: () => void = () => {}
   onSignOut: () => void = () => {}
 
@@ -67,10 +68,12 @@ export struct DashboardView {
             .width(1)
             .height('100%')
             .color('#E2E8E3')
-          this.detail(this.selectedSystem())
+          SystemDetail({ system: this.selectedSystem(), compact: false })
         }
         .layoutWeight(1)
         .width('100%')
+      } else if (this.compactDetailVisible) {
+        this.compactDetail()
       } else {
         this.systemList(false)
       }
@@ -133,7 +136,7 @@ export struct DashboardView {
             SystemCard({
               system: system,
               selected: showSelection && system.id === this.selectedId,
-              onSelect: () => this.onSelect(system.id)
+              onSelect: () => this.selectSystem(system.id)
             })
           }
         }, (system: SystemSummary) => system.id)
@@ -148,153 +151,33 @@ export struct DashboardView {
   }
 
   @Builder
-  private detail(system: SystemSummary) {
-    Scroll() {
-      Column({ space: 18 }) {
-        Row({ space: 12 }) {
-          Row()
-            .width(11)
-            .height(11)
-            .borderRadius(6)
-            .backgroundColor(system.isUp() ? '#20A465' : '#D8483E')
-          Column({ space: 3 }) {
-            Text(system.name)
-              .fontSize(28)
-              .fontWeight(FontWeight.Bold)
-              .fontColor('#17211B')
-            Text(system.host.length > 0 ? system.host : 'No host label')
-              .fontSize(13)
-              .fontColor('#718078')
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-
-          Text(system.status.toUpperCase())
-            .fontSize(12)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(system.isUp() ? '#176B45' : '#A12D26')
-            .padding({ left: 10, right: 10, top: 6, bottom: 6 })
-            .backgroundColor(system.isUp() ? '#E4F3EA' : '#FFE9E6')
-            .borderRadius(8)
-        }
-        .width('100%')
-
-        Row({ space: 12 }) {
-          this.metricTile('CPU', system.cpuPercent, '%')
-          this.metricTile('Memory', system.memoryPercent, '%')
-          this.metricTile('Disk', system.diskPercent, '%')
-          this.metricTile('GPU', system.gpuPercent, '%')
-        }
-        .width('100%')
-
-        Column({ space: 14 }) {
-          Text('Resource pressure')
-            .fontSize(17)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#26342B')
-            .width('100%')
-          this.pressureBar('CPU', system.cpuPercent, '#267454')
-          this.pressureBar('Memory', system.memoryPercent, '#4673A7')
-          this.pressureBar('Disk', system.diskPercent, '#9B6B2F')
-        }
-        .width('100%')
-        .padding(18)
-        .backgroundColor('#FFFFFF')
-        .borderRadius(16)
-
-        Row({ space: 12 }) {
-          Column({ space: 8 }) {
-            Text('LOAD AVERAGE')
-              .fontSize(11)
-              .fontColor('#748077')
-            Text(`${system.loadOne.toFixed(2)}  ${system.loadFive.toFixed(2)}  ${system.loadFifteen.toFixed(2)}`)
-              .fontSize(20)
-              .fontWeight(FontWeight.Medium)
-              .fontColor('#26342B')
-            Text('1m       5m       15m')
-              .fontSize(11)
-              .fontColor('#89928C')
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-
-          Column({ space: 8 }) {
-            Text('TEMPERATURE')
-              .fontSize(11)
-              .fontColor('#748077')
-            Text(system.temperatureCelsius > 0 ? `${system.temperatureCelsius.toFixed(0)} °C` : '—')
-              .fontSize(20)
-              .fontWeight(FontWeight.Medium)
-              .fontColor('#26342B')
-            Text(`Uptime ${this.formatUptime(system.uptimeSeconds)}`)
-              .fontSize(11)
-              .fontColor('#89928C')
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-        }
-        .width('100%')
-        .padding(18)
-        .backgroundColor('#FFFFFF')
-        .borderRadius(16)
+  private compactDetail() {
+    Column() {
+      Row() {
+        Button('‹  Systems')
+          .height(38)
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#176B45')
+          .backgroundColor('#E4F3EA')
+          .borderRadius(10)
+          .onClick(() => {
+            this.compactDetailVisible = false
+          })
       }
       .width('100%')
-      .padding({ left: 22, right: 22, top: 20, bottom: 30 })
+      .padding({ left: 16, right: 16, top: 12, bottom: 2 })
+
+      SystemDetail({ system: this.selectedSystem(), compact: true })
     }
     .layoutWeight(1)
-    .height('100%')
-    .scrollBar(BarState.Off)
-  }
-
-  @Builder
-  private metricTile(label: string, value: number, suffix: string) {
-    Column({ space: 8 }) {
-      Text(label.toUpperCase())
-        .fontSize(11)
-        .fontColor('#748077')
-      Text(`${value.toFixed(0)}${suffix}`)
-        .fontSize(23)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(value >= 90 ? '#B3261E' : '#223128')
-    }
-    .alignItems(HorizontalAlign.Start)
-    .layoutWeight(1)
-    .padding(16)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(15)
-  }
-
-  @Builder
-  private pressureBar(label: string, value: number, color: string) {
-    Column({ space: 6 }) {
-      Row() {
-        Text(label)
-          .fontSize(13)
-          .fontColor('#526158')
-          .layoutWeight(1)
-        Text(`${value.toFixed(0)}%`)
-          .fontSize(13)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#29372E')
-      }
-      Progress({ value: Math.min(value, 100), total: 100, type: ProgressType.Linear })
-        .width('100%')
-        .height(7)
-        .color(value >= 90 ? '#C93C32' : color)
-        .backgroundColor('#E8ECE8')
-        .borderRadius(4)
-    }
     .width('100%')
   }
 
-  private formatUptime(seconds: number): string {
-    if (seconds <= 0) {
-      return '—'
+  private selectSystem(id: string): void {
+    this.selectedId = id
+    if (!this.expanded) {
+      this.compactDetailVisible = true
     }
-    const days = Math.floor(seconds / 86400)
-    if (days > 0) {
-      return `${days}d`
-    }
-    return `${Math.max(1, Math.floor(seconds / 3600))}h`
   }
 }
