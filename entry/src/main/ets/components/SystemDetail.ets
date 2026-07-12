@@ -34,7 +34,7 @@ export struct SystemDetail {
               .fontColor($r('app.color.text_primary'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
-            Text(this.host.length > 0 ? this.host : 'No host label')
+            Text(this.host.length > 0 ? this.host : $r('app.string.no_host_label'))
               .fontSize(13)
               .fontColor($r('app.color.text_secondary'))
               .maxLines(1)
@@ -43,7 +43,7 @@ export struct SystemDetail {
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
 
-          Text(this.status.toUpperCase())
+          Text(this.statusLabel())
             .fontSize(12)
             .fontWeight(FontWeight.Medium)
             .fontColor(this.isUp() ? $r('app.color.action') : $r('app.color.status_down_text'))
@@ -62,7 +62,7 @@ export struct SystemDetail {
               .width(20)
               .height(20)
               .color($r('app.color.action'))
-            Text('Loading detailed metrics…')
+            Text($r('app.string.loading_detailed_metrics'))
               .fontSize(13)
               .fontColor($r('app.color.text_secondary'))
           }
@@ -153,5 +153,15 @@ export struct SystemDetail {
 
   private isUp(): boolean {
     return this.status === 'up'
+  }
+
+  private statusLabel(): ResourceStr {
+    if (this.status === 'up') {
+      return $r('app.string.status_up')
+    }
+    if (this.status === 'down') {
+      return $r('app.string.status_down')
+    }
+    return $r('app.string.status_unknown')
   }
 }

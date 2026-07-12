@@ -10,14 +10,14 @@ export struct HardwareCard {
 
   build() {
     Column({ space: 10 }) {
-      Text('System')
+      Text($r('app.string.system_detail'))
         .fontSize(17)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.text_primary'))
         .width('100%')
 
       if (this.detail.hardware.cpuModel.length > 0) {
-        DetailValueRow({ label: 'Processor', value: this.detail.hardware.cpuModel })
+        DetailValueRow({ label: $r('app.string.processor'), value: this.detail.hardware.cpuModel })
       }
 
       if (this.compact) {
@@ -51,13 +51,13 @@ export struct HardwareCard {
   @Builder
   private primaryDetails() {
     if (this.detail.hardware.hostname.length > 0) {
-      DetailValueRow({ label: 'Hostname', value: this.detail.hardware.hostname })
+      DetailValueRow({ label: $r('app.string.hostname'), value: this.detail.hardware.hostname })
     }
     if (this.detail.hardware.osName.length > 0) {
-      DetailValueRow({ label: 'OS', value: this.detail.hardware.osName })
+      DetailValueRow({ label: $r('app.string.operating_system'), value: this.detail.hardware.osName })
     }
     if (this.detail.hardware.kernel.length > 0) {
-      DetailValueRow({ label: 'Kernel', value: this.detail.hardware.kernel })
+      DetailValueRow({ label: $r('app.string.kernel'), value: this.detail.hardware.kernel })
     }
   }
 
@@ -65,21 +65,21 @@ export struct HardwareCard {
   private secondaryDetails() {
     if (this.detail.hardware.cores > 0) {
       DetailValueRow({
-        label: 'CPU topology',
-        value: `${this.detail.hardware.cores.toFixed(0)} cores · ${this.detail.hardware.threads.toFixed(0)} threads`
+        label: $r('app.string.cpu_topology'),
+        value: $r('app.string.cpu_topology_value', this.detail.hardware.cores, this.detail.hardware.threads)
       })
     }
     if (this.detail.hardware.memoryBytes > 0) {
-      DetailValueRow({ label: 'Installed memory', value: formatBytes(this.detail.hardware.memoryBytes) })
+      DetailValueRow({ label: $r('app.string.installed_memory'), value: formatBytes(this.detail.hardware.memoryBytes) })
     }
     if (this.detail.hardware.architecture.length > 0) {
-      DetailValueRow({ label: 'Architecture', value: this.detail.hardware.architecture })
+      DetailValueRow({ label: $r('app.string.architecture'), value: this.detail.hardware.architecture })
     }
     if (this.agentVersion.length > 0) {
-      DetailValueRow({ label: 'Agent', value: this.agentVersion })
+      DetailValueRow({ label: $r('app.string.agent'), value: this.agentVersion })
     }
     if (this.detail.hardware.podman) {
-      DetailValueRow({ label: 'Containers', value: 'Podman' })
+      DetailValueRow({ label: $r('app.string.containers'), value: 'Podman' })
     }
   }
 }

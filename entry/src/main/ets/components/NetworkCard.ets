@@ -9,9 +9,9 @@ export struct NetworkCard {
 
   build() {
     Column({ space: 11 }) {
-      DetailCardHeader({ title: 'Network' })
-      DetailValueRow({ label: 'Upload', value: formatRate(this.state.uploadBytesPerSecond) })
-      DetailValueRow({ label: 'Download', value: formatRate(this.state.downloadBytesPerSecond) })
+      DetailCardHeader({ title: $r('app.string.network') })
+      DetailValueRow({ label: $r('app.string.upload'), value: formatRate(this.state.uploadBytesPerSecond) })
+      DetailValueRow({ label: $r('app.string.download'), value: formatRate(this.state.downloadBytesPerSecond) })
 
       ForEach(this.state.interfaces, (networkInterface: NetworkInterfaceMetric) => {
         Divider().color($r('app.color.divider'))
@@ -22,11 +22,11 @@ export struct NetworkCard {
             .fontColor($r('app.color.text_primary'))
             .width('100%')
           DetailValueRow({
-            label: 'Up / down',
+            label: $r('app.string.up_down'),
             value: `${formatRate(networkInterface.uploadBytesPerSecond)} · ${formatRate(networkInterface.downloadBytesPerSecond)}`
           })
           DetailValueRow({
-            label: 'Session total',
+            label: $r('app.string.session_total'),
             value: `${formatBytes(networkInterface.totalUploadBytes)} · ${formatBytes(networkInterface.totalDownloadBytes)}`
           })
         }

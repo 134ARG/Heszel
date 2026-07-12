@@ -1,7 +1,7 @@
 @Component
 export struct DetailValueRow {
-  @Prop label: string = ''
-  @Prop value: string = ''
+  @Prop label: ResourceStr = ''
+  @Prop value: ResourceStr = ''
   @Prop warning: boolean = false
 
   build() {

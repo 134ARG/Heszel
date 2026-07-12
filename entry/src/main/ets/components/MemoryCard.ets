@@ -10,25 +10,25 @@ export struct MemoryCard {
 
   build() {
     Column({ space: 11 }) {
-      DetailCardHeader({ title: 'Memory' })
+      DetailCardHeader({ title: $r('app.string.memory') })
       PressureBar({
         value: this.state.percent,
-        label: 'Usage',
+        label: $r('app.string.usage'),
         color: $r('app.color.metric_memory')
       })
       DetailValueRow({
-        label: 'Used',
+        label: $r('app.string.used'),
         value: `${formatGigabytes(this.state.usedGb)} / ${formatGigabytes(this.state.totalGb)}`
       })
       if (this.state.cacheGb > 0) {
-        DetailValueRow({ label: 'Buffer + cache', value: formatGigabytes(this.state.cacheGb) })
+        DetailValueRow({ label: $r('app.string.buffer_cache'), value: formatGigabytes(this.state.cacheGb) })
       }
       if (this.state.zfsArcGb > 0) {
         DetailValueRow({ label: 'ZFS ARC', value: formatGigabytes(this.state.zfsArcGb) })
       }
       if (this.state.swapTotalGb > 0) {
         DetailValueRow({
-          label: 'Swap',
+          label: $r('app.string.swap'),
           value: `${formatGigabytes(this.state.swapUsedGb)} / ${formatGigabytes(this.state.swapTotalGb)}`
         })
       }

@@ -1,7 +1,7 @@
 @Component
 export struct PressureBar {
   @Prop value: number = 0
-  @Prop label: string = ''
+  @Prop label: ResourceStr = ''
   @Prop color: ResourceColor = Color.Green
 
   build() {

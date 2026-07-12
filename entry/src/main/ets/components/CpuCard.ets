@@ -8,17 +8,17 @@ export struct CpuCard {
 
   build() {
     Column({ space: 12 }) {
-      DetailCardHeader({ title: 'CPU detail' })
+      DetailCardHeader({ title: $r('app.string.cpu_detail') })
 
       if (this.state.breakdown.length >= 5) {
-        DetailValueRow({ label: 'User', value: `${this.state.breakdown[0].toFixed(0)}%` })
-        DetailValueRow({ label: 'System', value: `${this.state.breakdown[1].toFixed(0)}%` })
-        DetailValueRow({ label: 'I/O wait', value: `${this.state.breakdown[2].toFixed(0)}%` })
-        DetailValueRow({ label: 'Steal', value: `${this.state.breakdown[3].toFixed(0)}%` })
+        DetailValueRow({ label: $r('app.string.cpu_user'), value: `${this.state.breakdown[0].toFixed(0)}%` })
+        DetailValueRow({ label: $r('app.string.cpu_system'), value: `${this.state.breakdown[1].toFixed(0)}%` })
+        DetailValueRow({ label: $r('app.string.io_wait'), value: `${this.state.breakdown[2].toFixed(0)}%` })
+        DetailValueRow({ label: $r('app.string.cpu_steal'), value: `${this.state.breakdown[3].toFixed(0)}%` })
       }
 
       if (this.state.cores.length > 0) {
-        Text('Per-core usage')
+        Text($r('app.string.per_core_usage'))
           .fontSize(11)
           .fontColor($r('app.color.text_tertiary'))
           .width('100%')
@@ -37,7 +37,7 @@ export struct CpuCard {
         .width('100%')
 
         if (this.state.coreCount > this.visibleCoreLimit()) {
-          Text(`Showing ${this.visibleCoreLimit()} of ${this.state.coreCount} threads`)
+          Text($r('app.string.showing_threads', this.visibleCoreLimit(), this.state.coreCount))
             .fontSize(11)
             .fontColor($r('app.color.text_tertiary'))
             .width('100%')

@@ -187,7 +187,7 @@ struct SystemsCard {
           .width(24)
           .onClick(() => this.refreshCard())
 
-        Text(`${this.updated}  ·  Load ${this.load}`)
+        Text(`${this.updated}  ·  ${this.load}`)
           .fontSize(9)
           .fontColor($r('app.color.text_secondary'))
           .maxLines(1)

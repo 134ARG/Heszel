@@ -1,32 +1,138 @@
 {
   "string": [
-    {
-      "name": "module_desc",
-      "value": "Fold-aware Beszel dashboard"
-    },
-    {
-      "name": "EntryAbility_desc",
-      "value": "Heszel monitoring dashboard"
-    },
-    {
-      "name": "EntryAbility_label",
-      "value": "Heszel"
-    },
-    {
-      "name": "EntryFormAbility_label",
-      "value": "Heszel systems"
-    },
-    {
-      "name": "EntryFormAbility_desc",
-      "value": "Heszel home-screen systems card"
-    },
-    {
-      "name": "systems_widget_name",
-      "value": "Systems"
-    },
-    {
-      "name": "systems_widget_description",
-      "value": "Cached Beszel system health and resource usage"
-    }
+    { "name": "module_desc", "value": "Fold-aware Beszel dashboard" },
+    { "name": "EntryAbility_desc", "value": "Heszel monitoring dashboard" },
+    { "name": "EntryAbility_label", "value": "Heszel" },
+    { "name": "EntryFormAbility_label", "value": "Heszel systems" },
+    { "name": "EntryFormAbility_desc", "value": "Heszel home-screen systems card" },
+    { "name": "systems_widget_name", "value": "Systems" },
+    { "name": "systems_widget_description", "value": "Cached Beszel system health and resource usage" },
+
+    { "name": "restoring_heszel", "value": "Restoring Heszel…" },
+    { "name": "login_tagline", "value": "Your Beszel dashboard, shaped for the fold." },
+    { "name": "hub_address", "value": "HUB ADDRESS" },
+    { "name": "gateway_key_optional", "value": "GATEWAY KEY · OPTIONAL" },
+    { "name": "gateway_key_placeholder", "value": "X-Heszel-Key value" },
+    { "name": "email", "value": "EMAIL" },
+    { "name": "password", "value": "PASSWORD" },
+    { "name": "password_placeholder", "value": "Beszel password" },
+    { "name": "connecting", "value": "Connecting…" },
+    { "name": "connect_to_beszel", "value": "Connect to Beszel" },
+    { "name": "credentials_security_note", "value": "Your password is never stored. Session and gateway secrets are protected by HarmonyOS." },
+
+    { "name": "retry", "value": "Retry" },
+    { "name": "loading_systems", "value": "Loading systems…" },
+    { "name": "no_shared_systems", "value": "No shared systems" },
+    { "name": "connecting_hub", "value": "Connecting to your Beszel hub." },
+    { "name": "share_system_hint", "value": "Share a system with this Beszel account, then refresh." },
+    { "name": "dashboard", "value": "Dashboard" },
+    { "name": "systems", "value": "Systems" },
+    { "name": "back_dashboard", "value": "‹  Dashboard" },
+    { "name": "back_systems", "value": "‹  Systems" },
+    { "name": "systems_online", "value": "%d of %d systems online" },
+    { "name": "live", "value": "Live" },
+    { "name": "refresh", "value": "Refresh" },
+    { "name": "settings", "value": "Settings" },
+    { "name": "updated", "value": "Updated %s" },
+
+    { "name": "language_section", "value": "LANGUAGE" },
+    { "name": "language", "value": "App language" },
+    { "name": "language_system", "value": "System default" },
+    { "name": "language_english", "value": "English" },
+    { "name": "language_chinese", "value": "Simplified Chinese" },
+    { "name": "language_restart_hint", "value": "Restart Heszel after changing the language." },
+    { "name": "gateway_access", "value": "GATEWAY ACCESS" },
+    { "name": "gateway_security_note", "value": "Saved gateway keys are never displayed. A replacement is stored only after the hub accepts it." },
+    { "name": "enter_replacement_key", "value": "Enter replacement key" },
+    { "name": "verify_and_update", "value": "Verify and update" },
+    { "name": "account", "value": "ACCOUNT" },
+    { "name": "beszel_hub", "value": "Beszel hub" },
+    { "name": "signed_in_as", "value": "Signed in as" },
+    { "name": "sign_out", "value": "Sign out" },
+
+    { "name": "no_host_label", "value": "No host label" },
+    { "name": "status_up", "value": "UP" },
+    { "name": "status_down", "value": "DOWN" },
+    { "name": "status_unknown", "value": "UNKNOWN" },
+    { "name": "loading_detailed_metrics", "value": "Loading detailed metrics…" },
+    { "name": "system_detail", "value": "System" },
+    { "name": "processor", "value": "Processor" },
+    { "name": "hostname", "value": "Hostname" },
+    { "name": "operating_system", "value": "Operating system" },
+    { "name": "kernel", "value": "Kernel" },
+    { "name": "cpu_topology", "value": "CPU topology" },
+    { "name": "cpu_topology_value", "value": "%d cores · %d threads" },
+    { "name": "installed_memory", "value": "Installed memory" },
+    { "name": "architecture", "value": "Architecture" },
+    { "name": "agent", "value": "Agent" },
+    { "name": "containers", "value": "Containers" },
+
+    { "name": "resource_pressure", "value": "Resource pressure" },
+    { "name": "memory", "value": "Memory" },
+    { "name": "disk", "value": "Disk" },
+    { "name": "usage", "value": "Usage" },
+    { "name": "load_average", "value": "LOAD AVERAGE" },
+    { "name": "temperature", "value": "TEMPERATURE" },
+    { "name": "uptime_value", "value": "Uptime %s" },
+
+    { "name": "cpu_detail", "value": "CPU detail" },
+    { "name": "cpu_user", "value": "User" },
+    { "name": "cpu_system", "value": "System" },
+    { "name": "io_wait", "value": "I/O wait" },
+    { "name": "cpu_steal", "value": "Steal" },
+    { "name": "per_core_usage", "value": "Per-core usage" },
+    { "name": "showing_threads", "value": "Showing %d of %d threads" },
+
+    { "name": "used", "value": "Used" },
+    { "name": "buffer_cache", "value": "Buffer + cache" },
+    { "name": "swap", "value": "Swap" },
+    { "name": "storage", "value": "Storage" },
+    { "name": "root_filesystem", "value": "Root filesystem" },
+    { "name": "root_used", "value": "Root used" },
+    { "name": "read", "value": "Read" },
+    { "name": "write", "value": "Write" },
+    { "name": "io_utilization", "value": "I/O utilization" },
+    { "name": "read_write_latency", "value": "Read / write latency" },
+    { "name": "read_write", "value": "Read / write" },
+
+    { "name": "network", "value": "Network" },
+    { "name": "upload", "value": "Upload" },
+    { "name": "download", "value": "Download" },
+    { "name": "up_down", "value": "Up / down" },
+    { "name": "session_total", "value": "Session total" },
+    { "name": "gpu_memory", "value": "Memory" },
+    { "name": "power", "value": "Power" },
+
+    { "name": "health", "value": "Health" },
+    { "name": "battery", "value": "Battery" },
+    { "name": "battery_charging", "value": "Charging" },
+    { "name": "battery_discharging", "value": "Discharging" },
+    { "name": "battery_full", "value": "Full" },
+    { "name": "services", "value": "Services" },
+    { "name": "services_failed", "value": "%d failed of %d" },
+    { "name": "services_healthy", "value": "%d healthy" },
+
+    { "name": "containers_count", "value": "Containers · %d" },
+    { "name": "no_running_containers", "value": "No running containers" },
+    { "name": "network_up_down", "value": "Network up / down" },
+
+    { "name": "widget_open_heszel", "value": "Open Heszel to load systems" },
+    { "name": "widget_no_cached_data", "value": "No cached data" },
+    { "name": "widget_no_host", "value": "No host address" },
+    { "name": "widget_recently_updated", "value": "Recently updated" },
+    { "name": "widget_uptime", "value": "Uptime %s" },
+    { "name": "widget_load", "value": "Load %s" },
+
+    { "name": "error_enter_credentials", "value": "Enter the hub address, email, and password." },
+    { "name": "error_connect_beszel", "value": "Unable to connect to Beszel." },
+    { "name": "error_refresh_systems", "value": "Unable to refresh systems." },
+    { "name": "error_remove_token", "value": "Unable to remove the protected session token. Please try again." },
+    { "name": "error_restore_session", "value": "Unable to restore the saved session." },
+    { "name": "error_save_session", "value": "Signed in, but HarmonyOS could not save this session." },
+    { "name": "error_gateway_rejected", "value": "The nginx gateway rejected this key." },
+    { "name": "error_load_detail", "value": "Unable to load detailed system data." },
+    { "name": "error_network_saved_session", "value": "Beszel is unreachable. Your saved session is safe; connect Tailscale or restore networking, then retry." },
+    { "name": "error_session_rejected", "value": "Your saved session was rejected by Beszel. Sign in again." },
+    { "name": "error_refresh_available", "value": "%s Refresh remains available." }
   ]
 }

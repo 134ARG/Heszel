@@ -1,3 +1,5 @@
+import { i18n } from '@kit.LocalizationKit'
+
 @Component
 export struct SettingsView {
   @Prop baseUrl: string = ''
@@ -5,14 +7,23 @@ export struct SettingsView {
   @Prop expanded: boolean = false
   @Prop errorMessage: string = ''
   @State private gatewayKeyInput: string = ''
+  @State private languageCode: string = 'default'
   onBack: () => void = () => {}
   onSignOut: () => void = () => {}
   onGatewayKeyChange: (gatewayKey: string) => void = () => {}
 
+  aboutToAppear(): void {
+    try {
+      this.languageCode = this.normalizeLanguage(i18n.System.getAppPreferredLanguage())
+    } catch (_) {
+      this.languageCode = 'default'
+    }
+  }
+
   build() {
     Column() {
       Row({ space: 12 }) {
-        Button('‹  Dashboard')
+        Button($r('app.string.back_dashboard'))
           .height(38)
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
@@ -21,7 +32,7 @@ export struct SettingsView {
           .borderRadius(10)
           .onClick(() => this.onBack())
 
-        Text('Settings')
+        Text($r('app.string.settings'))
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.text_primary'))
@@ -43,19 +54,60 @@ export struct SettingsView {
       Scroll() {
         Column({ space: 18 }) {
           Column({ space: 12 }) {
-            Text('GATEWAY ACCESS')
+            Text($r('app.string.language_section'))
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_tertiary'))
+              .width('100%')
+
+            Column({ space: 10 }) {
+              Row({ space: 12 }) {
+                Text($r('app.string.language'))
+                  .fontSize(14)
+                  .fontColor($r('app.color.text_primary'))
+                  .layoutWeight(1)
+
+                Select([
+                  { value: $r('app.string.language_system') },
+                  { value: $r('app.string.language_english') },
+                  { value: $r('app.string.language_chinese') }
+                ])
+                  .selected(this.languageIndex())
+                  .value(this.languageValue())
+                  .height(42)
+                  .font({ size: 13 })
+                  .fontColor($r('app.color.text_primary'))
+                  .backgroundColor($r('app.color.surface_input'))
+                  .onSelect((index: number) => this.changeLanguage(index))
+              }
+              .width('100%')
+
+              Text($r('app.string.language_restart_hint'))
+                .fontSize(11)
+                .fontColor($r('app.color.text_tertiary'))
+                .width('100%')
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor($r('app.color.surface'))
+            .borderRadius(16)
+          }
+          .width('100%')
+
+          Column({ space: 12 }) {
+            Text($r('app.string.gateway_access'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_tertiary'))
               .width('100%')
 
             Column({ space: 12 }) {
-              Text('Saved gateway keys are never displayed. A replacement is stored only after the hub accepts it.')
+              Text($r('app.string.gateway_security_note'))
                 .fontSize(12)
                 .fontColor($r('app.color.text_secondary'))
                 .width('100%')
 
-              TextInput({ placeholder: 'Enter replacement key', text: this.gatewayKeyInput })
+              TextInput({ placeholder: $r('app.string.enter_replacement_key'), text: this.gatewayKeyInput })
                 .type(InputType.Password)
                 .showPasswordIcon(false)
                 .height(48)
@@ -69,7 +121,7 @@ export struct SettingsView {
                   this.gatewayKeyInput = value
                 })
 
-              Button('Verify and update')
+              Button($r('app.string.verify_and_update'))
                 .height(44)
                 .width('100%')
                 .fontSize(14)
@@ -92,7 +144,7 @@ export struct SettingsView {
           .width('100%')
 
           Column({ space: 12 }) {
-            Text('ACCOUNT')
+            Text($r('app.string.account'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_tertiary'))
@@ -100,7 +152,7 @@ export struct SettingsView {
 
             Column() {
               Column({ space: 4 }) {
-                Text('Beszel hub')
+                Text($r('app.string.beszel_hub'))
                   .fontSize(11)
                   .fontColor($r('app.color.text_tertiary'))
                 Text(this.baseUrl)
@@ -118,7 +170,7 @@ export struct SettingsView {
                 .margin({ left: 16, right: 16 })
 
               Column({ space: 4 }) {
-                Text('Signed in as')
+                Text($r('app.string.signed_in_as'))
                   .fontSize(11)
                   .fontColor($r('app.color.text_tertiary'))
                 Text(this.email)
@@ -135,7 +187,7 @@ export struct SettingsView {
                 .color($r('app.color.divider'))
                 .margin({ left: 16, right: 16 })
 
-              Button('Sign out')
+              Button($r('app.string.sign_out'))
                 .width('100%')
                 .height(48)
                 .fontSize(14)
@@ -162,5 +214,48 @@ export struct SettingsView {
     .height('100%')
     .alignItems(HorizontalAlign.Center)
     .backgroundColor($r('app.color.background'))
+  }
+
+  private normalizeLanguage(language: string): string {
+    if (language.startsWith('zh')) {
+      return 'zh-CN'
+    }
+    if (language.startsWith('en')) {
+      return 'en'
+    }
+    return 'default'
+  }
+
+  private languageIndex(): number {
+    if (this.languageCode === 'en') {
+      return 1
+    }
+    if (this.languageCode === 'zh-CN') {
+      return 2
+    }
+    return 0
+  }
+
+  private languageValue(): ResourceStr {
+    if (this.languageCode === 'en') {
+      return $r('app.string.language_english')
+    }
+    if (this.languageCode === 'zh-CN') {
+      return $r('app.string.language_chinese')
+    }
+    return $r('app.string.language_system')
+  }
+
+  private changeLanguage(index: number): void {
+    const language = index === 1 ? 'en' : index === 2 ? 'zh-CN' : 'default'
+    if (language === this.languageCode) {
+      return
+    }
+    try {
+      i18n.System.setAppPreferredLanguage(language)
+      this.languageCode = language
+    } catch (_) {
+      // Keep the previous language if HarmonyOS rejects the preference.
+    }
   }
 }

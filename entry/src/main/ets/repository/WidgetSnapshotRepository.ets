@@ -1,12 +1,22 @@
 import { common } from '@kit.AbilityKit'
 import { preferences } from '@kit.ArkData'
 import { formBindingData, formProvider } from '@kit.FormKit'
+import { resourceManager } from '@kit.LocalizationKit'
 import { SystemSummary } from '../model/BeszelModels'
 
 const PREFERENCES_NAME = 'heszel_widget'
 const KEY_SNAPSHOT = 'systems_snapshot'
 const KEY_FORMS = 'forms'
 const LEGACY_KEY_FORM_IDS = 'form_ids'
+
+function localized(resources: resourceManager.ResourceManager, name: string, fallback: string,
+  ...args: Array<string | number>): string {
+  try {
+    return resources.getStringByNameSync(name, ...args)
+  } catch (_) {
+    return fallback
+  }
+}
 
 class WidgetFormInstance {
   id: string = ''
@@ -25,18 +35,21 @@ class WidgetSystemData {
   uptime: string = 'Uptime --'
   load: string = '--  --  --'
 
-  static fromSystem(system: SystemSummary): WidgetSystemData {
+  static fromSystem(system: SystemSummary, resources: resourceManager.ResourceManager): WidgetSystemData {
     const data = new WidgetSystemData()
     data.id = system.id
     data.name = system.name
-    data.host = system.host.length > 0 ? system.host : 'No host address'
+    data.host = system.host.length > 0 ? system.host :
+      localized(resources, 'widget_no_host', 'No host address')
     data.up = system.isUp() ? '1' : '0'
     data.cpu = Math.min(Math.round(system.cpuPercent), 100).toString()
     data.memory = Math.min(Math.round(system.memoryPercent), 100).toString()
     data.disk = Math.min(Math.round(system.diskPercent), 100).toString()
     data.temperature = system.temperatureCelsius > 0 ? `${Math.round(system.temperatureCelsius)}°C` : '--'
-    data.uptime = `Uptime ${WidgetSystemData.formatUptime(system.uptimeSeconds)}`
-    data.load = `${system.loadOne.toFixed(2)}  ${system.loadFive.toFixed(2)}  ${system.loadFifteen.toFixed(2)}`
+    const uptime = WidgetSystemData.formatUptime(system.uptimeSeconds)
+    data.uptime = localized(resources, 'widget_uptime', `Uptime ${uptime}`, uptime)
+    const load = `${system.loadOne.toFixed(2)}  ${system.loadFive.toFixed(2)}  ${system.loadFifteen.toFixed(2)}`
+    data.load = localized(resources, 'widget_load', `Load ${load}`, load)
     return data
   }
 
@@ -61,12 +74,24 @@ class WidgetSnapshotData {
   updated: string = 'No cached data'
   systems: WidgetSystemData[] = []
 
-  static fromSystems(systems: SystemSummary[], updated: string): WidgetSnapshotData {
+  static empty(resources: resourceManager.ResourceManager): WidgetSnapshotData {
     const data = new WidgetSnapshotData()
+    data.summary = localized(resources, 'widget_open_heszel', data.summary)
+    data.updated = localized(resources, 'widget_no_cached_data', data.updated)
+    return data
+  }
+
+  static fromSystems(systems: SystemSummary[], updated: string,
+    resources: resourceManager.ResourceManager): WidgetSnapshotData {
+    const data = WidgetSnapshotData.empty(resources)
     const online = systems.filter((system: SystemSummary) => system.isUp()).length
-    data.summary = `${online} of ${systems.length} systems online`
-    data.updated = updated.length > 0 ? `Updated ${updated}` : 'Recently updated'
-    systems.forEach((system: SystemSummary) => data.systems.push(WidgetSystemData.fromSystem(system)))
+    data.summary = localized(resources, 'systems_online', `${online} of ${systems.length} systems online`,
+      online, systems.length)
+    data.updated = updated.length > 0 ?
+      localized(resources, 'updated', `Updated ${updated}`, updated) :
+      localized(resources, 'widget_recently_updated', 'Recently updated')
+    systems.forEach((system: SystemSummary) =>
+      data.systems.push(WidgetSystemData.fromSystem(system, resources)))
     return data
   }
 }
@@ -134,7 +159,7 @@ export class WidgetSnapshotRepository {
 
   async saveSnapshot(systems: SystemSummary[], updated: string): Promise<void> {
     try {
-      const snapshot = WidgetSnapshotData.fromSystems(systems, updated)
+      const snapshot = WidgetSnapshotData.fromSystems(systems, updated, this.context.resourceManager)
       const store = await this.getStore()
       await store.put(KEY_SNAPSHOT, JSON.stringify(snapshot))
       await store.flush()
@@ -149,7 +174,7 @@ export class WidgetSnapshotRepository {
       const store = await this.getStore()
       await store.delete(KEY_SNAPSHOT)
       await store.flush()
-      await this.updateForms(store, new WidgetSnapshotData())
+      await this.updateForms(store, WidgetSnapshotData.empty(this.context.resourceManager))
     } catch (error) {
       throw this.storageError(error, 'Unable to clear the widget snapshot.')
     }

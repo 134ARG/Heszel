@@ -10,24 +10,24 @@ export struct StorageCard {
 
   build() {
     Column({ space: 12 }) {
-      DetailCardHeader({ title: 'Storage' })
+      DetailCardHeader({ title: $r('app.string.storage') })
       PressureBar({
         value: this.state.percent,
-        label: 'Root filesystem',
+        label: $r('app.string.root_filesystem'),
         color: $r('app.color.metric_disk')
       })
       DetailValueRow({
-        label: 'Root used',
+        label: $r('app.string.root_used'),
         value: `${formatGigabytes(this.state.usedGb)} / ${formatGigabytes(this.state.totalGb)}`
       })
-      DetailValueRow({ label: 'Read', value: formatRate(this.state.readBytesPerSecond) })
-      DetailValueRow({ label: 'Write', value: formatRate(this.state.writeBytesPerSecond) })
+      DetailValueRow({ label: $r('app.string.read'), value: formatRate(this.state.readBytesPerSecond) })
+      DetailValueRow({ label: $r('app.string.write'), value: formatRate(this.state.writeBytesPerSecond) })
       if (this.state.diskIoVisible()) {
-        DetailValueRow({ label: 'I/O utilization', value: `${this.state.ioPercent.toFixed(0)}%` })
+        DetailValueRow({ label: $r('app.string.io_utilization'), value: `${this.state.ioPercent.toFixed(0)}%` })
       }
       if (this.state.latencyVisible()) {
         DetailValueRow({
-          label: 'Read / write latency',
+          label: $r('app.string.read_write_latency'),
           value: `${this.state.readAwaitMs.toFixed(1)} / ${this.state.writeAwaitMs.toFixed(1)} ms`
         })
       }
@@ -41,11 +41,11 @@ export struct StorageCard {
             color: $r('app.color.metric_disk')
           })
           DetailValueRow({
-            label: 'Used',
+            label: $r('app.string.used'),
             value: `${formatGigabytes(filesystem.usedGb)} / ${formatGigabytes(filesystem.totalGb)}`
           })
           DetailValueRow({
-            label: 'Read / write',
+            label: $r('app.string.read_write'),
             value: `${formatRate(filesystem.readBytesPerSecond)} · ${formatRate(filesystem.writeBytesPerSecond)}`
           })
         }

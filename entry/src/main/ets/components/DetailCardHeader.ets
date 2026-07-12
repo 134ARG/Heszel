@@ -1,6 +1,6 @@
 @Component
 export struct DetailCardHeader {
-  @Prop title: string = ''
+  @Prop title: ResourceStr = ''
 
   build() {
     Row() {

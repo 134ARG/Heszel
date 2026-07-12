@@ -1,5 +1,4 @@
 import { HealthMetricsState, SensorMetric } from '../model/SystemDetailModels'
-import { batteryStateLabel } from './DetailFormatting'
 import { DetailCardHeader } from './DetailCardHeader'
 import { DetailValueRow } from './DetailValueRow'
 
@@ -9,21 +8,21 @@ export struct HealthCard {
 
   build() {
     Column({ space: 11 }) {
-      DetailCardHeader({ title: 'Health' })
+      DetailCardHeader({ title: $r('app.string.health') })
 
       if (this.state.batteryVisible()) {
         DetailValueRow({
-          label: batteryStateLabel(this.batteryState()),
+          label: this.batteryStateLabel(),
           value: `${this.batteryPercent().toFixed(0)}%`,
           warning: this.batteryPercent() < 20
         })
       }
       if (this.state.servicesVisible()) {
         DetailValueRow({
-          label: 'Services',
+          label: $r('app.string.services'),
           value: this.state.servicesFailed > 0 ?
-            `${this.state.servicesFailed.toFixed(0)} failed of ${this.state.servicesTotal.toFixed(0)}` :
-            `${this.state.servicesTotal.toFixed(0)} healthy`,
+            $r('app.string.services_failed', this.state.servicesFailed, this.state.servicesTotal) :
+            $r('app.string.services_healthy', this.state.servicesTotal),
           warning: this.state.servicesFailed > 0
         })
       }
@@ -49,5 +48,18 @@ export struct HealthCard {
 
   private batteryState(): number {
     return this.state.batteryState
+  }
+
+  private batteryStateLabel(): ResourceStr {
+    switch (this.batteryState()) {
+      case 1:
+        return $r('app.string.battery_charging')
+      case 2:
+        return $r('app.string.battery_discharging')
+      case 3:
+        return $r('app.string.battery_full')
+      default:
+        return $r('app.string.battery')
+    }
   }
 }

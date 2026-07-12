@@ -9,10 +9,10 @@ export struct ContainersCard {
 
   build() {
     Column({ space: 11 }) {
-      DetailCardHeader({ title: `Containers · ${this.state.containers.length}` })
+      DetailCardHeader({ title: $r('app.string.containers_count', this.state.containers.length) })
 
       if (this.state.containers.length === 0) {
-        Text('No running containers')
+        Text($r('app.string.no_running_containers'))
           .fontSize(12)
           .fontColor($r('app.color.text_secondary'))
           .width('100%')
@@ -31,10 +31,10 @@ export struct ContainersCard {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
           DetailValueRow({ label: 'CPU', value: `${container.cpuPercent.toFixed(1)}%` })
-          DetailValueRow({ label: 'Memory', value: formatGigabytes(container.memoryGb) })
+          DetailValueRow({ label: $r('app.string.memory'), value: formatGigabytes(container.memoryGb) })
           if (container.hasNetwork) {
             DetailValueRow({
-              label: 'Network up / down',
+              label: $r('app.string.network_up_down'),
               value: `${formatRate(container.uploadBytesPerSecond)} · ${formatRate(container.downloadBytesPerSecond)}`
             })
           }

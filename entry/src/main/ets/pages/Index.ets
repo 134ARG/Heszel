@@ -84,7 +84,7 @@ struct Index {
             .width(36)
             .height(36)
             .color($r('app.color.action'))
-          Text('Restoring Heszel…')
+          Text($r('app.string.restoring_heszel'))
             .fontSize(14)
             .fontColor($r('app.color.text_secondary'))
         }
@@ -141,7 +141,7 @@ struct Index {
   private async login(serverUrl: string, email: string, password: string, gatewayKey: string): Promise<void> {
     this.loginError = ''
     if (serverUrl.trim().length === 0 || email.trim().length === 0 || password.length === 0) {
-      this.loginError = 'Enter the hub address, email, and password.'
+      this.loginError = this.localized('error_enter_credentials', 'Enter the hub address, email, and password.')
       return
     }
 
@@ -164,7 +164,8 @@ struct Index {
         this.startRealtime()
       }
     } catch (error) {
-      this.loginError = this.describeError(error, 'Unable to connect to Beszel.')
+      this.loginError = this.describeError(error,
+        this.localized('error_connect_beszel', 'Unable to connect to Beszel.'))
     } finally {
       this.signingIn = false
     }
@@ -211,7 +212,8 @@ struct Index {
         await this.expireSavedSession()
         return
       }
-      this.dashboardError = this.describeError(error, 'Unable to refresh systems.')
+      this.dashboardError = this.describeError(error,
+        this.localized('error_refresh_systems', 'Unable to refresh systems.'))
     } finally {
       this.refreshInFlight = false
       if (this.manualRefreshPending && this.client !== null && this.session.token.length > 0) {
@@ -270,7 +272,8 @@ struct Index {
       },
       (error: Error) => {
         if (this.pageVisible && this.session.token.length > 0) {
-          this.dashboardError = `${error.message} Refresh remains available.`
+          this.dashboardError = this.localized(
+            'error_refresh_available', `${error.message} Refresh remains available.`, error.message)
         }
       }
     )
@@ -385,7 +388,8 @@ struct Index {
         await this.expireSavedSession()
         return
       }
-      this.dashboardError = this.describeError(error, 'Unable to refresh systems.')
+      this.dashboardError = this.describeError(error,
+        this.localized('error_refresh_systems', 'Unable to refresh systems.'))
     } finally {
       this.refreshInFlight = false
       if (this.manualRefreshPending && this.client !== null && this.session.token.length > 0) {
@@ -431,7 +435,8 @@ struct Index {
       try {
         await this.sessionRepository.clearToken()
       } catch (_) {
-        this.dashboardError = 'Unable to remove the protected session token. Please try again.'
+        this.dashboardError = this.localized(
+          'error_remove_token', 'Unable to remove the protected session token. Please try again.')
         if (this.pageVisible && this.session.token.length > 0) {
           this.startRealtime()
         }
@@ -481,7 +486,8 @@ struct Index {
         }
       }
     } catch (error) {
-      this.loginError = this.describeError(error, 'Unable to restore the saved session.')
+      this.loginError = this.describeError(error,
+        this.localized('error_restore_session', 'Unable to restore the saved session.'))
     } finally {
       this.restoringSession = false
     }
@@ -496,7 +502,8 @@ struct Index {
       this.pendingSelectedId = this.selectedId
       this.lastPersistedSelectedId = this.selectedId
     } catch (_) {
-      this.dashboardError = 'Signed in, but HarmonyOS could not save this session.'
+      this.dashboardError = this.localized(
+        'error_save_session', 'Signed in, but HarmonyOS could not save this session.')
     }
   }
 
@@ -529,7 +536,8 @@ struct Index {
         this.startRealtime()
       }
     } catch (error) {
-      this.dashboardError = this.describeError(error, 'The nginx gateway rejected this key.')
+      this.dashboardError = this.describeError(error,
+        this.localized('error_gateway_rejected', 'The nginx gateway rejected this key.'))
     } finally {
       this.refreshing = false
     }
@@ -655,7 +663,8 @@ struct Index {
         await this.expireSavedSession()
         return
       }
-      state.errorMessage = this.describeError(error, 'Unable to load detailed system data.')
+      state.errorMessage = this.describeError(error,
+        this.localized('error_load_detail', 'Unable to load detailed system data.'))
     } finally {
       state.loading = false
     }
@@ -683,8 +692,9 @@ struct Index {
         return false
       }
 
-      this.dashboardError =
-        'Beszel is unreachable. Your saved session is safe; connect Tailscale or restore networking, then retry.'
+      this.dashboardError = this.localized(
+        'error_network_saved_session',
+        'Beszel is unreachable. Your saved session is safe; connect Tailscale or restore networking, then retry.')
       return false
     }
   }
@@ -707,7 +717,8 @@ struct Index {
     this.liveMetrics = false
     this.dashboardError = ''
     this.lastRefresh = ''
-    this.loginError = 'Your saved session was rejected by Beszel. Sign in again.'
+    this.loginError = this.localized(
+      'error_session_rejected', 'Your saved session was rejected by Beszel. Sign in again.')
     await this.clearWidgetSnapshot()
   }
 
@@ -747,5 +758,14 @@ struct Index {
       return error.message
     }
     return fallback
+  }
+
+  private localized(name: string, fallback: string, ...args: Array<string | number>): string {
+    try {
+      const context = this.getUIContext().getHostContext()
+      return context?.resourceManager.getStringByNameSync(name, ...args) ?? fallback
+    } catch (_) {
+      return fallback
+    }
   }
 }

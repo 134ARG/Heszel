@@ -47,7 +47,7 @@ export struct DashboardView {
             .fontSize(13)
             .fontColor($r('app.color.error_text'))
             .layoutWeight(1)
-          Text('Retry')
+          Text($r('app.string.retry'))
             .fontSize(13)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.action'))
@@ -82,12 +82,11 @@ export struct DashboardView {
   private navigationRoot() {
     if (this.systems.length === 0) {
       Column({ space: 12 }) {
-        Text(this.loading ? 'Loading systems…' : 'No shared systems')
+        Text(this.loading ? $r('app.string.loading_systems') : $r('app.string.no_shared_systems'))
           .fontSize(20)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.text_primary'))
-        Text(this.loading ? 'Connecting to your Beszel hub.' :
-          'Share a system with this Beszel account, then refresh.')
+        Text(this.loading ? $r('app.string.connecting_hub') : $r('app.string.share_system_hint'))
           .fontSize(14)
           .fontColor($r('app.color.text_secondary'))
           .textAlign(TextAlign.Center)
@@ -146,7 +145,7 @@ export struct DashboardView {
     Column() {
       if (!this.expanded) {
         Row() {
-          Button('‹  Systems')
+          Button($r('app.string.back_systems'))
             .height(38)
             .fontSize(14)
             .fontWeight(FontWeight.Medium)
@@ -200,7 +199,7 @@ export struct DashboardView {
         .fontSize(24)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
-      Text(`${this.onlineCount()} of ${this.systems.length} systems online`)
+      Text($r('app.string.systems_online', this.onlineCount(), this.systems.length))
         .fontSize(12)
         .fontColor($r('app.color.text_secondary'))
     }
@@ -217,7 +216,7 @@ export struct DashboardView {
         .borderRadius(4)
         .backgroundColor(this.liveMetrics && this.realtimeConnected && this.detailVisible ?
           $r('app.color.status_up') : $r('app.color.text_tertiary'))
-      Text('Live')
+      Text($r('app.string.live'))
         .fontSize(13)
         .fontColor($r('app.color.text_secondary'))
       Toggle({ type: ToggleType.Switch, isOn: this.liveMetrics })
@@ -244,7 +243,7 @@ export struct DashboardView {
       .backgroundColor($r('app.color.action_surface'))
       .borderRadius(10)
       .enabled(!this.loading)
-      .accessibilityText('Refresh')
+      .accessibilityText($r('app.string.refresh'))
       .onClick(() => this.onRefresh())
   }
 
@@ -259,7 +258,7 @@ export struct DashboardView {
       .height(36)
       .backgroundColor($r('app.color.surface_neutral'))
       .borderRadius(10)
-      .accessibilityText('Settings')
+      .accessibilityText($r('app.string.settings'))
       .onClick(() => this.openSettings())
   }
 
@@ -267,7 +266,7 @@ export struct DashboardView {
   private systemList() {
     Column({ space: 10 }) {
       if (this.lastRefresh.length > 0) {
-        Text(`Updated ${this.lastRefresh}`)
+        Text($r('app.string.updated', this.lastRefresh))
           .fontSize(11)
           .fontColor($r('app.color.text_tertiary'))
           .width('100%')

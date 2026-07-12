@@ -19,12 +19,12 @@ export struct GpuCard {
           PressureBar({ value: gpu.usagePercent, label: gpu.name, color: $r('app.color.metric_cpu') })
           if (gpu.hasMemory) {
             DetailValueRow({
-              label: 'Memory',
+              label: $r('app.string.gpu_memory'),
               value: `${gpu.memoryUsedMb.toFixed(0)} / ${gpu.memoryTotalMb.toFixed(0)} MB`
             })
           }
           if (gpu.hasPower) {
-            DetailValueRow({ label: 'Power', value: `${gpu.powerWatts.toFixed(1)} W` })
+            DetailValueRow({ label: $r('app.string.power'), value: `${gpu.powerWatts.toFixed(1)} W` })
           }
         }
         .width('100%')

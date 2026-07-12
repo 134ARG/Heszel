@@ -13,7 +13,7 @@ export struct SystemOverview {
         Column({ space: 12 }) {
           Row({ space: 12 }) {
             MetricTile({ value: this.metrics.cpuPercent, label: 'CPU', suffix: '%' })
-            MetricTile({ value: this.metrics.memoryPercent, label: 'Memory', suffix: '%' })
+            MetricTile({ value: this.metrics.memoryPercent, label: 'RAM', suffix: '%' })
           }.width('100%')
           Row({ space: 12 }) {
             MetricTile({ value: this.metrics.diskPercent, label: 'Disk', suffix: '%' })
@@ -23,21 +23,21 @@ export struct SystemOverview {
       } else {
         Row({ space: 12 }) {
           MetricTile({ value: this.metrics.cpuPercent, label: 'CPU', suffix: '%' })
-          MetricTile({ value: this.metrics.memoryPercent, label: 'Memory', suffix: '%' })
+          MetricTile({ value: this.metrics.memoryPercent, label: 'RAM', suffix: '%' })
           MetricTile({ value: this.metrics.diskPercent, label: 'Disk', suffix: '%' })
           MetricTile({ value: this.metrics.gpuPercent, label: 'GPU', suffix: '%' })
         }.width('100%')
       }
 
       Column({ space: 14 }) {
-        Text('Resource pressure')
+        Text($r('app.string.resource_pressure'))
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.text_primary'))
           .width('100%')
         PressureBar({ value: this.metrics.cpuPercent, label: 'CPU', color: $r('app.color.metric_cpu') })
-        PressureBar({ value: this.metrics.memoryPercent, label: 'Memory', color: $r('app.color.metric_memory') })
-        PressureBar({ value: this.metrics.diskPercent, label: 'Disk', color: $r('app.color.metric_disk') })
+        PressureBar({ value: this.metrics.memoryPercent, label: $r('app.string.memory'), color: $r('app.color.metric_memory') })
+        PressureBar({ value: this.metrics.diskPercent, label: $r('app.string.disk'), color: $r('app.color.metric_disk') })
       }
       .width('100%')
       .padding(18)
@@ -75,7 +75,7 @@ export struct SystemOverview {
   @Builder
   private loadAverage() {
     Column({ space: 8 }) {
-      Text('LOAD AVERAGE').fontSize(11).fontColor($r('app.color.text_tertiary'))
+      Text($r('app.string.load_average')).fontSize(11).fontColor($r('app.color.text_tertiary'))
       Text(`${this.metrics.loadOne.toFixed(2)}  ${this.metrics.loadFive.toFixed(2)}  ${this.metrics.loadFifteen.toFixed(2)}`)
         .fontSize(20)
         .fontWeight(FontWeight.Medium)
@@ -87,12 +87,12 @@ export struct SystemOverview {
   @Builder
   private temperature() {
     Column({ space: 8 }) {
-      Text('TEMPERATURE').fontSize(11).fontColor($r('app.color.text_tertiary'))
+      Text($r('app.string.temperature')).fontSize(11).fontColor($r('app.color.text_tertiary'))
       Text(this.metrics.temperatureCelsius > 0 ? `${this.metrics.temperatureCelsius.toFixed(0)} °C` : '—')
         .fontSize(20)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.text_primary'))
-      Text(`Uptime ${this.formatUptime(this.metrics.uptimeSeconds)}`)
+      Text($r('app.string.uptime_value', this.formatUptime(this.metrics.uptimeSeconds)))
         .fontSize(11)
         .fontColor($r('app.color.text_tertiary'))
     }.alignItems(HorizontalAlign.Start).width('100%')

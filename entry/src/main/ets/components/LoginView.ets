@@ -26,7 +26,7 @@ export struct LoginView {
             .fontWeight(FontWeight.Bold)
             .fontColor($r('app.color.text_primary'))
 
-          Text('Your Beszel dashboard, shaped for the fold.')
+          Text($r('app.string.login_tagline'))
             .fontSize(15)
             .fontColor($r('app.color.text_secondary'))
             .textAlign(TextAlign.Center)
@@ -35,7 +35,7 @@ export struct LoginView {
         .margin({ bottom: 18 })
 
         Column({ space: 8 }) {
-          Text('HUB ADDRESS')
+          Text($r('app.string.hub_address'))
             .fontSize(12)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.text_label'))
@@ -58,13 +58,13 @@ export struct LoginView {
         }
 
         Column({ space: 8 }) {
-          Text('GATEWAY KEY · OPTIONAL')
+          Text($r('app.string.gateway_key_optional'))
             .fontSize(12)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.text_label'))
             .width('100%')
 
-          TextInput({ placeholder: 'X-Heszel-Key value', text: this.gatewayKey })
+          TextInput({ placeholder: $r('app.string.gateway_key_placeholder'), text: this.gatewayKey })
             .type(InputType.Password)
             .height(52)
             .width('100%')
@@ -79,7 +79,7 @@ export struct LoginView {
         }
 
         Column({ space: 8 }) {
-          Text('EMAIL')
+          Text($r('app.string.email'))
             .fontSize(12)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.text_label'))
@@ -100,13 +100,13 @@ export struct LoginView {
         }
 
         Column({ space: 8 }) {
-          Text('PASSWORD')
+          Text($r('app.string.password'))
             .fontSize(12)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.text_label'))
             .width('100%')
 
-          TextInput({ placeholder: 'Beszel password', text: this.password })
+          TextInput({ placeholder: $r('app.string.password_placeholder'), text: this.password })
             .type(InputType.Password)
             .height(52)
             .width('100%')
@@ -130,7 +130,7 @@ export struct LoginView {
             .borderRadius(12)
         }
 
-        Button(this.loading ? 'Connecting…' : 'Connect to Beszel')
+        Button(this.loading ? $r('app.string.connecting') : $r('app.string.connect_to_beszel'))
           .width('100%')
           .height(52)
           .fontSize(16)
@@ -143,7 +143,7 @@ export struct LoginView {
             this.onLogin(this.serverUrl, this.email, this.password, this.gatewayKey)
           })
 
-        Text('Your password is never stored. Session and gateway secrets are protected by HarmonyOS.')
+        Text($r('app.string.credentials_security_note'))
           .fontSize(12)
           .fontColor($r('app.color.text_tertiary'))
           .textAlign(TextAlign.Center)
