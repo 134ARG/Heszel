@@ -1,9 +1,6 @@
-import { SystemMetric, SystemSummary } from '../model/BeszelModels'
-
 @Component
 export struct MetricTile {
-  @ObjectLink system: SystemSummary
-  @Prop metric: SystemMetric = SystemMetric.CPU
+  @Prop value: number = 0
   @Prop label: string = ''
   @Prop suffix: string = ''
 
@@ -13,10 +10,10 @@ export struct MetricTile {
         .fontSize(11)
         .fontColor($r('app.color.text_tertiary'))
 
-      Text(`${this.system.metricValue(this.metric).toFixed(0)}${this.suffix}`)
+      Text(`${this.value.toFixed(0)}${this.suffix}`)
         .fontSize(23)
         .fontWeight(FontWeight.Medium)
-        .fontColor(this.system.metricValue(this.metric) >= 90
+        .fontColor(this.value >= 90
           ? $r('app.color.error')
           : $r('app.color.text_primary'))
     }

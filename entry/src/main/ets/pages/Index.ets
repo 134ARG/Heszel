@@ -7,6 +7,12 @@ import {
 import { DashboardView } from '../components/DashboardView'
 import { LoginView } from '../components/LoginView'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
+import {
+  BeszelContainerStatsRecordWire,
+  BeszelSystemDetailsWire,
+  BeszelSystemStatsRecordWire,
+  SystemDetailState
+} from '../model/SystemDetailModels'
 import { SessionRepository, StoredSession } from '../repository/SessionRepository'
 
 @Entry
@@ -22,6 +28,7 @@ struct Index {
   @State private lastRefresh: string = ''
   @StorageProp('curScreenSizeString') private curScreenSizeString: string = 'sm'
   @State @Watch('onDetailContextChanged') private detailVisible: boolean = false
+  @State private detailState: SystemDetailState = new SystemDetailState()
   @State @Watch('onLiveMetricsChanged') private liveMetrics: boolean = false
   @State private realtimeConnected: boolean = false
   @State private restoringSession: boolean = true
@@ -36,6 +43,7 @@ struct Index {
   private metricRefreshPending: boolean = false
   private metricRefreshTimer: number = -1
   private sessionRefreshPending: boolean = false
+  private detailStates: Map<string, SystemDetailState> = new Map<string, SystemDetailState>()
 
   aboutToAppear(): void {
     this.restoreSession()
@@ -88,6 +96,7 @@ struct Index {
         DashboardView({
           systems: $systems,
           selectedId: $selectedId,
+          detailState: this.detailState,
           loading: this.refreshing,
           errorMessage: this.dashboardError,
           lastRefresh: this.lastRefresh,
@@ -133,6 +142,7 @@ struct Index {
       this.savedEmail = session.email
       this.systems = []
       this.selectedId = ''
+      this.clearDetailStates()
       await this.persistSession(session)
       await this.refreshSystems(true)
       if (this.pageVisible && this.session.token.length > 0) {
@@ -260,6 +270,7 @@ struct Index {
   private handleSystemRealtimeEvent(event: BeszelSystemRealtimeEvent): void {
     if (event.action === 'delete') {
       this.systems = this.systems.filter((system: SystemSummary) => system.id !== event.record.id)
+      this.detailStates.delete(event.record.id)
     } else if (event.action === 'create' || event.action === 'update') {
       const fresh = SystemSummary.fromWire(event.record)
       const existing = this.systems.find((system: SystemSummary) => system.id === fresh.id)
@@ -294,17 +305,19 @@ struct Index {
   }
 
   private handleRealtimeMetrics(systemId: string, metrics: BeszelRealtimeMetrics): void {
-    if (metrics.info === undefined) {
-      return
-    }
     const system = this.systems.find((candidate: SystemSummary) => candidate.id === systemId)
-    if (system === undefined) {
-      return
+    if (system !== undefined && metrics.info !== undefined) {
+      system.updateMetrics(metrics.info)
     }
 
-    system.updateMetrics(metrics.info)
-    this.systems = this.systems.slice()
-    this.lastRefresh = new Date().toLocaleTimeString()
+    const detail = this.detailStates.get(systemId)
+    if (detail !== undefined) {
+      if (metrics.stats !== undefined) {
+        detail.applyMetrics(metrics.stats, metrics.container, '', true)
+      } else if (metrics.container !== undefined && metrics.container !== null) {
+        detail.applyContainers(metrics.container)
+      }
+    }
 
     if (this.metricRefreshPending && systemId === this.selectedId) {
       this.cancelMetricRefresh()
@@ -367,6 +380,9 @@ struct Index {
       this.cancelMetricRefresh()
       this.refreshing = false
     }
+    if (this.detailIsVisible()) {
+      this.loadSelectedDetail()
+    }
     this.syncMetricSubscription()
   }
 
@@ -388,6 +404,7 @@ struct Index {
     this.sessionRefreshPending = false
     this.systems = []
     this.selectedId = ''
+    this.clearDetailStates()
     this.detailVisible = false
     this.liveMetrics = false
     this.dashboardError = ''
@@ -439,6 +456,7 @@ struct Index {
   }
 
   private onSelectedIdChanged(): void {
+    this.selectDetailState()
     this.persistSelectedId()
     if (this.metricRefreshPending) {
       this.cancelMetricRefresh()
@@ -455,6 +473,66 @@ struct Index {
       await this.sessionRepository.saveSelectedSystem(this.selectedId)
     } catch (_) {
       // Selection persistence is convenient but should never interrupt telemetry.
+    }
+  }
+
+  private selectDetailState(): void {
+    if (this.selectedId.length === 0) {
+      this.detailState = new SystemDetailState()
+      return
+    }
+    let state = this.detailStates.get(this.selectedId)
+    if (state === undefined) {
+      state = new SystemDetailState(this.selectedId)
+      this.detailStates.set(this.selectedId, state)
+    }
+    this.detailState = state
+    if (this.detailVisible) {
+      this.loadSelectedDetail()
+    }
+  }
+
+  private clearDetailStates(): void {
+    this.detailStates.clear()
+    this.detailState = new SystemDetailState()
+  }
+
+  private async loadSelectedDetail(): Promise<void> {
+    const client = this.client
+    const state = this.detailState
+    if (!this.detailVisible || client === null || this.session.token.length === 0 ||
+      state.systemId.length === 0 || state.loading || state.loaded) {
+      return
+    }
+
+    const requestStarted = Date.now()
+    state.loading = true
+    state.errorMessage = ''
+    try {
+      const details: BeszelSystemDetailsWire | null =
+        await client.getSystemDetails(this.session.token, state.systemId)
+      state.applyHardware(details)
+
+      const stats: BeszelSystemStatsRecordWire | null =
+        await client.getLatestSystemStats(this.session.token, state.systemId)
+      const containers: BeszelContainerStatsRecordWire | null =
+        await client.getLatestContainerStats(this.session.token, state.systemId)
+      if (state.lastRealtimeAt <= requestStarted && stats !== null &&
+        stats.stats !== undefined && stats.stats !== null) {
+        state.applyMetrics(stats.stats, containers?.stats, stats.created ?? '')
+      } else if (state.lastRealtimeAt <= requestStarted &&
+        containers?.stats !== undefined && containers.stats !== null) {
+        state.applyContainers(containers.stats)
+      }
+      state.loaded = true
+    } catch (error) {
+      if (this.isSessionRejected(error)) {
+        await this.expireSavedSession()
+        return
+      }
+      state.errorMessage = this.describeError(error, 'Unable to load detailed system data.')
+    } finally {
+      state.loading = false
     }
   }
 
@@ -499,6 +577,7 @@ struct Index {
     this.session = new BeszelSession()
     this.sessionRefreshPending = false
     this.systems = []
+    this.clearDetailStates()
     this.detailVisible = false
     this.liveMetrics = false
     this.dashboardError = ''

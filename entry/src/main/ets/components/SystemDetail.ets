@@ -1,10 +1,20 @@
 import { SystemMetric, SystemSummary } from '../model/BeszelModels'
+import { SystemDetailState } from '../model/SystemDetailModels'
+import { ContainersCard } from './ContainersCard'
+import { CpuCard } from './CpuCard'
+import { GpuCard } from './GpuCard'
+import { HardwareCard } from './HardwareCard'
+import { HealthCard } from './HealthCard'
+import { MemoryCard } from './MemoryCard'
+import { NetworkCard } from './NetworkCard'
 import { PressureBar } from './PressureBar'
 import { MetricTile } from './MetricTile'
+import { StorageCard } from './StorageCard'
 
 @Component
 export struct SystemDetail {
   @ObjectLink system: SystemSummary
+  @ObjectLink detail: SystemDetailState
   @Prop compact: boolean = false
 
   build() {
@@ -46,23 +56,23 @@ export struct SystemDetail {
         if (this.compact) {
           Column({ space: 12 }) {
             Row({ space: 12 }) {
-              MetricTile({ system: this.system, metric: SystemMetric.CPU, label: 'CPU', suffix: '%' })
-              MetricTile({ system: this.system, metric: SystemMetric.Memory, label: 'Memory', suffix: '%' })
+              MetricTile({ value: this.metricValue(SystemMetric.CPU), label: 'CPU', suffix: '%' })
+              MetricTile({ value: this.metricValue(SystemMetric.Memory), label: 'Memory', suffix: '%' })
             }
             .width('100%')
             Row({ space: 12 }) {
-              MetricTile({ system: this.system, metric: SystemMetric.Disk, label: 'Disk', suffix: '%' })
-              MetricTile({ system: this.system, metric: SystemMetric.GPU, label: 'GPU', suffix: '%' })
+              MetricTile({ value: this.metricValue(SystemMetric.Disk), label: 'Disk', suffix: '%' })
+              MetricTile({ value: this.metricValue(SystemMetric.GPU), label: 'GPU', suffix: '%' })
             }
             .width('100%')
           }
           .width('100%')
         } else {
           Row({ space: 12 }) {
-            MetricTile({ system: this.system, metric: SystemMetric.CPU, label: 'CPU', suffix: '%' })
-            MetricTile({ system: this.system, metric: SystemMetric.Memory, label: 'Memory', suffix: '%' })
-            MetricTile({ system: this.system, metric: SystemMetric.Disk, label: 'Disk', suffix: '%' })
-            MetricTile({ system: this.system, metric: SystemMetric.GPU, label: 'GPU', suffix: '%' })
+            MetricTile({ value: this.metricValue(SystemMetric.CPU), label: 'CPU', suffix: '%' })
+            MetricTile({ value: this.metricValue(SystemMetric.Memory), label: 'Memory', suffix: '%' })
+            MetricTile({ value: this.metricValue(SystemMetric.Disk), label: 'Disk', suffix: '%' })
+            MetricTile({ value: this.metricValue(SystemMetric.GPU), label: 'GPU', suffix: '%' })
           }
           .width('100%')
         }
@@ -74,20 +84,17 @@ export struct SystemDetail {
             .fontColor($r('app.color.text_primary'))
             .width('100%')
           PressureBar({
-            system: this.system,
-            metric: SystemMetric.CPU,
+            value: this.metricValue(SystemMetric.CPU),
             label: 'CPU',
             color: $r('app.color.metric_cpu')
           })
           PressureBar({
-            system: this.system,
-            metric: SystemMetric.Memory,
+            value: this.metricValue(SystemMetric.Memory),
             label: 'Memory',
             color: $r('app.color.metric_memory')
           })
           PressureBar({
-            system: this.system,
-            metric: SystemMetric.Disk,
+            value: this.metricValue(SystemMetric.Disk),
             label: 'Disk',
             color: $r('app.color.metric_disk')
           })
@@ -126,6 +133,54 @@ export struct SystemDetail {
           .backgroundColor($r('app.color.surface'))
           .borderRadius(16)
         }
+
+        if (this.detail.loading && !this.detail.loaded) {
+          Row({ space: 10 }) {
+            LoadingProgress()
+              .width(20)
+              .height(20)
+              .color($r('app.color.action'))
+            Text('Loading detailed metrics…')
+              .fontSize(13)
+              .fontColor($r('app.color.text_secondary'))
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor($r('app.color.surface'))
+          .borderRadius(14)
+        }
+
+        if (this.detail.errorMessage.length > 0) {
+          Text(this.detail.errorMessage)
+            .fontSize(12)
+            .fontColor($r('app.color.error_text'))
+            .width('100%')
+            .padding(14)
+            .backgroundColor($r('app.color.error_surface'))
+            .borderRadius(12)
+        }
+
+        if (this.compact) {
+          Column({ space: 14 }) {
+            this.primaryDetailCards()
+            this.secondaryDetailCards()
+          }
+          .width('100%')
+        } else {
+          Row({ space: 14 }) {
+            Column({ space: 14 }) {
+              this.primaryDetailCards()
+            }
+            .layoutWeight(1)
+
+            Column({ space: 14 }) {
+              this.secondaryDetailCards()
+            }
+            .layoutWeight(1)
+          }
+          .alignItems(VerticalAlign.Top)
+          .width('100%')
+        }
       }
       .width('100%')
       .padding({
@@ -140,48 +195,44 @@ export struct SystemDetail {
     .scrollBar(BarState.Off)
   }
 
-  // @Builder
-  // private metricTile(label: string, value: number, suffix: string) {
-  //   Column({ space: 8 }) {
-  //     Text(label.toUpperCase())
-  //       .fontSize(11)
-  //       .fontColor($r('app.color.text_tertiary'))
-  //     Text(`${value.toFixed(0)}${suffix}`)
-  //       .fontSize(23)
-  //       .fontWeight(FontWeight.Medium)
-  //       .fontColor(value >= 90 ? $r('app.color.error') : $r('app.color.text_primary'))
-  //   }
-  //   .alignItems(HorizontalAlign.Start)
-  //   .layoutWeight(1)
-  //   .padding(16)
-  //   .backgroundColor($r('app.color.surface'))
-  //   .borderRadius(15)
-  // }
+  @Builder
+  private primaryDetailCards() {
+    if (this.detail.hardware.hasData()) {
+      HardwareCard({ detail: this.detail, system: this.system })
+    }
+    if (this.detail.hasMetrics) {
+      MemoryCard({ detail: this.detail })
+      StorageCard({ detail: this.detail })
+    }
+  }
 
+  @Builder
+  private secondaryDetailCards() {
+    if (this.detail.hasMetrics &&
+      (this.detail.metrics.cpuBreakdown.length > 0 || this.detail.metrics.cpuCores.length > 0)) {
+      CpuCard({ detail: this.detail, compact: this.compact })
+    }
+    if (this.detail.hasMetrics) {
+      NetworkCard({ detail: this.detail })
+    }
+    if (this.detail.metrics.gpus.length > 0) {
+      GpuCard({ detail: this.detail })
+    }
+    if (this.detail.metrics.sensors.length > 0 || this.detail.metrics.batteryPercent > 0 ||
+      this.system.batteryPercent > 0 || this.system.servicesTotal > 0) {
+      HealthCard({ detail: this.detail, system: this.system })
+    }
+    if (this.detail.containers.length > 0) {
+      ContainersCard({ detail: this.detail })
+    }
+  }
 
-  // @Builder
-  // private pressureBar(label: string, value: number, color: ResourceColor) {
-  //   Column({ space: 6 }) {
-  //     Row() {
-  //       Text(label)
-  //         .fontSize(13)
-  //         .fontColor($r('app.color.text_secondary'))
-  //         .layoutWeight(1)
-  //       Text(`${value.toFixed(0)}%`)
-  //         .fontSize(13)
-  //         .fontWeight(FontWeight.Medium)
-  //         .fontColor($r('app.color.text_primary'))
-  //     }
-  //     Progress({ value: Math.min(value, 100), total: 100, type: ProgressType.Linear })
-  //       .width('100%')
-  //       .height(7)
-  //       .color(value >= 90 ? $r('app.color.metric_danger') : color)
-  //       .backgroundColor($r('app.color.progress_track'))
-  //       .borderRadius(4)
-  //   }
-  //   .width('100%')
-  // }
-
+  private metricValue(metric: SystemMetric): number {
+    if (metric === SystemMetric.GPU) {
+      return this.system.metricValue(metric)
+    }
+    return this.detail.hasMetrics ? this.detail.metrics.metricValue(metric) : this.system.metricValue(metric)
+  }
   @Builder
   private loadAverage() {
     Column({ space: 8 }) {

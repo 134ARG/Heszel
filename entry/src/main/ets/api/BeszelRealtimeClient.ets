@@ -2,6 +2,7 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { http } from '@kit.NetworkKit'
 import { util } from '@kit.ArkTS'
 import { BeszelSystemInfoWire, BeszelSystemWire } from '../model/BeszelModels'
+import { BeszelContainerStatsWire, BeszelSystemStatsWire } from '../model/SystemDetailModels'
 
 export interface BeszelSystemRealtimeEvent {
   action: string
@@ -10,6 +11,8 @@ export interface BeszelSystemRealtimeEvent {
 
 export interface BeszelRealtimeMetrics {
   info?: BeszelSystemInfoWire
+  stats?: BeszelSystemStatsWire
+  container?: BeszelContainerStatsWire[] | null
 }
 
 class RealtimeSubscriptionBody {

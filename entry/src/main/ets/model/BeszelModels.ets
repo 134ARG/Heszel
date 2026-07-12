@@ -6,6 +6,9 @@ export interface BeszelSystemInfoWire {
   g?: number
   la?: number[]
   u?: number
+  v?: string
+  bat?: number[]
+  sv?: number[]
 }
 
 export interface BeszelSystemWire {
@@ -70,6 +73,11 @@ export class SystemSummary {
   loadFive: number = 0
   loadFifteen: number = 0
   uptimeSeconds: number = 0
+  agentVersion: string = ''
+  batteryPercent: number = 0
+  batteryState: number = 0
+  servicesTotal: number = 0
+  servicesFailed: number = 0
 
   static fromWire(record: BeszelSystemWire): SystemSummary {
     const summary = new SystemSummary()
@@ -88,6 +96,11 @@ export class SystemSummary {
     summary.loadFive = metric(info?.la?.[1])
     summary.loadFifteen = metric(info?.la?.[2])
     summary.uptimeSeconds = metric(info?.u)
+    summary.agentVersion = info?.v ?? ''
+    summary.batteryPercent = metric(info?.bat?.[0])
+    summary.batteryState = metric(info?.bat?.[1])
+    summary.servicesTotal = metric(info?.sv?.[0])
+    summary.servicesFailed = metric(info?.sv?.[1])
     return summary
   }
 
@@ -105,6 +118,11 @@ export class SystemSummary {
     this.loadFive = other.loadFive
     this.loadFifteen = other.loadFifteen
     this.uptimeSeconds = other.uptimeSeconds
+    this.agentVersion = other.agentVersion
+    this.batteryPercent = other.batteryPercent
+    this.batteryState = other.batteryState
+    this.servicesTotal = other.servicesTotal
+    this.servicesFailed = other.servicesFailed
   }
 
   updateMetrics(info: BeszelSystemInfoWire): void {
@@ -117,6 +135,11 @@ export class SystemSummary {
     this.loadFive = metric(info.la?.[1])
     this.loadFifteen = metric(info.la?.[2])
     this.uptimeSeconds = metric(info.u)
+    this.agentVersion = info.v ?? this.agentVersion
+    this.batteryPercent = metric(info.bat?.[0])
+    this.batteryState = metric(info.bat?.[1])
+    this.servicesTotal = metric(info.sv?.[0])
+    this.servicesFailed = metric(info.sv?.[1])
   }
 
   metricValue(metric: SystemMetric): number {

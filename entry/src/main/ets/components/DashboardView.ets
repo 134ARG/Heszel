@@ -1,4 +1,5 @@
 import { SystemSummary } from '../model/BeszelModels'
+import { SystemDetailState } from '../model/SystemDetailModels'
 import { SettingsView } from './SettingsView'
 import { SystemCard } from './SystemCard'
 import { SystemDetail } from './SystemDetail'
@@ -15,6 +16,7 @@ class DashboardDestinationParam {
 export struct DashboardView {
   @Link @Watch('onSystemsChanged') systems: SystemSummary[]
   @Link @Watch('onSelectedIdChanged') selectedId: string
+  @ObjectLink detailState: SystemDetailState
   @Prop loading: boolean = false
   @Prop errorMessage: string = ''
   @Prop lastRefresh: string = ''
@@ -153,7 +155,7 @@ export struct DashboardView {
       ForEach(
         this.detailSystems(param),
         (system: SystemSummary) => {
-          SystemDetail({ system: system, compact: !this.expanded })
+          SystemDetail({ system: system, detail: this.detailState, compact: !this.expanded })
         },
         (system: SystemSummary) => system.id
       )

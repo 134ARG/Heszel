@@ -1,9 +1,6 @@
-import { SystemMetric, SystemSummary } from '../model/BeszelModels'
-
 @Component
 export struct PressureBar {
-  @ObjectLink system: SystemSummary
-  @Prop metric: SystemMetric = SystemMetric.CPU
+  @Prop value: number = 0
   @Prop label: string = ''
   @Prop color: ResourceColor = Color.Green
 
@@ -11,21 +8,22 @@ export struct PressureBar {
     Column({ space: 6 }) {
       Row() {
         Text(this.label).layoutWeight(1)
-        Text(`${this.system.metricValue(this.metric).toFixed(0)}%`)
+        Text(`${this.value.toFixed(0)}%`)
       }
 
       Progress({
-        value: Math.min(this.system.metricValue(this.metric), 100),
+        value: Math.min(this.value, 100),
         total: 100, type: ProgressType.Linear
       })
         .width('100%')
-        .color(this.system.metricValue(this.metric) >= 90 ? $r('app.color.metric_danger') : this.color)
+        .color(this.value >= 90 ? $r('app.color.metric_danger') : this.color)
         .backgroundColor($r('app.color.progress_track'))
         .style({
           strokeWidth: 7,
           strokeRadius: 4,
-          enableSmoothEffect: false
+          // enableSmoothEffect: false
         })
+        // .animation({ duration: 220, curve: Curve.EaseOut })
     }
   }
 }

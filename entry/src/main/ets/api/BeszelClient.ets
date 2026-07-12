@@ -7,6 +7,13 @@ import {
   BeszelSystemWire,
   SystemSummary
 } from '../model/BeszelModels'
+import {
+  BeszelContainerStatsListWire,
+  BeszelContainerStatsRecordWire,
+  BeszelSystemDetailsWire,
+  BeszelSystemStatsListWire,
+  BeszelSystemStatsRecordWire
+} from '../model/SystemDetailModels'
 
 interface LoginBody {
   identity: string
@@ -163,6 +170,91 @@ export class BeszelClient {
       return systems
     } catch (error) {
       throw this.asError(error, 'Unable to load systems from Beszel.')
+    } finally {
+      request.destroy()
+    }
+  }
+
+  async getSystemDetails(token: string, systemId: string): Promise<BeszelSystemDetailsWire | null> {
+    const request = http.createHttp()
+    const fields = 'id,hostname,kernel,cores,threads,cpu,os,os_name,arch,memory,podman,updated'
+    try {
+      const response = await request.request(
+        `${this.baseUrl}/api/collections/system_details/records/${encodeURIComponent(systemId)}?fields=${fields}`,
+        {
+          method: http.RequestMethod.GET,
+          header: {
+            'Accept': 'application/json',
+            'Authorization': token
+          },
+          connectTimeout: 15000,
+          readTimeout: 15000
+        }
+      )
+      if (response.responseCode === 404) {
+        return null
+      }
+      const responseText = response.result.toString()
+      if (response.responseCode < 200 || response.responseCode >= 300) {
+        throw new BeszelApiError(this.readError(responseText, 'Unable to load system details.'), response.responseCode)
+      }
+      return JSON.parse(responseText) as BeszelSystemDetailsWire
+    } catch (error) {
+      throw this.asError(error, 'Unable to load system details.')
+    } finally {
+      request.destroy()
+    }
+  }
+
+  async getLatestSystemStats(token: string, systemId: string): Promise<BeszelSystemStatsRecordWire | null> {
+    const request = http.createHttp()
+    const filter = encodeURIComponent(`system="${systemId}"`)
+    const path = `/api/collections/system_stats/records?page=1&perPage=1&sort=-created&filter=${filter}&fields=created,stats`
+    try {
+      const response = await request.request(`${this.baseUrl}${path}`, {
+        method: http.RequestMethod.GET,
+        header: {
+          'Accept': 'application/json',
+          'Authorization': token
+        },
+        connectTimeout: 15000,
+        readTimeout: 15000
+      })
+      const responseText = response.result.toString()
+      if (response.responseCode < 200 || response.responseCode >= 300) {
+        throw new BeszelApiError(this.readError(responseText, 'Unable to load detailed metrics.'), response.responseCode)
+      }
+      const wire = JSON.parse(responseText) as BeszelSystemStatsListWire
+      return wire.items.length > 0 ? wire.items[0] : null
+    } catch (error) {
+      throw this.asError(error, 'Unable to load detailed metrics.')
+    } finally {
+      request.destroy()
+    }
+  }
+
+  async getLatestContainerStats(token: string, systemId: string): Promise<BeszelContainerStatsRecordWire | null> {
+    const request = http.createHttp()
+    const filter = encodeURIComponent(`system="${systemId}"`)
+    const path = `/api/collections/container_stats/records?page=1&perPage=1&sort=-created&filter=${filter}&fields=created,stats`
+    try {
+      const response = await request.request(`${this.baseUrl}${path}`, {
+        method: http.RequestMethod.GET,
+        header: {
+          'Accept': 'application/json',
+          'Authorization': token
+        },
+        connectTimeout: 15000,
+        readTimeout: 15000
+      })
+      const responseText = response.result.toString()
+      if (response.responseCode < 200 || response.responseCode >= 300) {
+        throw new BeszelApiError(this.readError(responseText, 'Unable to load container metrics.'), response.responseCode)
+      }
+      const wire = JSON.parse(responseText) as BeszelContainerStatsListWire
+      return wire.items.length > 0 ? wire.items[0] : null
+    } catch (error) {
+      throw this.asError(error, 'Unable to load container metrics.')
     } finally {
       request.destroy()
     }
