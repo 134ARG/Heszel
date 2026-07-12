@@ -1,21 +1,34 @@
 import { SystemSummary } from '../model/BeszelModels'
+import { SettingsView } from './SettingsView'
 import { SystemCard } from './SystemCard'
 import { SystemDetail } from './SystemDetail'
 
+class DashboardDestinationParam {
+  systemId: string
+
+  constructor(systemId: string = '') {
+    this.systemId = systemId
+  }
+}
+
 @Component
 export struct DashboardView {
-  @Link systems: SystemSummary[]
-  @Link selectedId: string
+  @Link @Watch('onSystemsChanged') systems: SystemSummary[]
+  @Link @Watch('onSelectedIdChanged') selectedId: string
   @Prop loading: boolean = false
   @Prop errorMessage: string = ''
   @Prop lastRefresh: string = ''
-  @Prop expanded: boolean = false
-  @Link compactDetailVisible: boolean
+  @Prop @Watch('onExpandedChanged') expanded: boolean = false
   @Prop liveMetrics: boolean = false
   @Prop realtimeConnected: boolean = false
+  @Prop baseUrl: string = ''
+  @Prop email: string = ''
+  @State private detailVisible: boolean = false
   onRefresh: () => void = () => {}
-  onOpenSettings: () => void = () => {}
   onLiveMetricsChange: (enabled: boolean) => void = () => {}
+  onDetailVisibilityChange: (visible: boolean) => void = () => {}
+  onSignOut: () => void = () => {}
+  private pathStack: NavPathStack = new NavPathStack()
 
   private onlineCount(): number {
     return this.systems.filter((system: SystemSummary) => system.isUp()).length
@@ -42,45 +55,20 @@ export struct DashboardView {
         .backgroundColor($r('app.color.error_surface'))
       }
 
-      if (this.systems.length === 0) {
-        Column({ space: 12 }) {
-          Text(this.loading ? 'Loading systems…' : 'No shared systems')
-            .fontSize(20)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.text_primary'))
-          Text(this.loading ? 'Connecting to your Beszel hub.' :
-            'Share a system with this Beszel account, then refresh.')
-            .fontSize(14)
-            .fontColor($r('app.color.text_secondary'))
-            .textAlign(TextAlign.Center)
-        }
-        .layoutWeight(1)
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .padding(32)
-      } else if (this.expanded) {
-        Row() {
-          this.systemList(true)
-          Divider()
-            .vertical(true)
-            .width(1)
-            .height('100%')
-            .color($r('app.color.divider'))
-          ForEach(
-            this.systems.filter((system: SystemSummary) => system.id === this.selectedId),
-            (system: SystemSummary) => {
-              SystemDetail({ system: system, compact: false })
-            },
-            (system: SystemSummary) => system.id
-          )
-        }
-        .layoutWeight(1)
-        .width('100%')
-      } else if (this.compactDetailVisible) {
-        this.compactDetail()
-      } else {
-        this.systemList(false)
+      Navigation(this.pathStack) {
+        this.navigationRoot()
       }
+        .mode(this.expanded ? NavigationMode.Split : NavigationMode.Stack)
+        .navBarWidth(340)
+        .hideTitleBar(true)
+        .navDestination(this.destinationBuilder)
+        .onNavigationModeChange((mode: NavigationMode) => {
+          if (mode === NavigationMode.Split) {
+            this.ensureDetailForSplit()
+          }
+        })
+        .layoutWeight(1)
+        .width('100%')
     }
     .width('100%')
     .height('100%')
@@ -88,37 +76,103 @@ export struct DashboardView {
   }
 
   @Builder
-  private header() {
-    if (this.expanded) {
-      Row({ space: 12 }) {
-        this.titleBlock()
-        this.liveControl()
-        this.refreshButton()
-        this.settingsButton()
+  private navigationRoot() {
+    if (this.systems.length === 0) {
+      Column({ space: 12 }) {
+        Text(this.loading ? 'Loading systems…' : 'No shared systems')
+          .fontSize(20)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.text_primary'))
+        Text(this.loading ? 'Connecting to your Beszel hub.' :
+          'Share a system with this Beszel account, then refresh.')
+          .fontSize(14)
+          .fontColor($r('app.color.text_secondary'))
+          .textAlign(TextAlign.Center)
       }
       .width('100%')
-      .padding({ left: 18, right: 18, top: 18, bottom: 14 })
-      .backgroundColor($r('app.color.surface_header'))
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .padding(32)
     } else {
-      Column({ space: 10 }) {
-        Row({ space: 12 }) {
-          this.titleBlock()
-          this.settingsButton()
-        }
-        .width('100%')
-
-        Row({ space: 12 }) {
-          this.liveControl()
-          Blank()
-            .layoutWeight(1)
-          this.refreshButton()
-        }
-        .width('100%')
-      }
-      .width('100%')
-      .padding({ left: 18, right: 18, top: 16, bottom: 12 })
-      .backgroundColor($r('app.color.surface_header'))
+      this.systemList(this.expanded)
     }
+  }
+
+  @Builder
+  private destinationBuilder(name: string, param: Object) {
+    NavDestination() {
+      if (name === 'detail') {
+        this.detailDestination(param)
+      } else if (name === 'settings') {
+        SettingsView({
+          baseUrl: this.baseUrl,
+          email: this.email,
+          expanded: this.expanded,
+          errorMessage: this.errorMessage,
+          onBack: () => {
+            this.pathStack.pop()
+          },
+          onSignOut: () => {
+            this.onSignOut()
+          }
+        })
+      }
+    }
+      .hideTitleBar(true)
+      .onShown(() => {
+        this.syncDetailVisibility()
+      })
+      .onHidden(() => {
+        this.syncDetailVisibility()
+        if (name === 'settings') {
+          this.ensureDetailForSplit()
+        }
+      })
+  }
+
+  @Builder
+  private detailDestination(param: Object) {
+    Column() {
+      if (!this.expanded) {
+        Row() {
+          Button('‹  Systems')
+            .height(38)
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.action'))
+            .backgroundColor($r('app.color.action_surface'))
+            .borderRadius(10)
+            .onClick(() => {
+              this.pathStack.pop()
+            })
+        }
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 12, bottom: 2 })
+      }
+
+      ForEach(
+        this.detailSystems(param),
+        (system: SystemSummary) => {
+          SystemDetail({ system: system, compact: !this.expanded })
+        },
+        (system: SystemSummary) => system.id
+      )
+    }
+    .width('100%')
+    .height('100%')
+  }
+
+  @Builder
+  private header() {
+    Row({ space: 8 }) {
+      this.titleBlock()
+      this.liveControl()
+      this.refreshButton()
+      this.settingsButton()
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 18, bottom: 14 })
+    .backgroundColor($r('app.color.surface_header'))
   }
 
   @Builder
@@ -143,8 +197,7 @@ export struct DashboardView {
         .width(7)
         .height(7)
         .borderRadius(4)
-        .backgroundColor(this.liveMetrics && this.realtimeConnected &&
-          (this.expanded || this.compactDetailVisible) ?
+        .backgroundColor(this.liveMetrics && this.realtimeConnected && this.detailVisible ?
           $r('app.color.status_up') : $r('app.color.text_tertiary'))
       Text('Live')
         .fontSize(13)
@@ -156,25 +209,40 @@ export struct DashboardView {
 
   @Builder
   private refreshButton() {
-    Button(this.loading ? '…' : 'Refresh')
+    Button() {
+      if (this.loading) {
+        LoadingProgress()
+          .width(18)
+          .height(18)
+          .color($r('app.color.action'))
+      } else {
+        SymbolGlyph($r('sys.symbol.arrow_clockwise'))
+          .fontSize(20)
+          .fontColor([$r('app.color.action')])
+      }
+    }
+      .width(38)
       .height(36)
-      .fontSize(13)
-      .fontColor($r('app.color.action'))
       .backgroundColor($r('app.color.action_surface'))
       .borderRadius(10)
       .enabled(!this.loading)
+      .accessibilityText('Refresh')
       .onClick(() => this.onRefresh())
   }
 
   @Builder
   private settingsButton() {
-    Button('Settings')
+    Button() {
+      SymbolGlyph($r('sys.symbol.gearshape'))
+        .fontSize(20)
+        .fontColor([$r('app.color.neutral_action_text')])
+    }
+      .width(38)
       .height(36)
-      .fontSize(13)
-      .fontColor($r('app.color.neutral_action_text'))
       .backgroundColor($r('app.color.surface_neutral'))
       .borderRadius(10)
-      .onClick(() => this.onOpenSettings())
+      .accessibilityText('Settings')
+      .onClick(() => this.openSettings())
   }
 
   @Builder
@@ -202,45 +270,78 @@ export struct DashboardView {
       .width('100%')
       .scrollBar(BarState.Off)
     }
-    .width(showSelection ? 340 : '100%')
+    .width('100%')
     .height('100%')
     .padding({ left: 14, right: 14, top: 12, bottom: 12 })
   }
 
-  @Builder
-  private compactDetail() {
-    Column() {
-      Row() {
-        Button('‹  Systems')
-          .height(38)
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.action'))
-          .backgroundColor($r('app.color.action_surface'))
-          .borderRadius(10)
-          .onClick(() => {
-            this.compactDetailVisible = false
-          })
-      }
-      .width('100%')
-      .padding({ left: 16, right: 16, top: 12, bottom: 2 })
-
-      ForEach(
-        this.systems.filter((system: SystemSummary) => system.id === this.selectedId),
-        (system: SystemSummary) => {
-          SystemDetail({ system: system, compact: true })
-        },
-        (system: SystemSummary) => system.id
-      )
-    }
-    .layoutWeight(1)
-    .width('100%')
-  }
-
   private selectSystem(id: string): void {
     this.selectedId = id
-    if (!this.expanded) {
-      this.compactDetailVisible = true
+    if (this.expanded) {
+      if (this.pathStack.size() === 1 && this.topDestinationName() === 'detail') {
+        this.pathStack.replacePath({ name: 'detail', param: new DashboardDestinationParam(id) })
+      } else {
+        this.pathStack.clear(false)
+        this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
+      }
+    } else {
+      this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
     }
+  }
+
+  private openSettings(): void {
+    if (this.topDestinationName() !== 'settings') {
+      this.pathStack.pushPath({ name: 'settings', param: new DashboardDestinationParam() })
+    }
+  }
+
+  private detailSystems(param: Object): SystemSummary[] {
+    const requestedId = (param as DashboardDestinationParam).systemId
+    const requested = this.systems.filter((system: SystemSummary) => system.id === requestedId)
+    if (requested.length > 0) {
+      return requested
+    }
+    return this.systems.filter((system: SystemSummary) => system.id === this.selectedId)
+  }
+
+  private topDestinationName(): string {
+    const pathNames = this.pathStack.getAllPathName()
+    return pathNames.length > 0 ? pathNames[pathNames.length - 1] : ''
+  }
+
+  private ensureDetailForSplit(): void {
+    if (!this.expanded || this.selectedId.length === 0 || this.pathStack.size() > 0) {
+      return
+    }
+    this.pathStack.pushPath({
+      name: 'detail',
+      param: new DashboardDestinationParam(this.selectedId)
+    }, false)
+  }
+
+  private syncDetailVisibility(): void {
+    const visible = this.topDestinationName() === 'detail'
+    if (this.detailVisible === visible) {
+      return
+    }
+    this.detailVisible = visible
+    this.onDetailVisibilityChange(visible)
+  }
+
+  private onSelectedIdChanged(): void {
+    this.ensureDetailForSplit()
+  }
+
+  private onSystemsChanged(): void {
+    if (this.systems.length === 0) {
+      this.pathStack.removeByName('detail')
+      this.syncDetailVisibility()
+      return
+    }
+    this.ensureDetailForSplit()
+  }
+
+  private onExpandedChanged(): void {
+    this.ensureDetailForSplit()
   }
 }

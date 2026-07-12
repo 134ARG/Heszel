@@ -6,7 +6,6 @@ import {
 } from '../api/BeszelRealtimeClient'
 import { DashboardView } from '../components/DashboardView'
 import { LoginView } from '../components/LoginView'
-import { SettingsView } from '../components/SettingsView'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
 import { SessionRepository, StoredSession } from '../repository/SessionRepository'
 
@@ -21,9 +20,8 @@ struct Index {
   @State private loginError: string = ''
   @State private dashboardError: string = ''
   @State private lastRefresh: string = ''
-  @State @Watch('onDetailContextChanged') private expanded: boolean = false
-  @State @Watch('onDetailContextChanged') private settingsVisible: boolean = false
-  @State @Watch('onDetailContextChanged') private compactDetailVisible: boolean = false
+  @StorageProp('curScreenSizeString') private curScreenSizeString: string = 'sm'
+  @State @Watch('onDetailContextChanged') private detailVisible: boolean = false
   @State @Watch('onLiveMetricsChanged') private liveMetrics: boolean = false
   @State private realtimeConnected: boolean = false
   @State private restoringSession: boolean = true
@@ -86,47 +84,35 @@ struct Index {
             this.login(serverUrl, email, password)
           }
         })
-      } else if (this.settingsVisible) {
-        SettingsView({
-          baseUrl: this.session.baseUrl,
-          email: this.session.email,
-          expanded: this.expanded,
-          errorMessage: this.dashboardError,
-          onBack: () => {
-            this.settingsVisible = false
-          },
-          onSignOut: () => {
-            this.signOut()
-          }
-        })
       } else {
         DashboardView({
           systems: $systems,
           selectedId: $selectedId,
-          compactDetailVisible: $compactDetailVisible,
           loading: this.refreshing,
           errorMessage: this.dashboardError,
           lastRefresh: this.lastRefresh,
-          expanded: this.expanded,
+          expanded: this.curScreenSizeString === 'lg',
           liveMetrics: this.liveMetrics,
           realtimeConnected: this.realtimeConnected,
+          baseUrl: this.session.baseUrl,
+          email: this.session.email,
           onRefresh: () => {
             this.handleManualRefresh()
           },
-          onOpenSettings: () => {
-            this.settingsVisible = true
-          },
           onLiveMetricsChange: (enabled: boolean) => {
             this.liveMetrics = enabled
+          },
+          onDetailVisibilityChange: (visible: boolean) => {
+            this.detailVisible = visible
+          },
+          onSignOut: () => {
+            this.signOut()
           }
         })
       }
     }
     .width('100%')
     .height('100%')
-    .onAreaChange((_oldArea: Area, newArea: Area) => {
-      this.expanded = Number(newArea.width) >= 600
-    })
   }
 
   private async login(serverUrl: string, email: string, password: string): Promise<void> {
@@ -293,7 +279,6 @@ struct Index {
       this.selectedId = this.systems[0].id
     } else if (this.systems.length === 0) {
       this.selectedId = ''
-      this.compactDetailVisible = false
     }
     this.lastRefresh = new Date().toLocaleTimeString()
   }
@@ -359,7 +344,7 @@ struct Index {
   }
 
   private detailIsVisible(): boolean {
-    return !this.settingsVisible && this.selectedId.length > 0 && (this.expanded || this.compactDetailVisible)
+    return this.detailVisible && this.selectedId.length > 0
   }
 
   private syncMetricSubscription(): void {
@@ -403,9 +388,8 @@ struct Index {
     this.sessionRefreshPending = false
     this.systems = []
     this.selectedId = ''
-    this.compactDetailVisible = false
+    this.detailVisible = false
     this.liveMetrics = false
-    this.settingsVisible = false
     this.dashboardError = ''
     this.lastRefresh = ''
   }
@@ -515,9 +499,8 @@ struct Index {
     this.session = new BeszelSession()
     this.sessionRefreshPending = false
     this.systems = []
-    this.compactDetailVisible = false
+    this.detailVisible = false
     this.liveMetrics = false
-    this.settingsVisible = false
     this.dashboardError = ''
     this.lastRefresh = ''
     this.loginError = 'Your saved session was rejected by Beszel. Sign in again.'
