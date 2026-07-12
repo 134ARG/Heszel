@@ -1,22 +1,19 @@
-import { NetworkInterfaceMetric, SystemDetailState } from '../model/SystemDetailModels'
+import { NetworkInterfaceMetric, NetworkMetricsState } from '../model/SystemDetailModels'
 import { formatBytes, formatRate } from './DetailFormatting'
+import { DetailCardHeader } from './DetailCardHeader'
 import { DetailValueRow } from './DetailValueRow'
 
 @Component
 export struct NetworkCard {
-  @ObjectLink detail: SystemDetailState
+  @ObjectLink state: NetworkMetricsState
 
   build() {
     Column({ space: 11 }) {
-      Text('Network')
-        .fontSize(17)
-        .fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.text_primary'))
-        .width('100%')
-      DetailValueRow({ label: 'Upload', value: formatRate(this.detail.metrics.uploadBytesPerSecond) })
-      DetailValueRow({ label: 'Download', value: formatRate(this.detail.metrics.downloadBytesPerSecond) })
+      DetailCardHeader({ title: 'Network' })
+      DetailValueRow({ label: 'Upload', value: formatRate(this.state.uploadBytesPerSecond) })
+      DetailValueRow({ label: 'Download', value: formatRate(this.state.downloadBytesPerSecond) })
 
-      ForEach(this.detail.metrics.interfaces, (networkInterface: NetworkInterfaceMetric) => {
+      ForEach(this.state.interfaces, (networkInterface: NetworkInterfaceMetric) => {
         Divider().color($r('app.color.divider'))
         Column({ space: 8 }) {
           Text(networkInterface.name)
@@ -28,15 +25,16 @@ export struct NetworkCard {
             label: 'Up / down',
             value: `${formatRate(networkInterface.uploadBytesPerSecond)} · ${formatRate(networkInterface.downloadBytesPerSecond)}`
           })
-          if (networkInterface.totalUploadBytes > 0 || networkInterface.totalDownloadBytes > 0) {
-            DetailValueRow({
-              label: 'Session total',
-              value: `${formatBytes(networkInterface.totalUploadBytes)} · ${formatBytes(networkInterface.totalDownloadBytes)}`
-            })
-          }
+          DetailValueRow({
+            label: 'Session total',
+            value: `${formatBytes(networkInterface.totalUploadBytes)} · ${formatBytes(networkInterface.totalDownloadBytes)}`
+          })
         }
         .width('100%')
-      }, (networkInterface: NetworkInterfaceMetric) => networkInterface.name)
+      }, (networkInterface: NetworkInterfaceMetric) =>
+        `${networkInterface.name}:${formatRate(networkInterface.uploadBytesPerSecond)}:` +
+          `${formatRate(networkInterface.downloadBytesPerSecond)}:${formatBytes(networkInterface.totalUploadBytes)}:` +
+          `${formatBytes(networkInterface.totalDownloadBytes)}`)
     }
     .width('100%')
     .padding(18)

@@ -1,37 +1,36 @@
-import { GpuMetric, SystemDetailState } from '../model/SystemDetailModels'
+import { GpuMetric, GpuMetricsState } from '../model/SystemDetailModels'
 import { DetailValueRow } from './DetailValueRow'
+import { DetailCardHeader } from './DetailCardHeader'
 import { PressureBar } from './PressureBar'
 
 @Component
 export struct GpuCard {
-  @ObjectLink detail: SystemDetailState
+  @ObjectLink state: GpuMetricsState
 
   build() {
     Column({ space: 12 }) {
-      Text('GPU')
-        .fontSize(17)
-        .fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.text_primary'))
-        .width('100%')
+      DetailCardHeader({ title: 'GPU' })
 
-      ForEach(this.detail.metrics.gpus, (gpu: GpuMetric, index: number) => {
+      ForEach(this.state.gpus, (gpu: GpuMetric, index: number) => {
         if (index > 0) {
           Divider().color($r('app.color.divider'))
         }
         Column({ space: 9 }) {
           PressureBar({ value: gpu.usagePercent, label: gpu.name, color: $r('app.color.metric_cpu') })
-          if (gpu.memoryTotalMb > 0) {
+          if (gpu.hasMemory) {
             DetailValueRow({
               label: 'Memory',
               value: `${gpu.memoryUsedMb.toFixed(0)} / ${gpu.memoryTotalMb.toFixed(0)} MB`
             })
           }
-          if (gpu.powerWatts > 0) {
+          if (gpu.hasPower) {
             DetailValueRow({ label: 'Power', value: `${gpu.powerWatts.toFixed(1)} W` })
           }
         }
         .width('100%')
-      }, (gpu: GpuMetric) => gpu.id)
+      }, (gpu: GpuMetric) =>
+        `${gpu.id}:${gpu.usagePercent.toFixed(0)}:${gpu.memoryUsedMb.toFixed(0)}:` +
+          `${gpu.memoryTotalMb.toFixed(0)}:${gpu.powerWatts.toFixed(1)}:${gpu.hasMemory}:${gpu.hasPower}`)
     }
     .width('100%')
     .padding(18)

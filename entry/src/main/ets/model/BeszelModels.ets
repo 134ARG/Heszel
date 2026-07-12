@@ -125,21 +125,13 @@ export class SystemSummary {
     this.servicesFailed = other.servicesFailed
   }
 
-  updateMetrics(info: BeszelSystemInfoWire): void {
-    this.cpuPercent = metric(info.cpu)
-    this.memoryPercent = metric(info.mp)
-    this.diskPercent = metric(info.dp)
-    this.temperatureCelsius = metric(info.dt)
-    this.gpuPercent = metric(info.g)
-    this.loadOne = metric(info.la?.[0])
-    this.loadFive = metric(info.la?.[1])
-    this.loadFifteen = metric(info.la?.[2])
-    this.uptimeSeconds = metric(info.u)
-    this.agentVersion = info.v ?? this.agentVersion
-    this.batteryPercent = metric(info.bat?.[0])
-    this.batteryState = metric(info.bat?.[1])
-    this.servicesTotal = metric(info.sv?.[0])
-    this.servicesFailed = metric(info.sv?.[1])
+  updateCardMetrics(info: BeszelSystemInfoWire): void {
+    if (info.cpu !== undefined && this.cpuPercent !== metric(info.cpu)) this.cpuPercent = metric(info.cpu)
+    if (info.mp !== undefined && this.memoryPercent !== metric(info.mp)) this.memoryPercent = metric(info.mp)
+    if (info.dp !== undefined && this.diskPercent !== metric(info.dp)) this.diskPercent = metric(info.dp)
+    if (info.dt !== undefined && this.temperatureCelsius !== metric(info.dt)) {
+      this.temperatureCelsius = metric(info.dt)
+    }
   }
 
   metricValue(metric: SystemMetric): number {

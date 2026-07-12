@@ -1,27 +1,24 @@
-import { SystemDetailState } from '../model/SystemDetailModels'
+import { CpuMetricsState } from '../model/SystemDetailModels'
 import { DetailValueRow } from './DetailValueRow'
+import { DetailCardHeader } from './DetailCardHeader'
 
 @Component
 export struct CpuCard {
-  @ObjectLink detail: SystemDetailState
+  @ObjectLink state: CpuMetricsState
   @Prop compact: boolean = false
 
   build() {
     Column({ space: 12 }) {
-      Text('CPU detail')
-        .fontSize(17)
-        .fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.text_primary'))
-        .width('100%')
+      DetailCardHeader({ title: 'CPU detail' })
 
-      if (this.detail.metrics.cpuBreakdown.length >= 5) {
-        DetailValueRow({ label: 'User', value: `${this.detail.metrics.cpuBreakdown[0].toFixed(0)}%` })
-        DetailValueRow({ label: 'System', value: `${this.detail.metrics.cpuBreakdown[1].toFixed(0)}%` })
-        DetailValueRow({ label: 'I/O wait', value: `${this.detail.metrics.cpuBreakdown[2].toFixed(0)}%` })
-        DetailValueRow({ label: 'Steal', value: `${this.detail.metrics.cpuBreakdown[3].toFixed(0)}%` })
+      if (this.state.breakdown.length >= 5) {
+        DetailValueRow({ label: 'User', value: `${this.state.breakdown[0].toFixed(0)}%` })
+        DetailValueRow({ label: 'System', value: `${this.state.breakdown[1].toFixed(0)}%` })
+        DetailValueRow({ label: 'I/O wait', value: `${this.state.breakdown[2].toFixed(0)}%` })
+        DetailValueRow({ label: 'Steal', value: `${this.state.breakdown[3].toFixed(0)}%` })
       }
 
-      if (this.detail.metrics.cpuCores.length > 0) {
+      if (this.state.cores.length > 0) {
         Text('Per-core usage')
           .fontSize(11)
           .fontColor($r('app.color.text_tertiary'))
@@ -35,12 +32,13 @@ export struct CpuCard {
               .margin({ right: 6, bottom: 6 })
               .backgroundColor($r('app.color.surface_input'))
               .borderRadius(8)
-          }, (_value: number, index: number) => index.toString())
+          }, (value: number, index: number) =>
+            `${index}:${value.toFixed(0)}:${value >= 90}`)
         }
         .width('100%')
 
-        if (this.detail.metrics.cpuCores.length > this.visibleCoreLimit()) {
-          Text(`Showing ${this.visibleCoreLimit()} of ${this.detail.metrics.cpuCores.length} threads`)
+        if (this.state.coreCount > this.visibleCoreLimit()) {
+          Text(`Showing ${this.visibleCoreLimit()} of ${this.state.coreCount} threads`)
             .fontSize(11)
             .fontColor($r('app.color.text_tertiary'))
             .width('100%')
@@ -58,6 +56,6 @@ export struct CpuCard {
   }
 
   private visibleCores(): number[] {
-    return this.detail.metrics.cpuCores.slice(0, this.visibleCoreLimit())
+    return this.state.cores.slice(0, this.visibleCoreLimit())
   }
 }

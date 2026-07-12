@@ -15,6 +15,9 @@ import {
 } from '../model/SystemDetailModels'
 import { SessionRepository, StoredSession } from '../repository/SessionRepository'
 
+const DETAIL_CACHE_LIMIT = 10
+const SELECTION_PERSIST_DELAY_MS = 750
+
 @Entry
 @Component
 struct Index {
@@ -44,6 +47,10 @@ struct Index {
   private metricRefreshTimer: number = -1
   private sessionRefreshPending: boolean = false
   private detailStates: Map<string, SystemDetailState> = new Map<string, SystemDetailState>()
+  private selectionPersistTimer: number = -1
+  private selectionPersistTask: Promise<void> | null = null
+  private pendingSelectedId: string = ''
+  private lastPersistedSelectedId: string = ''
 
   aboutToAppear(): void {
     this.restoreSession()
@@ -58,6 +65,7 @@ struct Index {
 
   onPageHide(): void {
     this.pageVisible = false
+    this.flushSelectedId()
     this.stopRealtime()
   }
 
@@ -187,6 +195,9 @@ struct Index {
         this.selectedId = systems[0].id
       }
       this.lastRefresh = new Date().toLocaleTimeString()
+      if (this.realtimeClient !== null && !this.realtimeConnected) {
+        this.realtimeClient.retryNow()
+      }
     } catch (error) {
       if (this.isSessionRejected(error)) {
         await this.expireSavedSession()
@@ -307,16 +318,12 @@ struct Index {
   private handleRealtimeMetrics(systemId: string, metrics: BeszelRealtimeMetrics): void {
     const system = this.systems.find((candidate: SystemSummary) => candidate.id === systemId)
     if (system !== undefined && metrics.info !== undefined) {
-      system.updateMetrics(metrics.info)
+      system.updateCardMetrics(metrics.info)
     }
 
     const detail = this.detailStates.get(systemId)
     if (detail !== undefined) {
-      if (metrics.stats !== undefined) {
-        detail.applyMetrics(metrics.stats, metrics.container, '', true)
-      } else if (metrics.container !== undefined && metrics.container !== null) {
-        detail.applyContainers(metrics.container)
-      }
+      detail.applyRealtime(metrics.info, metrics.stats, metrics.container)
     }
 
     if (this.metricRefreshPending && systemId === this.selectedId) {
@@ -387,6 +394,7 @@ struct Index {
   }
 
   private async signOut(): Promise<void> {
+    await this.flushSelectedId()
     this.stopRealtime()
     if (this.sessionRepository !== null) {
       try {
@@ -421,6 +429,7 @@ struct Index {
       const stored = await this.sessionRepository.load()
       this.savedServerUrl = stored.baseUrl
       this.savedEmail = stored.email
+      this.lastPersistedSelectedId = stored.selectedSystemId
       this.selectedId = stored.selectedSystemId
       if (!stored.canRestore()) {
         return
@@ -450,6 +459,8 @@ struct Index {
     }
     try {
       await this.sessionRepository.saveSession(session, this.selectedId)
+      this.pendingSelectedId = this.selectedId
+      this.lastPersistedSelectedId = this.selectedId
     } catch (_) {
       this.dashboardError = 'Signed in, but HarmonyOS could not save this session.'
     }
@@ -457,7 +468,7 @@ struct Index {
 
   private onSelectedIdChanged(): void {
     this.selectDetailState()
-    this.persistSelectedId()
+    this.scheduleSelectedIdPersistence()
     if (this.metricRefreshPending) {
       this.cancelMetricRefresh()
       this.refreshing = false
@@ -465,12 +476,49 @@ struct Index {
     this.syncMetricSubscription()
   }
 
-  private async persistSelectedId(): Promise<void> {
-    if (this.sessionRepository === null) {
+  private scheduleSelectedIdPersistence(): void {
+    this.pendingSelectedId = this.selectedId
+    if (this.selectionPersistTimer >= 0) {
+      clearTimeout(this.selectionPersistTimer)
+      this.selectionPersistTimer = -1
+    }
+    if (this.pendingSelectedId === this.lastPersistedSelectedId) {
       return
     }
+    this.selectionPersistTimer = setTimeout(() => {
+      this.selectionPersistTimer = -1
+      this.flushSelectedId()
+    }, SELECTION_PERSIST_DELAY_MS)
+  }
+
+  private async flushSelectedId(): Promise<void> {
+    if (this.selectionPersistTimer >= 0) {
+      clearTimeout(this.selectionPersistTimer)
+      this.selectionPersistTimer = -1
+    }
+    if (this.selectionPersistTask !== null) {
+      await this.selectionPersistTask
+      if (this.pendingSelectedId !== this.lastPersistedSelectedId) {
+        await this.flushSelectedId()
+      }
+      return
+    }
+    if (this.sessionRepository === null || this.pendingSelectedId === this.lastPersistedSelectedId) {
+      return
+    }
+    const repository = this.sessionRepository
+    this.selectionPersistTask = this.persistPendingSelectedIds(repository)
+    await this.selectionPersistTask
+    this.selectionPersistTask = null
+  }
+
+  private async persistPendingSelectedIds(repository: SessionRepository): Promise<void> {
     try {
-      await this.sessionRepository.saveSelectedSystem(this.selectedId)
+      while (this.pendingSelectedId !== this.lastPersistedSelectedId) {
+        const id = this.pendingSelectedId
+        await repository.saveSelectedSystem(id)
+        this.lastPersistedSelectedId = id
+      }
     } catch (_) {
       // Selection persistence is convenient but should never interrupt telemetry.
     }
@@ -484,7 +532,14 @@ struct Index {
     let state = this.detailStates.get(this.selectedId)
     if (state === undefined) {
       state = new SystemDetailState(this.selectedId)
-      this.detailStates.set(this.selectedId, state)
+    } else {
+      this.detailStates.delete(this.selectedId)
+    }
+    this.detailStates.set(this.selectedId, state)
+    this.trimDetailCache()
+    const system = this.systems.find((candidate: SystemSummary) => candidate.id === this.selectedId)
+    if (system !== undefined) {
+      state.applySummary(system)
     }
     this.detailState = state
     if (this.detailVisible) {
@@ -497,6 +552,13 @@ struct Index {
     this.detailState = new SystemDetailState()
   }
 
+  private trimDetailCache(): void {
+    while (this.detailStates.size > DETAIL_CACHE_LIMIT) {
+      const oldestId = this.detailStates.keys().next().value as string
+      this.detailStates.delete(oldestId)
+    }
+  }
+
   private async loadSelectedDetail(): Promise<void> {
     const client = this.client
     const state = this.detailState
@@ -505,7 +567,6 @@ struct Index {
       return
     }
 
-    const requestStarted = Date.now()
     state.loading = true
     state.errorMessage = ''
     try {
@@ -517,11 +578,10 @@ struct Index {
         await client.getLatestSystemStats(this.session.token, state.systemId)
       const containers: BeszelContainerStatsRecordWire | null =
         await client.getLatestContainerStats(this.session.token, state.systemId)
-      if (state.lastRealtimeAt <= requestStarted && stats !== null &&
-        stats.stats !== undefined && stats.stats !== null) {
-        state.applyMetrics(stats.stats, containers?.stats, stats.created ?? '')
-      } else if (state.lastRealtimeAt <= requestStarted &&
-        containers?.stats !== undefined && containers.stats !== null) {
+      state.initializeCapabilities(stats?.stats, containers?.stats)
+      if (stats !== null && stats.stats !== undefined && stats.stats !== null) {
+        state.applyMetrics(stats.stats, containers?.stats)
+      } else if (containers?.stats !== undefined && containers.stats !== null) {
         state.applyContainers(containers.stats)
       }
       state.loaded = true

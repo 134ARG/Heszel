@@ -10,6 +10,7 @@ const SCREEN_SIZE_BREAKPOINT = 600;
 
 export default class EntryAbility extends UIAbility {
   private mainWindow: window.Window | null = null;
+  private currentScreenSize: string = '';
   private readonly windowSizeChangeCallback = (windowSize: window.Size): void => {
     this.updateScreenDisplay(windowSize.width);
   };
@@ -61,10 +62,12 @@ export default class EntryAbility extends UIAbility {
     try {
       const densityPixels = display.getDefaultDisplaySync().densityPixels;
       const realWindowWidth = densityPixels > 0 ? windowWidth / densityPixels : windowWidth;
-      AppStorage.setOrCreate(
-        SCREEN_SIZE_KEY,
-        realWindowWidth < SCREEN_SIZE_BREAKPOINT ? SCREEN_SIZE_SM : SCREEN_SIZE_LG
-      );
+      const screenSize = realWindowWidth < SCREEN_SIZE_BREAKPOINT ? SCREEN_SIZE_SM : SCREEN_SIZE_LG;
+      if (screenSize === this.currentScreenSize) {
+        return;
+      }
+      this.currentScreenSize = screenSize;
+      AppStorage.setOrCreate(SCREEN_SIZE_KEY, screenSize);
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to classify window size. Cause: %{public}s', JSON.stringify(err));
     }

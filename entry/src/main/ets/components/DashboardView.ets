@@ -155,7 +155,14 @@ export struct DashboardView {
       ForEach(
         this.detailSystems(param),
         (system: SystemSummary) => {
-          SystemDetail({ system: system, detail: this.detailState, compact: !this.expanded })
+          SystemDetail({
+            detail: this.detailState,
+            systemName: system.name,
+            host: system.host,
+            status: system.status,
+            agentVersion: system.agentVersion,
+            compact: !this.expanded
+          })
         },
         (system: SystemSummary) => system.id
       )

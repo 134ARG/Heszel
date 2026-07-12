@@ -1,41 +1,38 @@
-import { FilesystemMetric, SystemDetailState } from '../model/SystemDetailModels'
+import { FilesystemMetric, StorageMetricsState } from '../model/SystemDetailModels'
 import { formatGigabytes, formatRate } from './DetailFormatting'
+import { DetailCardHeader } from './DetailCardHeader'
 import { DetailValueRow } from './DetailValueRow'
 import { PressureBar } from './PressureBar'
 
 @Component
 export struct StorageCard {
-  @ObjectLink detail: SystemDetailState
+  @ObjectLink state: StorageMetricsState
 
   build() {
     Column({ space: 12 }) {
-      Text('Storage')
-        .fontSize(17)
-        .fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.text_primary'))
-        .width('100%')
+      DetailCardHeader({ title: 'Storage' })
       PressureBar({
-        value: this.detail.metrics.diskPercent,
+        value: this.state.percent,
         label: 'Root filesystem',
         color: $r('app.color.metric_disk')
       })
       DetailValueRow({
         label: 'Root used',
-        value: `${formatGigabytes(this.detail.metrics.diskUsedGb)} / ${formatGigabytes(this.detail.metrics.diskTotalGb)}`
+        value: `${formatGigabytes(this.state.usedGb)} / ${formatGigabytes(this.state.totalGb)}`
       })
-      DetailValueRow({ label: 'Read', value: formatRate(this.detail.metrics.diskReadBytesPerSecond) })
-      DetailValueRow({ label: 'Write', value: formatRate(this.detail.metrics.diskWriteBytesPerSecond) })
-      if (this.detail.metrics.diskIoPercent > 0) {
-        DetailValueRow({ label: 'I/O utilization', value: `${this.detail.metrics.diskIoPercent.toFixed(0)}%` })
+      DetailValueRow({ label: 'Read', value: formatRate(this.state.readBytesPerSecond) })
+      DetailValueRow({ label: 'Write', value: formatRate(this.state.writeBytesPerSecond) })
+      if (this.state.diskIoVisible()) {
+        DetailValueRow({ label: 'I/O utilization', value: `${this.state.ioPercent.toFixed(0)}%` })
       }
-      if (this.detail.metrics.diskReadAwaitMs > 0 || this.detail.metrics.diskWriteAwaitMs > 0) {
+      if (this.state.latencyVisible()) {
         DetailValueRow({
           label: 'Read / write latency',
-          value: `${this.detail.metrics.diskReadAwaitMs.toFixed(1)} / ${this.detail.metrics.diskWriteAwaitMs.toFixed(1)} ms`
+          value: `${this.state.readAwaitMs.toFixed(1)} / ${this.state.writeAwaitMs.toFixed(1)} ms`
         })
       }
 
-      ForEach(this.detail.metrics.filesystems, (filesystem: FilesystemMetric) => {
+      ForEach(this.state.filesystems, (filesystem: FilesystemMetric) => {
         Divider().color($r('app.color.divider'))
         Column({ space: 9 }) {
           PressureBar({
@@ -53,7 +50,10 @@ export struct StorageCard {
           })
         }
         .width('100%')
-      }, (filesystem: FilesystemMetric) => filesystem.name)
+      }, (filesystem: FilesystemMetric) =>
+        `${filesystem.name}:${this.filesystemPercent(filesystem).toFixed(0)}:` +
+          `${formatGigabytes(filesystem.usedGb)}:${formatGigabytes(filesystem.totalGb)}:` +
+          `${formatRate(filesystem.readBytesPerSecond)}:${formatRate(filesystem.writeBytesPerSecond)}`)
     }
     .width('100%')
     .padding(18)

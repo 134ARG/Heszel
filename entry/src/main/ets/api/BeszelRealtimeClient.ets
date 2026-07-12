@@ -4,6 +4,8 @@ import { util } from '@kit.ArkTS'
 import { BeszelSystemInfoWire, BeszelSystemWire } from '../model/BeszelModels'
 import { BeszelContainerStatsWire, BeszelSystemStatsWire } from '../model/SystemDetailModels'
 
+const RECONNECT_DELAYS_MS: number[] = [2000, 5000, 10000, 20000, 40000, 60000]
+
 export interface BeszelSystemRealtimeEvent {
   action: string
   record: BeszelSystemWire
@@ -51,6 +53,8 @@ export class BeszelRealtimeClient {
   private shouldConnect: boolean = false
   private submitInFlight: boolean = false
   private submitPending: boolean = false
+  private failureCount: number = 0
+  private subscriptionReady: boolean = false
 
   constructor(
     baseUrl: string,
@@ -73,6 +77,7 @@ export class BeszelRealtimeClient {
       return
     }
     this.shouldConnect = true
+    this.failureCount = 0
     this.connectStream()
   }
 
@@ -82,6 +87,8 @@ export class BeszelRealtimeClient {
     this.clientId = ''
     this.buffer = ''
     this.submitPending = false
+    this.failureCount = 0
+    this.subscriptionReady = false
     this.generation += 1
     if (this.reconnectTimer >= 0) {
       clearTimeout(this.reconnectTimer)
@@ -100,6 +107,23 @@ export class BeszelRealtimeClient {
     }
     this.metricsSystemId = systemId
     this.submitSubscriptions()
+  }
+
+  retryNow(): void {
+    if (!this.shouldConnect || this.subscriptionReady) {
+      return
+    }
+    this.failureCount = 0
+    if (this.reconnectTimer >= 0) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = -1
+    }
+    this.generation += 1
+    if (this.stream !== null) {
+      this.stream.destroy()
+      this.stream = null
+    }
+    this.connectStream()
   }
 
   private connectStream(): void {
@@ -253,11 +277,14 @@ export class BeszelRealtimeClient {
         throw new Error(`Realtime subscription failed (${response.responseCode}).`)
       }
       if (this.shouldConnect && this.clientId === submittedClientId) {
+        this.failureCount = 0
+        this.subscriptionReady = true
         this.onConnectionChanged(true)
       }
     } catch (error) {
       if (this.shouldConnect && this.clientId === submittedClientId) {
         this.onConnectionChanged(false)
+        this.subscriptionReady = false
         this.onError(error instanceof Error ? error : new Error('Unable to update realtime subscriptions.'))
         if (this.stream !== null) {
           this.stream.destroy()
@@ -287,16 +314,22 @@ export class BeszelRealtimeClient {
     }
     this.generation += 1
     this.clientId = ''
+    this.subscriptionReady = false
     if (this.stream !== null) {
       this.stream.destroy()
       this.stream = null
     }
     this.onConnectionChanged(false)
-    if (this.shouldConnect && this.reconnectTimer < 0) {
+    if (this.shouldConnect && this.reconnectTimer < 0 && this.failureCount < RECONNECT_DELAYS_MS.length) {
+      const reconnectDelay = RECONNECT_DELAYS_MS[this.failureCount]
+      const reconnectJitter = Math.floor(reconnectDelay * 0.2 * Math.random())
+      this.failureCount += 1
       this.reconnectTimer = setTimeout(() => {
         this.reconnectTimer = -1
         this.connectStream()
-      }, 2000)
+      }, reconnectDelay + reconnectJitter)
+    } else if (this.shouldConnect && this.failureCount >= RECONNECT_DELAYS_MS.length) {
+      this.onError(new Error('Realtime paused after repeated failures. Tap Refresh to retry.'))
     }
   }
 }
