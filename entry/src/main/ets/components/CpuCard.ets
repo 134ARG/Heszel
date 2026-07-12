@@ -47,6 +47,7 @@ export struct CpuCard {
     .width('100%')
     .padding(18)
     .backgroundColor($r('app.color.surface'))
+    .border({ width: 1, color: $r('app.color.card_border') })
     .borderRadius(16)
   }
 

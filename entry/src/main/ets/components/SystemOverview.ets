@@ -42,6 +42,7 @@ export struct SystemOverview {
       .width('100%')
       .padding(18)
       .backgroundColor($r('app.color.surface'))
+      .border({ width: 1, color: $r('app.color.card_border') })
       .borderRadius(16)
 
       if (this.compact) {
@@ -54,6 +55,7 @@ export struct SystemOverview {
         .width('100%')
         .padding(18)
         .backgroundColor($r('app.color.surface'))
+        .border({ width: 1, color: $r('app.color.card_border') })
         .borderRadius(16)
       } else {
         Row({ space: 12 }) {
@@ -63,6 +65,7 @@ export struct SystemOverview {
         .width('100%')
         .padding(18)
         .backgroundColor($r('app.color.surface'))
+        .border({ width: 1, color: $r('app.color.card_border') })
         .borderRadius(16)
       }
     }

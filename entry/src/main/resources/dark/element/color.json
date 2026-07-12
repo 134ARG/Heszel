@@ -17,6 +17,7 @@
     { "name": "action_surface", "value": "#173C2A" },
     { "name": "neutral_action_text", "value": "#C2CCC5" },
     { "name": "divider", "value": "#303A33" },
+    { "name": "card_border", "value": "#273029" },
     { "name": "progress_track", "value": "#303833" },
     { "name": "selected_border", "value": "#4BA977" },
     { "name": "status_up", "value": "#42D98B" },

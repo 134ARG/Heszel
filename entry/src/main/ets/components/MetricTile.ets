@@ -21,6 +21,7 @@ export struct MetricTile {
     .layoutWeight(1)
     .padding(16)
     .backgroundColor($r('app.color.surface'))
+    .border({ width: 1, color: $r('app.color.card_border') })
     .borderRadius(15)
   }
 }

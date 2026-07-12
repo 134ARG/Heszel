@@ -97,7 +97,7 @@ export struct DashboardView {
       .justifyContent(FlexAlign.Center)
       .padding(32)
     } else {
-      this.systemList(this.expanded)
+      this.systemList()
     }
   }
 
@@ -259,7 +259,7 @@ export struct DashboardView {
   }
 
   @Builder
-  private systemList(showSelection: boolean) {
+  private systemList() {
     Column({ space: 10 }) {
       if (this.lastRefresh.length > 0) {
         Text(`Updated ${this.lastRefresh}`)
@@ -273,7 +273,7 @@ export struct DashboardView {
           ListItem() {
             SystemCard({
               system: system,
-              selected: showSelection && system.id === this.selectedId,
+              selected: this.expanded && system.id === this.selectedId,
               onSelect: () => this.selectSystem(system.id)
             })
           }
