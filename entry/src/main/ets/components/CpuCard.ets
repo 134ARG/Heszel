@@ -5,7 +5,6 @@ import { DetailCardHeader } from './DetailCardHeader'
 @Component
 export struct CpuCard {
   @ObjectLink state: CpuMetricsState
-  @Prop compact: boolean = false
 
   build() {
     Column({ space: 12 }) {
@@ -52,7 +51,7 @@ export struct CpuCard {
   }
 
   private visibleCoreLimit(): number {
-    return this.compact ? 16 : 32
+    return 32
   }
 
   private visibleCores(): number[] {

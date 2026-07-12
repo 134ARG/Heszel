@@ -29,6 +29,7 @@ export struct DashboardView {
   onRefresh: () => void = () => {}
   onLiveMetricsChange: (enabled: boolean) => void = () => {}
   onDetailVisibilityChange: (visible: boolean) => void = () => {}
+  onGatewayKeyChange: (gatewayKey: string) => void = () => {}
   onSignOut: () => void = () => {}
   private pathStack: NavPathStack = new NavPathStack()
 
@@ -116,6 +117,9 @@ export struct DashboardView {
           },
           onSignOut: () => {
             this.onSignOut()
+          },
+          onGatewayKeyChange: (gatewayKey: string) => {
+            this.onGatewayKeyChange(gatewayKey)
           }
         })
       }

@@ -18,7 +18,7 @@ export struct HealthCard {
           warning: this.batteryPercent() < 20
         })
       }
-      if (this.state.servicesTotal > 0) {
+      if (this.state.servicesVisible()) {
         DetailValueRow({
           label: 'Services',
           value: this.state.servicesFailed > 0 ?

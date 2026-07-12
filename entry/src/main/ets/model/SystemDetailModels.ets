@@ -592,8 +592,10 @@ export class HealthMetricsState {
   }
 
   updateSummary(system: SystemSummary): void {
-    if (this.servicesTotal !== system.servicesTotal) this.servicesTotal = system.servicesTotal
-    if (this.servicesFailed !== system.servicesFailed) this.servicesFailed = system.servicesFailed
+    if (system.servicesTotal > 0) {
+      if (this.servicesTotal !== system.servicesTotal) this.servicesTotal = system.servicesTotal
+      if (this.servicesFailed !== system.servicesFailed) this.servicesFailed = system.servicesFailed
+    }
     if (this.batteryAvailable && system.batteryPercent > 0) {
       this.batteryPercent = system.batteryPercent
       this.batteryState = system.batteryState
@@ -636,6 +638,7 @@ export class HealthMetricsState {
     return this.sensorsAvailable || this.batteryAvailable || this.servicesAvailable
   }
   batteryVisible(): boolean { return this.batteryAvailable }
+  servicesVisible(): boolean { return this.servicesAvailable }
 }
 
 @Observed

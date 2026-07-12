@@ -48,6 +48,7 @@ export class BeszelSession {
   baseUrl: string = ''
   token: string = ''
   email: string = ''
+  gatewayKey: string = ''
 }
 
 export enum SystemMetric {

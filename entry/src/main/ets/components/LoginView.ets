@@ -4,14 +4,17 @@ export struct LoginView {
   @Prop errorMessage: string = ''
   @Prop initialServerUrl: string = ''
   @Prop initialEmail: string = ''
+  @Prop initialGatewayKey: string = ''
   @State private serverUrl: string = ''
   @State private email: string = ''
   @State private password: string = ''
-  onLogin: (serverUrl: string, email: string, password: string) => void = () => {}
+  @State private gatewayKey: string = ''
+  onLogin: (serverUrl: string, email: string, password: string, gatewayKey: string) => void = () => {}
 
   aboutToAppear(): void {
     this.serverUrl = this.initialServerUrl
     this.email = this.initialEmail
+    this.gatewayKey = this.initialGatewayKey
   }
 
   build() {
@@ -51,6 +54,27 @@ export struct LoginView {
             .borderRadius(14)
             .onChange((value: string) => {
               this.serverUrl = value
+            })
+        }
+
+        Column({ space: 8 }) {
+          Text('GATEWAY KEY · OPTIONAL')
+            .fontSize(12)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.text_label'))
+            .width('100%')
+
+          TextInput({ placeholder: 'X-Heszel-Key value', text: this.gatewayKey })
+            .type(InputType.Password)
+            .height(52)
+            .width('100%')
+            .fontColor($r('app.color.text_primary'))
+            .placeholderColor($r('app.color.text_tertiary'))
+            .caretColor($r('app.color.action'))
+            .backgroundColor($r('app.color.surface_input'))
+            .borderRadius(14)
+            .onChange((value: string) => {
+              this.gatewayKey = value
             })
         }
 
@@ -116,10 +140,10 @@ export struct LoginView {
           .borderRadius(14)
           .enabled(!this.loading)
           .onClick(() => {
-            this.onLogin(this.serverUrl, this.email, this.password)
+            this.onLogin(this.serverUrl, this.email, this.password, this.gatewayKey)
           })
 
-        Text('Your password is never stored. The session token is protected by HarmonyOS.')
+        Text('Your password is never stored. Session and gateway secrets are protected by HarmonyOS.')
           .fontSize(12)
           .fontColor($r('app.color.text_tertiary'))
           .textAlign(TextAlign.Center)

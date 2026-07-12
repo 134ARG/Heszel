@@ -129,21 +129,21 @@ export struct SystemDetail {
     if (this.detail.storageMetrics.isVisible()) {
       StorageCard({ state: this.detail.storageMetrics })
     }
+    if (this.detail.healthMetrics.isVisible()) {
+      HealthCard({ state: this.detail.healthMetrics })
+    }
   }
 
   @Builder
   private secondaryDetailCards() {
     if (this.detail.cpuMetrics.isVisible()) {
-      CpuCard({ state: this.detail.cpuMetrics, compact: this.compact })
+      CpuCard({ state: this.detail.cpuMetrics })
     }
     if (this.detail.networkMetrics.isVisible()) {
       NetworkCard({ state: this.detail.networkMetrics })
     }
     if (this.detail.gpuMetrics.isVisible()) {
       GpuCard({ state: this.detail.gpuMetrics })
-    }
-    if (this.detail.healthMetrics.isVisible()) {
-      HealthCard({ state: this.detail.healthMetrics })
     }
     if (this.detail.containerMetrics.isVisible()) {
       ContainersCard({ state: this.detail.containerMetrics })

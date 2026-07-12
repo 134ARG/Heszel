@@ -39,6 +39,7 @@ class SseMessage {
 export class BeszelRealtimeClient {
   private readonly baseUrl: string
   private readonly token: string
+  private readonly gatewayKey: string
   private readonly onSystemEvent: (event: BeszelSystemRealtimeEvent) => void
   private readonly onMetrics: (systemId: string, metrics: BeszelRealtimeMetrics) => void
   private readonly onConnectionChanged: (connected: boolean) => void
@@ -59,6 +60,7 @@ export class BeszelRealtimeClient {
   constructor(
     baseUrl: string,
     token: string,
+    gatewayKey: string,
     onSystemEvent: (event: BeszelSystemRealtimeEvent) => void,
     onMetrics: (systemId: string, metrics: BeszelRealtimeMetrics) => void,
     onConnectionChanged: (connected: boolean) => void,
@@ -66,6 +68,7 @@ export class BeszelRealtimeClient {
   ) {
     this.baseUrl = baseUrl
     this.token = token
+    this.gatewayKey = gatewayKey.trim()
     this.onSystemEvent = onSystemEvent
     this.onMetrics = onMetrics
     this.onConnectionChanged = onConnectionChanged
@@ -157,7 +160,8 @@ export class BeszelRealtimeClient {
       method: http.RequestMethod.GET,
       header: {
         'Accept': 'text/event-stream',
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'no-cache',
+        'X-Heszel-Key': this.gatewayKey
       },
       connectTimeout: 15000,
       readTimeout: 310000
@@ -267,7 +271,8 @@ export class BeszelRealtimeClient {
         header: {
           'Accept': 'application/json',
           'Authorization': this.token,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Heszel-Key': this.gatewayKey
         },
         extraData: JSON.stringify(body),
         connectTimeout: 15000,

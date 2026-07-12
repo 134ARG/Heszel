@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <title>Heszel app icon concept</title>
+  <desc>An abstract H formed by two server columns joined by a live metrics pulse.</desc>
+
+  <defs>
+    <linearGradient id="background" x1="168" y1="116" x2="856" y2="908" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23805A"/>
+      <stop offset="1" stop-color="#0D4B31"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="286" y1="252" x2="738" y2="788" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E4F3EA"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed background: HarmonyOS applies the launcher mask. -->
+  <rect width="1024" height="1024" fill="url(#background)"/>
+
+  <!-- Quiet depth without adding detail at launcher scale. -->
+  <circle cx="192" cy="172" r="196" fill="#FFFFFF" fill-opacity="0.035"/>
+  <circle cx="864" cy="836" r="260" fill="#FFFFFF" fill-opacity="0.028"/>
+
+  <!-- The two halves hint at both server racks and a foldable device. -->
+  <rect x="224" y="220" width="224" height="584" rx="92" fill="url(#mark)"/>
+  <rect x="576" y="220" width="224" height="584" rx="92" fill="url(#mark)"/>
+  <rect x="368" y="420" width="288" height="184" rx="88" fill="url(#mark)"/>
+
+  <!-- Online indicators. -->
+  <circle cx="336" cy="324" r="25" fill="#20A465"/>
+  <circle cx="688" cy="324" r="25" fill="#20A465"/>
+
+  <!-- Minimal server vents. -->
+  <rect x="302" y="668" width="68" height="22" rx="11" fill="#176B45" fill-opacity="0.28"/>
+  <rect x="654" y="668" width="68" height="22" rx="11" fill="#176B45" fill-opacity="0.28"/>
+
+  <!-- Live metric pulse crossing the H bridge. -->
+  <path d="M397 522H447L482 472L530 566L566 510H627"
+        stroke="#176B45"
+        stroke-width="30"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>

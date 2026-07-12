@@ -31,9 +31,11 @@ export class BeszelApiError extends Error {
 
 export class BeszelClient {
   private readonly baseUrl: string
+  private readonly gatewayKey: string
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, gatewayKey: string = '') {
     this.baseUrl = BeszelClient.normalizeBaseUrl(baseUrl)
+    this.gatewayKey = gatewayKey.trim()
   }
 
   static normalizeBaseUrl(value: string): string {
@@ -61,7 +63,8 @@ export class BeszelClient {
           method: http.RequestMethod.POST,
           header: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Heszel-Key': this.gatewayKey
           },
           extraData: JSON.stringify(body),
           connectTimeout: 15000,
@@ -85,6 +88,7 @@ export class BeszelClient {
       session.baseUrl = this.baseUrl
       session.token = auth.token
       session.email = email.trim()
+      session.gatewayKey = this.gatewayKey
       return session
     } catch (error) {
       throw this.asError(error, 'Unable to reach the Beszel hub.')
@@ -102,7 +106,8 @@ export class BeszelClient {
           method: http.RequestMethod.POST,
           header: {
             'Accept': 'application/json',
-            'Authorization': token
+            'Authorization': token,
+            'X-Heszel-Key': this.gatewayKey
           },
           connectTimeout: 15000,
           readTimeout: 15000
@@ -125,6 +130,7 @@ export class BeszelClient {
       session.baseUrl = this.baseUrl
       session.token = auth.token
       session.email = email
+      session.gatewayKey = this.gatewayKey
       return session
     } catch (error) {
       throw this.asError(error, 'Unable to refresh the saved Beszel session.')
@@ -143,7 +149,8 @@ export class BeszelClient {
         method: http.RequestMethod.GET,
         header: {
           'Accept': 'application/json',
-          'Authorization': token
+          'Authorization': token,
+          'X-Heszel-Key': this.gatewayKey
         },
         connectTimeout: 15000,
         readTimeout: 15000
@@ -185,7 +192,8 @@ export class BeszelClient {
           method: http.RequestMethod.GET,
           header: {
             'Accept': 'application/json',
-            'Authorization': token
+            'Authorization': token,
+            'X-Heszel-Key': this.gatewayKey
           },
           connectTimeout: 15000,
           readTimeout: 15000
@@ -215,7 +223,8 @@ export class BeszelClient {
         method: http.RequestMethod.GET,
         header: {
           'Accept': 'application/json',
-          'Authorization': token
+          'Authorization': token,
+          'X-Heszel-Key': this.gatewayKey
         },
         connectTimeout: 15000,
         readTimeout: 15000
@@ -242,7 +251,8 @@ export class BeszelClient {
         method: http.RequestMethod.GET,
         header: {
           'Accept': 'application/json',
-          'Authorization': token
+          'Authorization': token,
+          'X-Heszel-Key': this.gatewayKey
         },
         connectTimeout: 15000,
         readTimeout: 15000

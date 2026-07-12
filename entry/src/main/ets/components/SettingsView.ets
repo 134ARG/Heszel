@@ -4,8 +4,10 @@ export struct SettingsView {
   @Prop email: string = ''
   @Prop expanded: boolean = false
   @Prop errorMessage: string = ''
+  @State private gatewayKeyInput: string = ''
   onBack: () => void = () => {}
   onSignOut: () => void = () => {}
+  onGatewayKeyChange: (gatewayKey: string) => void = () => {}
 
   build() {
     Column() {
@@ -123,6 +125,55 @@ export struct SettingsView {
                 .padding(16)
             }
             .width('100%')
+            .backgroundColor($r('app.color.surface'))
+            .borderRadius(16)
+          }
+          .width('100%')
+
+          Column({ space: 12 }) {
+            Text('GATEWAY ACCESS')
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_tertiary'))
+              .width('100%')
+
+            Column({ space: 12 }) {
+              Text('Saved gateway keys are never displayed. A replacement is stored only after the hub accepts it.')
+                .fontSize(12)
+                .fontColor($r('app.color.text_secondary'))
+                .width('100%')
+
+              TextInput({ placeholder: 'Enter replacement key', text: this.gatewayKeyInput })
+                .type(InputType.Password)
+                .showPasswordIcon(false)
+                .height(48)
+                .width('100%')
+                .fontColor($r('app.color.text_primary'))
+                .placeholderColor($r('app.color.text_tertiary'))
+                .caretColor($r('app.color.action'))
+                .backgroundColor($r('app.color.surface_input'))
+                .borderRadius(12)
+                .onChange((value: string) => {
+                  this.gatewayKeyInput = value
+                })
+
+              Button('Verify and update')
+                .height(44)
+                .width('100%')
+                .fontSize(14)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.text_on_action'))
+                .backgroundColor($r('app.color.action'))
+                .borderRadius(12)
+                .enabled(this.gatewayKeyInput.trim().length > 0)
+                .onClick(() => {
+                  const replacement = this.gatewayKeyInput.trim()
+                  this.gatewayKeyInput = ''
+                  this.onGatewayKeyChange(replacement)
+                })
+            }
+            .width('100%')
+            .padding(16)
             .backgroundColor($r('app.color.surface'))
             .borderRadius(16)
           }

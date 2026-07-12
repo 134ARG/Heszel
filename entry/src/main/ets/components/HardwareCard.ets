@@ -17,19 +17,7 @@ export struct HardwareCard {
         .width('100%')
 
       if (this.detail.hardware.cpuModel.length > 0) {
-        Column({ space: 4 }) {
-          Text('Processor')
-            .fontSize(11)
-            .fontColor($r('app.color.text_tertiary'))
-          Text(this.detail.hardware.cpuModel)
-            .fontSize(13)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.text_primary'))
-            .maxLines(3)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .alignItems(HorizontalAlign.Start)
-        .width('100%')
+        DetailValueRow({ label: 'Processor', value: this.detail.hardware.cpuModel })
       }
 
       if (this.compact) {

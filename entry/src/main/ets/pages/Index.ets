@@ -37,6 +37,7 @@ struct Index {
   @State private restoringSession: boolean = true
   @State private savedServerUrl: string = ''
   @State private savedEmail: string = ''
+  @State private savedGatewayKey: string = ''
   private client: BeszelClient | null = null
   private realtimeClient: BeszelRealtimeClient | null = null
   private sessionRepository: SessionRepository | null = null
@@ -96,8 +97,9 @@ struct Index {
           errorMessage: this.loginError,
           initialServerUrl: this.savedServerUrl,
           initialEmail: this.savedEmail,
-          onLogin: (serverUrl: string, email: string, password: string) => {
-            this.login(serverUrl, email, password)
+          initialGatewayKey: this.savedGatewayKey,
+          onLogin: (serverUrl: string, email: string, password: string, gatewayKey: string) => {
+            this.login(serverUrl, email, password, gatewayKey)
           }
         })
       } else {
@@ -122,6 +124,9 @@ struct Index {
           onDetailVisibilityChange: (visible: boolean) => {
             this.detailVisible = visible
           },
+          onGatewayKeyChange: (gatewayKey: string) => {
+            this.updateGatewayKey(gatewayKey)
+          },
           onSignOut: () => {
             this.signOut()
           }
@@ -132,7 +137,7 @@ struct Index {
     .height('100%')
   }
 
-  private async login(serverUrl: string, email: string, password: string): Promise<void> {
+  private async login(serverUrl: string, email: string, password: string, gatewayKey: string): Promise<void> {
     this.loginError = ''
     if (serverUrl.trim().length === 0 || email.trim().length === 0 || password.length === 0) {
       this.loginError = 'Enter the hub address, email, and password.'
@@ -141,13 +146,14 @@ struct Index {
 
     this.signingIn = true
     try {
-      const client = new BeszelClient(serverUrl)
+      const client = new BeszelClient(serverUrl, gatewayKey)
       const session = await client.login(email, password)
       this.client = client
       this.session = session
       this.sessionRefreshPending = false
       this.savedServerUrl = session.baseUrl
       this.savedEmail = session.email
+      this.savedGatewayKey = session.gatewayKey
       this.systems = []
       this.selectedId = ''
       this.clearDetailStates()
@@ -251,6 +257,7 @@ struct Index {
     this.realtimeClient = new BeszelRealtimeClient(
       this.session.baseUrl,
       this.session.token,
+      this.session.gatewayKey,
       (event: BeszelSystemRealtimeEvent) => this.handleSystemRealtimeEvent(event),
       (systemId: string, metrics: BeszelRealtimeMetrics) => this.handleRealtimeMetrics(systemId, metrics),
       (connected: boolean) => {
@@ -429,13 +436,14 @@ struct Index {
       const stored = await this.sessionRepository.load()
       this.savedServerUrl = stored.baseUrl
       this.savedEmail = stored.email
+      this.savedGatewayKey = stored.gatewayKey
       this.lastPersistedSelectedId = stored.selectedSystemId
       this.selectedId = stored.selectedSystemId
       if (!stored.canRestore()) {
         return
       }
 
-      this.client = new BeszelClient(stored.baseUrl)
+      this.client = new BeszelClient(stored.baseUrl, stored.gatewayKey)
       this.session = this.toSession(stored)
       this.sessionRefreshPending = true
 
@@ -463,6 +471,40 @@ struct Index {
       this.lastPersistedSelectedId = this.selectedId
     } catch (_) {
       this.dashboardError = 'Signed in, but HarmonyOS could not save this session.'
+    }
+  }
+
+  private async updateGatewayKey(value: string): Promise<void> {
+    const gatewayKey = value.trim()
+    if (gatewayKey === this.session.gatewayKey || this.sessionRepository === null || this.session.token.length === 0) {
+      return
+    }
+
+    this.refreshing = true
+    this.dashboardError = ''
+    const client = new BeszelClient(this.session.baseUrl, gatewayKey)
+    try {
+      const incomingSystems = await client.listSystems(this.session.token)
+      await this.sessionRepository.saveGatewayKey(gatewayKey)
+
+      this.stopRealtime()
+      const session = new BeszelSession()
+      session.baseUrl = this.session.baseUrl
+      session.email = this.session.email
+      session.token = this.session.token
+      session.gatewayKey = gatewayKey
+      this.session = session
+      this.client = client
+      this.savedGatewayKey = gatewayKey
+      this.systems = this.reconcileSystems(incomingSystems)
+      this.lastRefresh = new Date().toLocaleTimeString()
+      if (this.pageVisible) {
+        this.startRealtime()
+      }
+    } catch (error) {
+      this.dashboardError = this.describeError(error, 'The nginx gateway rejected this key.')
+    } finally {
+      this.refreshing = false
     }
   }
 
@@ -650,6 +692,7 @@ struct Index {
     session.baseUrl = stored.baseUrl
     session.email = stored.email
     session.token = stored.token
+    session.gatewayKey = stored.gatewayKey
     return session
   }
 
