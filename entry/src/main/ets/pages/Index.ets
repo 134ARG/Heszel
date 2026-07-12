@@ -14,6 +14,8 @@ import {
   SystemDetailState
 } from '../model/SystemDetailModels'
 import { SessionRepository, StoredSession } from '../repository/SessionRepository'
+import { WidgetSnapshotRepository } from '../repository/WidgetSnapshotRepository'
+import { SystemRefreshService } from '../service/SystemRefreshService'
 
 const DETAIL_CACHE_LIMIT = 10
 const SELECTION_PERSIST_DELAY_MS = 750
@@ -41,11 +43,10 @@ struct Index {
   private client: BeszelClient | null = null
   private realtimeClient: BeszelRealtimeClient | null = null
   private sessionRepository: SessionRepository | null = null
+  private widgetRepository: WidgetSnapshotRepository | null = null
   private pageVisible: boolean = false
   private refreshInFlight: boolean = false
   private manualRefreshPending: boolean = false
-  private metricRefreshPending: boolean = false
-  private metricRefreshTimer: number = -1
   private sessionRefreshPending: boolean = false
   private detailStates: Map<string, SystemDetailState> = new Map<string, SystemDetailState>()
   private selectionPersistTimer: number = -1
@@ -201,6 +202,7 @@ struct Index {
         this.selectedId = systems[0].id
       }
       this.lastRefresh = new Date().toLocaleTimeString()
+      await this.publishWidgetSnapshot()
       if (this.realtimeClient !== null && !this.realtimeConnected) {
         this.realtimeClient.retryNow()
       }
@@ -214,7 +216,7 @@ struct Index {
       this.refreshInFlight = false
       if (this.manualRefreshPending && this.client !== null && this.session.token.length > 0) {
         this.manualRefreshPending = false
-        await this.refreshSystems(true)
+        await this.performManualRefresh()
       } else {
         this.manualRefreshPending = false
         this.refreshing = false
@@ -277,7 +279,6 @@ struct Index {
   }
 
   private stopRealtime(): void {
-    this.cancelMetricRefresh()
     if (this.realtimeClient !== null) {
       this.realtimeClient.disconnect()
       this.realtimeClient = null
@@ -333,40 +334,67 @@ struct Index {
       detail.applyRealtime(metrics.info, metrics.stats, metrics.container)
     }
 
-    if (this.metricRefreshPending && systemId === this.selectedId) {
-      this.cancelMetricRefresh()
-      this.refreshing = false
-      this.syncMetricSubscription()
-    }
   }
 
   private handleManualRefresh(): void {
-    const selected = this.systems.find((system: SystemSummary) => system.id === this.selectedId)
-    if (!this.detailIsVisible() || selected === undefined || !selected.isUp() ||
-      this.realtimeClient === null || !this.realtimeConnected) {
-      this.refreshSystems(true)
+    if (this.client === null || this.session.token.length === 0) {
       return
     }
-
-    this.dashboardError = ''
-    this.metricRefreshPending = true
-    this.refreshing = true
-    this.syncMetricSubscription()
-    this.metricRefreshTimer = setTimeout(() => {
-      if (!this.metricRefreshPending) {
-        return
-      }
-      this.cancelMetricRefresh()
-      this.syncMetricSubscription()
-      this.refreshSystems(true)
-    }, 8000)
+    if (this.refreshInFlight) {
+      this.manualRefreshPending = true
+      this.refreshing = true
+      return
+    }
+    this.performManualRefresh()
   }
 
-  private cancelMetricRefresh(): void {
-    this.metricRefreshPending = false
-    if (this.metricRefreshTimer >= 0) {
-      clearTimeout(this.metricRefreshTimer)
-      this.metricRefreshTimer = -1
+  private async performManualRefresh(): Promise<void> {
+    if (this.client === null || this.session.token.length === 0) {
+      return
+    }
+    this.refreshInFlight = true
+    this.refreshing = true
+    this.dashboardError = ''
+    const requestedSystemId = this.selectedId
+    try {
+      if (this.sessionRefreshPending) {
+        const sessionReady = await this.retrySessionRefresh()
+        if (!sessionReady || this.client === null) {
+          return
+        }
+      }
+      const result = await new SystemRefreshService().refresh(this.client, this.session, requestedSystemId)
+      this.systems = this.reconcileSystems(result.systems)
+      if (this.systems.length > 0 &&
+        !this.systems.some((system: SystemSummary) => system.id === this.selectedId)) {
+        this.selectedId = this.systems[0].id
+      }
+      if (result.metrics !== null) {
+        const detail = this.detailStates.get(requestedSystemId)
+        if (detail !== undefined) {
+          detail.applyRealtime(result.metrics.info, result.metrics.stats, result.metrics.container)
+        }
+      }
+      this.lastRefresh = result.refreshedAt
+      await this.publishWidgetSnapshot()
+      if (this.realtimeClient !== null && !this.realtimeConnected) {
+        this.realtimeClient.retryNow()
+      }
+    } catch (error) {
+      if (this.isSessionRejected(error)) {
+        await this.expireSavedSession()
+        return
+      }
+      this.dashboardError = this.describeError(error, 'Unable to refresh systems.')
+    } finally {
+      this.refreshInFlight = false
+      if (this.manualRefreshPending && this.client !== null && this.session.token.length > 0) {
+        this.manualRefreshPending = false
+        await this.performManualRefresh()
+      } else {
+        this.manualRefreshPending = false
+        this.refreshing = false
+      }
     }
   }
 
@@ -378,7 +406,7 @@ struct Index {
     if (this.realtimeClient === null) {
       return
     }
-    if ((this.liveMetrics && this.detailIsVisible()) || this.metricRefreshPending) {
+    if (this.liveMetrics && this.detailIsVisible()) {
       this.realtimeClient.setMetricsSystem(this.selectedId)
     } else {
       this.realtimeClient.setMetricsSystem('')
@@ -390,10 +418,6 @@ struct Index {
   }
 
   private onDetailContextChanged(): void {
-    if (!this.detailIsVisible() && this.metricRefreshPending) {
-      this.cancelMetricRefresh()
-      this.refreshing = false
-    }
     if (this.detailIsVisible()) {
       this.loadSelectedDetail()
     }
@@ -424,6 +448,7 @@ struct Index {
     this.liveMetrics = false
     this.dashboardError = ''
     this.lastRefresh = ''
+    await this.clearWidgetSnapshot()
   }
 
   private async restoreSession(): Promise<void> {
@@ -433,6 +458,7 @@ struct Index {
         return
       }
       this.sessionRepository = new SessionRepository(context)
+      this.widgetRepository = new WidgetSnapshotRepository(context)
       const stored = await this.sessionRepository.load()
       this.savedServerUrl = stored.baseUrl
       this.savedEmail = stored.email
@@ -498,6 +524,7 @@ struct Index {
       this.savedGatewayKey = gatewayKey
       this.systems = this.reconcileSystems(incomingSystems)
       this.lastRefresh = new Date().toLocaleTimeString()
+      await this.publishWidgetSnapshot()
       if (this.pageVisible) {
         this.startRealtime()
       }
@@ -511,10 +538,6 @@ struct Index {
   private onSelectedIdChanged(): void {
     this.selectDetailState()
     this.scheduleSelectedIdPersistence()
-    if (this.metricRefreshPending) {
-      this.cancelMetricRefresh()
-      this.refreshing = false
-    }
     this.syncMetricSubscription()
   }
 
@@ -685,6 +708,29 @@ struct Index {
     this.dashboardError = ''
     this.lastRefresh = ''
     this.loginError = 'Your saved session was rejected by Beszel. Sign in again.'
+    await this.clearWidgetSnapshot()
+  }
+
+  private async publishWidgetSnapshot(): Promise<void> {
+    if (this.widgetRepository === null) {
+      return
+    }
+    try {
+      await this.widgetRepository.saveSnapshot(this.systems, this.lastRefresh)
+    } catch (_) {
+      // A launcher card is supplementary and must never interrupt dashboard telemetry.
+    }
+  }
+
+  private async clearWidgetSnapshot(): Promise<void> {
+    if (this.widgetRepository === null) {
+      return
+    }
+    try {
+      await this.widgetRepository.clearSnapshot()
+    } catch (_) {
+      // Sign-out and session rejection must continue even when no card host is available.
+    }
   }
 
   private toSession(stored: StoredSession): BeszelSession {

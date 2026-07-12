@@ -133,6 +133,21 @@ export class SystemSummary {
     if (info.dt !== undefined && this.temperatureCelsius !== metric(info.dt)) {
       this.temperatureCelsius = metric(info.dt)
     }
+    if (info.g !== undefined && this.gpuPercent !== metric(info.g)) this.gpuPercent = metric(info.g)
+    if (info.la !== undefined) {
+      this.loadOne = metric(info.la[0])
+      this.loadFive = metric(info.la[1])
+      this.loadFifteen = metric(info.la[2])
+    }
+    if (info.u !== undefined && this.uptimeSeconds !== metric(info.u)) this.uptimeSeconds = metric(info.u)
+    if (info.bat !== undefined) {
+      this.batteryPercent = metric(info.bat[0])
+      this.batteryState = metric(info.bat[1])
+    }
+    if (info.sv !== undefined) {
+      this.servicesTotal = metric(info.sv[0])
+      this.servicesFailed = metric(info.sv[1])
+    }
   }
 
   metricValue(metric: SystemMetric): number {

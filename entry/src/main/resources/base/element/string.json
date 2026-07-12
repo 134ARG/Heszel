@@ -11,6 +11,22 @@
     {
       "name": "EntryAbility_label",
       "value": "Heszel"
+    },
+    {
+      "name": "EntryFormAbility_label",
+      "value": "Heszel systems"
+    },
+    {
+      "name": "EntryFormAbility_desc",
+      "value": "Heszel home-screen systems card"
+    },
+    {
+      "name": "systems_widget_name",
+      "value": "Systems"
+    },
+    {
+      "name": "systems_widget_description",
+      "value": "Cached Beszel system health and resource usage"
     }
   ]
 }
