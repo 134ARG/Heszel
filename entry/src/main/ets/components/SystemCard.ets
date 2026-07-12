@@ -13,19 +13,19 @@ export struct SystemCard {
           .width(9)
           .height(9)
           .borderRadius(5)
-          .backgroundColor(this.system.isUp() ? '#20A465' : '#D8483E')
+          .backgroundColor(this.system.isUp() ? $r('app.color.status_up') : $r('app.color.status_down'))
 
         Column({ space: 2 }) {
           Text(this.system.name)
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#18231C')
+            .fontColor($r('app.color.text_primary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.system.host.length > 0 ? this.system.host : this.system.status.toUpperCase())
             .fontSize(12)
-            .fontColor('#738077')
+            .fontColor($r('app.color.text_secondary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -36,7 +36,8 @@ export struct SystemCard {
           Text(`${this.system.temperatureCelsius.toFixed(0)}°`)
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
-            .fontColor(this.system.temperatureCelsius >= 75 ? '#B3261E' : '#32443A')
+            .fontColor(this.system.temperatureCelsius >= 75 ?
+              $r('app.color.error') : $r('app.color.text_primary'))
         }
       }
       .width('100%')
@@ -51,10 +52,10 @@ export struct SystemCard {
     .width('100%')
     .padding(16)
     .borderRadius(16)
-    .backgroundColor(this.selected ? '#E4F3EA' : '#FFFFFF')
+    .backgroundColor(this.selected ? $r('app.color.surface_selected') : $r('app.color.surface'))
     .border({
       width: this.selected ? 1 : 0,
-      color: '#7AB996'
+      color: $r('app.color.selected_border')
     })
     .onClick(() => {
       this.onSelect()
@@ -66,16 +67,16 @@ export struct SystemCard {
     Row({ space: 4 }) {
       Text(label)
         .fontSize(10)
-        .fontColor('#778179')
+        .fontColor($r('app.color.text_tertiary'))
       Text(`${value.toFixed(0)}%`)
         .fontSize(12)
         .fontWeight(FontWeight.Medium)
-        .fontColor(value >= 90 ? '#B3261E' : '#26352C')
+        .fontColor(value >= 90 ? $r('app.color.error') : $r('app.color.text_primary'))
     }
     .layoutWeight(1)
     .justifyContent(FlexAlign.Center)
     .padding({ top: 7, bottom: 7 })
     .borderRadius(9)
-    .backgroundColor(this.selected ? '#F4FAF6' : '#F2F5F2')
+    .backgroundColor(this.selected ? $r('app.color.surface_selected_soft') : $r('app.color.surface_input'))
   }
 }

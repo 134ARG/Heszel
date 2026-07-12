@@ -31,17 +31,17 @@ export struct DashboardView {
         Row({ space: 10 }) {
           Text(this.errorMessage)
             .fontSize(13)
-            .fontColor('#8A201A')
+            .fontColor($r('app.color.error_text'))
             .layoutWeight(1)
           Text('Retry')
             .fontSize(13)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#176B45')
+            .fontColor($r('app.color.action'))
             .onClick(() => this.onRefresh())
         }
         .width('100%')
         .padding({ left: 18, right: 18, top: 10, bottom: 10 })
-        .backgroundColor('#FFF0EE')
+        .backgroundColor($r('app.color.error_surface'))
       }
 
       if (this.systems.length === 0) {
@@ -49,11 +49,11 @@ export struct DashboardView {
           Text(this.loading ? 'Loading systems…' : 'No shared systems')
             .fontSize(20)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#27362D')
+            .fontColor($r('app.color.text_primary'))
           Text(this.loading ? 'Connecting to your Beszel hub.' :
             'Share a system with this Beszel account, then refresh.')
             .fontSize(14)
-            .fontColor('#718078')
+            .fontColor($r('app.color.text_secondary'))
             .textAlign(TextAlign.Center)
         }
         .layoutWeight(1)
@@ -67,7 +67,7 @@ export struct DashboardView {
             .vertical(true)
             .width(1)
             .height('100%')
-            .color('#E2E8E3')
+            .color($r('app.color.divider'))
           SystemDetail({ system: this.selectedSystem(), compact: false })
         }
         .layoutWeight(1)
@@ -80,7 +80,7 @@ export struct DashboardView {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F5F7F5')
+    .backgroundColor($r('app.color.background'))
   }
 
   @Builder
@@ -90,10 +90,10 @@ export struct DashboardView {
         Text('Heszel')
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#17211B')
+          .fontColor($r('app.color.text_primary'))
         Text(`${this.onlineCount()} of ${this.systems.length} systems online`)
           .fontSize(12)
-          .fontColor('#6B786F')
+          .fontColor($r('app.color.text_secondary'))
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
@@ -101,8 +101,8 @@ export struct DashboardView {
       Button(this.loading ? '…' : 'Refresh')
         .height(36)
         .fontSize(13)
-        .fontColor('#176B45')
-        .backgroundColor('#E4F3EA')
+        .fontColor($r('app.color.action'))
+        .backgroundColor($r('app.color.action_surface'))
         .borderRadius(10)
         .enabled(!this.loading)
         .onClick(() => this.onRefresh())
@@ -110,14 +110,14 @@ export struct DashboardView {
       Button('Sign out')
         .height(36)
         .fontSize(13)
-        .fontColor('#5B665F')
-        .backgroundColor('#ECEFEC')
+        .fontColor($r('app.color.neutral_action_text'))
+        .backgroundColor($r('app.color.surface_neutral'))
         .borderRadius(10)
         .onClick(() => this.onSignOut())
     }
     .width('100%')
     .padding({ left: 18, right: 18, top: 18, bottom: 14 })
-    .backgroundColor('#FCFDFC')
+    .backgroundColor($r('app.color.surface_header'))
   }
 
   @Builder
@@ -126,7 +126,7 @@ export struct DashboardView {
       if (this.lastRefresh.length > 0) {
         Text(`Updated ${this.lastRefresh}`)
           .fontSize(11)
-          .fontColor('#7C8880')
+          .fontColor($r('app.color.text_tertiary'))
           .width('100%')
       }
 
@@ -158,8 +158,8 @@ export struct DashboardView {
           .height(38)
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#176B45')
-          .backgroundColor('#E4F3EA')
+          .fontColor($r('app.color.action'))
+          .backgroundColor($r('app.color.action_surface'))
           .borderRadius(10)
           .onClick(() => {
             this.compactDetailVisible = false

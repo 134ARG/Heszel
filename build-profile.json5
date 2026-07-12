@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/xen134/.ohos/config/default_Heszel_IYhzs1PESld9IbwEF4gjIwluB9B00BtBM64YwnSyfHs=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "***REMOVED***",
+          "profile": "/Users/xen134/.ohos/config/default_Heszel_IYhzs1PESld9IbwEF4gjIwluB9B00BtBM64YwnSyfHs=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/xen134/.ohos/config/default_Heszel_IYhzs1PESld9IbwEF4gjIwluB9B00BtBM64YwnSyfHs=.p12",
+          "storePassword": "***REMOVED***"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",

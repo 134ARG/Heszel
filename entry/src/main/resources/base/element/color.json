@@ -1,8 +1,34 @@
 {
   "color": [
-    {
-      "name": "start_window_background",
-      "value": "#FCFDFC"
-    }
+    { "name": "start_window_background", "value": "#FCFDFC" },
+    { "name": "background", "value": "#F5F7F5" },
+    { "name": "surface", "value": "#FFFFFF" },
+    { "name": "surface_header", "value": "#FCFDFC" },
+    { "name": "surface_input", "value": "#F2F5F2" },
+    { "name": "surface_neutral", "value": "#ECEFEC" },
+    { "name": "surface_selected", "value": "#E4F3EA" },
+    { "name": "surface_selected_soft", "value": "#F4FAF6" },
+    { "name": "text_primary", "value": "#17211B" },
+    { "name": "text_secondary", "value": "#647067" },
+    { "name": "text_tertiary", "value": "#7A857D" },
+    { "name": "text_label", "value": "#5C695F" },
+    { "name": "text_on_action", "value": "#FFFFFF" },
+    { "name": "action", "value": "#176B45" },
+    { "name": "action_surface", "value": "#E4F3EA" },
+    { "name": "neutral_action_text", "value": "#5B665F" },
+    { "name": "divider", "value": "#E2E8E3" },
+    { "name": "progress_track", "value": "#E8ECE8" },
+    { "name": "selected_border", "value": "#7AB996" },
+    { "name": "status_up", "value": "#20A465" },
+    { "name": "status_down", "value": "#D8483E" },
+    { "name": "status_down_text", "value": "#A12D26" },
+    { "name": "status_down_surface", "value": "#FFE9E6" },
+    { "name": "error", "value": "#B3261E" },
+    { "name": "error_text", "value": "#8A201A" },
+    { "name": "error_surface", "value": "#FFF0EE" },
+    { "name": "metric_cpu", "value": "#267454" },
+    { "name": "metric_memory", "value": "#4673A7" },
+    { "name": "metric_disk", "value": "#9B6B2F" },
+    { "name": "metric_danger", "value": "#C93C32" }
   ]
 }

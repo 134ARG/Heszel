@@ -13,6 +13,15 @@ interface LoginBody {
   password: string
 }
 
+export class BeszelApiError extends Error {
+  readonly responseCode: number
+
+  constructor(message: string, responseCode: number) {
+    super(message)
+    this.responseCode = responseCode
+  }
+}
+
 export class BeszelClient {
   private readonly baseUrl: string
 
@@ -54,7 +63,10 @@ export class BeszelClient {
       )
       const responseText = response.result.toString()
       if (response.responseCode < 200 || response.responseCode >= 300) {
-        throw new Error(this.readError(responseText, 'Sign-in failed. Check the server and credentials.'))
+        throw new BeszelApiError(
+          this.readError(responseText, 'Sign-in failed. Check the server and credentials.'),
+          response.responseCode
+        )
       }
 
       const auth = JSON.parse(responseText) as BeszelAuthWire
@@ -69,6 +81,46 @@ export class BeszelClient {
       return session
     } catch (error) {
       throw this.asError(error, 'Unable to reach the Beszel hub.')
+    } finally {
+      request.destroy()
+    }
+  }
+
+  async refreshSession(token: string, email: string): Promise<BeszelSession> {
+    const request = http.createHttp()
+    try {
+      const response = await request.request(
+        `${this.baseUrl}/api/collections/users/auth-refresh`,
+        {
+          method: http.RequestMethod.POST,
+          header: {
+            'Accept': 'application/json',
+            'Authorization': token
+          },
+          connectTimeout: 15000,
+          readTimeout: 15000
+        }
+      )
+      const responseText = response.result.toString()
+      if (response.responseCode < 200 || response.responseCode >= 300) {
+        throw new BeszelApiError(
+          this.readError(responseText, 'The saved Beszel session is no longer valid.'),
+          response.responseCode
+        )
+      }
+
+      const auth = JSON.parse(responseText) as BeszelAuthWire
+      if (auth.token.length === 0) {
+        throw new Error('Beszel returned an empty refreshed token.')
+      }
+
+      const session = new BeszelSession()
+      session.baseUrl = this.baseUrl
+      session.token = auth.token
+      session.email = email
+      return session
+    } catch (error) {
+      throw this.asError(error, 'Unable to refresh the saved Beszel session.')
     } finally {
       request.destroy()
     }
@@ -91,7 +143,10 @@ export class BeszelClient {
       })
       const responseText = response.result.toString()
       if (response.responseCode < 200 || response.responseCode >= 300) {
-        throw new Error(this.readError(responseText, 'Unable to load systems from Beszel.'))
+        throw new BeszelApiError(
+          this.readError(responseText, 'Unable to load systems from Beszel.'),
+          response.responseCode
+        )
       }
 
       const wire = JSON.parse(responseText) as BeszelSystemListWire
