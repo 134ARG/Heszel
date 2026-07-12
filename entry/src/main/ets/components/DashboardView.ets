@@ -128,6 +128,11 @@ export struct DashboardView {
       .onShown(() => {
         this.syncDetailVisibility()
       })
+      .onActive(() => {
+        if (name === 'detail') {
+          this.trimDetailHistory()
+        }
+      })
       .onHidden(() => {
         this.syncDetailVisibility()
         if (name === 'settings') {
@@ -289,14 +294,17 @@ export struct DashboardView {
   }
 
   private selectSystem(id: string): void {
+    if (id === this.selectedId && this.topDestinationName() === 'detail') {
+      return
+    }
     this.selectedId = id
     if (this.expanded) {
-      if (this.pathStack.size() === 1 && this.topDestinationName() === 'detail') {
-        this.pathStack.replacePath({ name: 'detail', param: new DashboardDestinationParam(id) })
-      } else {
-        this.pathStack.clear(false)
+      if (this.topDestinationName() === 'detail') {
         this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
+        return
       }
+      this.pathStack.clear(false)
+      this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
     } else {
       this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
     }
@@ -320,6 +328,22 @@ export struct DashboardView {
   private topDestinationName(): string {
     const pathNames = this.pathStack.getAllPathName()
     return pathNames.length > 0 ? pathNames[pathNames.length - 1] : ''
+  }
+
+  private trimDetailHistory(): void {
+    if (!this.expanded || this.topDestinationName() !== 'detail') {
+      return
+    }
+    const pathNames = this.pathStack.getAllPathName()
+    const staleIndexes: number[] = []
+    for (let index = 0; index < pathNames.length - 1; index++) {
+      if (pathNames[index] === 'detail') {
+        staleIndexes.push(index)
+      }
+    }
+    if (staleIndexes.length > 0) {
+      this.pathStack.removeByIndexes(staleIndexes)
+    }
   }
 
   private ensureDetailForSplit(): void {
@@ -355,6 +379,13 @@ export struct DashboardView {
   }
 
   private onExpandedChanged(): void {
+    if (!this.expanded && this.topDestinationName() === 'detail' && this.selectedId.length > 0) {
+      this.pathStack.replacePath({
+        name: 'detail',
+        param: new DashboardDestinationParam(this.selectedId)
+      }, false)
+      return
+    }
     this.ensureDetailForSplit()
   }
 }
