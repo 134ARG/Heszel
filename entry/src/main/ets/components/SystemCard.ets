@@ -1,8 +1,9 @@
-import { SystemSummary } from '../model/BeszelModels'
+import { SystemMetric, SystemSummary } from '../model/BeszelModels'
+import { MetricChip } from './MetricChip'
 
 @Component
 export struct SystemCard {
-  @Prop system: SystemSummary = new SystemSummary()
+  @ObjectLink system: SystemSummary
   @Prop selected: boolean = false
   onSelect: () => void = () => {}
 
@@ -43,9 +44,9 @@ export struct SystemCard {
       .width('100%')
 
       Row({ space: 8 }) {
-        this.metricChip('CPU', this.system.cpuPercent)
-        this.metricChip('RAM', this.system.memoryPercent)
-        this.metricChip('DISK', this.system.diskPercent)
+        MetricChip({ system: this.system, metric: SystemMetric.CPU, label: 'CPU', selected: this.selected })
+        MetricChip({ system: this.system, metric: SystemMetric.Memory, label: 'RAM', selected: this.selected })
+        MetricChip({ system: this.system, metric: SystemMetric.Disk, label: 'DISK', selected: this.selected })
       }
       .width('100%')
     }
@@ -62,21 +63,4 @@ export struct SystemCard {
     })
   }
 
-  @Builder
-  private metricChip(label: string, value: number) {
-    Row({ space: 4 }) {
-      Text(label)
-        .fontSize(10)
-        .fontColor($r('app.color.text_tertiary'))
-      Text(`${value.toFixed(0)}%`)
-        .fontSize(12)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(value >= 90 ? $r('app.color.error') : $r('app.color.text_primary'))
-    }
-    .layoutWeight(1)
-    .justifyContent(FlexAlign.Center)
-    .padding({ top: 7, bottom: 7 })
-    .borderRadius(9)
-    .backgroundColor(this.selected ? $r('app.color.surface_selected_soft') : $r('app.color.surface_input'))
-  }
 }

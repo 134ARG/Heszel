@@ -23,6 +23,7 @@ struct Index {
   private sessionRepository: SessionRepository | null = null
   private pollTimer: number = -1
   private refreshInFlight: boolean = false
+  private manualRefreshPending: boolean = false
   private sessionRefreshPending: boolean = false
 
   aboutToAppear(): void {
@@ -123,7 +124,14 @@ struct Index {
   }
 
   private async refreshSystems(showLoading: boolean, retryPendingSession: boolean = true): Promise<void> {
-    if (this.client === null || this.session.token.length === 0 || this.refreshInFlight) {
+    if (this.client === null || this.session.token.length === 0) {
+      return
+    }
+    if (this.refreshInFlight) {
+      if (showLoading) {
+        this.manualRefreshPending = true
+        this.refreshing = true
+      }
       return
     }
 
@@ -140,7 +148,8 @@ struct Index {
         }
       }
 
-      const systems = await this.client.listSystems(this.session.token)
+      const incomingSystems = await this.client.listSystems(this.session.token)
+      const systems = this.reconcileSystems(incomingSystems)
       this.systems = systems
       if (systems.length > 0 && !systems.some((system: SystemSummary) => system.id === this.selectedId)) {
         this.selectedId = systems[0].id
@@ -154,8 +163,34 @@ struct Index {
       this.dashboardError = this.describeError(error, 'Unable to refresh systems.')
     } finally {
       this.refreshInFlight = false
-      this.refreshing = false
+      if (this.manualRefreshPending && this.client !== null && this.session.token.length > 0) {
+        this.manualRefreshPending = false
+        await this.refreshSystems(true)
+      } else {
+        this.manualRefreshPending = false
+        this.refreshing = false
+      }
     }
+  }
+
+  private reconcileSystems(incoming: SystemSummary[]): SystemSummary[] {
+    const existingById = new Map<string, SystemSummary>()
+    this.systems.forEach((system: SystemSummary) => {
+      existingById.set(system.id, system)
+    })
+
+    const reconciled: SystemSummary[] = []
+    incoming.forEach((fresh: SystemSummary) => {
+      const existing = existingById.get(fresh.id)
+      if (existing === undefined) {
+        reconciled.push(fresh)
+        return
+      }
+
+      existing.updateFrom(fresh)
+      reconciled.push(existing)
+    })
+    return reconciled
   }
 
   private startPolling(): void {

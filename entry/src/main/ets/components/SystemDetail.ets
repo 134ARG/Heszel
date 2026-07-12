@@ -1,8 +1,10 @@
-import { SystemSummary } from '../model/BeszelModels'
+import { SystemMetric, SystemSummary } from '../model/BeszelModels'
+import { PressureBar } from './PressureBar'
+import { MetricTile } from './MetricTile'
 
 @Component
 export struct SystemDetail {
-  @Prop system: SystemSummary = new SystemSummary()
+  @ObjectLink system: SystemSummary
   @Prop compact: boolean = false
 
   build() {
@@ -44,23 +46,23 @@ export struct SystemDetail {
         if (this.compact) {
           Column({ space: 12 }) {
             Row({ space: 12 }) {
-              this.metricTile('CPU', this.system.cpuPercent, '%')
-              this.metricTile('Memory', this.system.memoryPercent, '%')
+              MetricTile({ system: this.system, metric: SystemMetric.CPU, label: 'CPU', suffix: '%' })
+              MetricTile({ system: this.system, metric: SystemMetric.Memory, label: 'Memory', suffix: '%' })
             }
             .width('100%')
             Row({ space: 12 }) {
-              this.metricTile('Disk', this.system.diskPercent, '%')
-              this.metricTile('GPU', this.system.gpuPercent, '%')
+              MetricTile({ system: this.system, metric: SystemMetric.Disk, label: 'Disk', suffix: '%' })
+              MetricTile({ system: this.system, metric: SystemMetric.GPU, label: 'GPU', suffix: '%' })
             }
             .width('100%')
           }
           .width('100%')
         } else {
           Row({ space: 12 }) {
-            this.metricTile('CPU', this.system.cpuPercent, '%')
-            this.metricTile('Memory', this.system.memoryPercent, '%')
-            this.metricTile('Disk', this.system.diskPercent, '%')
-            this.metricTile('GPU', this.system.gpuPercent, '%')
+            MetricTile({ system: this.system, metric: SystemMetric.CPU, label: 'CPU', suffix: '%' })
+            MetricTile({ system: this.system, metric: SystemMetric.Memory, label: 'Memory', suffix: '%' })
+            MetricTile({ system: this.system, metric: SystemMetric.Disk, label: 'Disk', suffix: '%' })
+            MetricTile({ system: this.system, metric: SystemMetric.GPU, label: 'GPU', suffix: '%' })
           }
           .width('100%')
         }
@@ -71,9 +73,24 @@ export struct SystemDetail {
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.text_primary'))
             .width('100%')
-          this.pressureBar('CPU', this.system.cpuPercent, $r('app.color.metric_cpu'))
-          this.pressureBar('Memory', this.system.memoryPercent, $r('app.color.metric_memory'))
-          this.pressureBar('Disk', this.system.diskPercent, $r('app.color.metric_disk'))
+          PressureBar({
+            system: this.system,
+            metric: SystemMetric.CPU,
+            label: 'CPU',
+            color: $r('app.color.metric_cpu')
+          })
+          PressureBar({
+            system: this.system,
+            metric: SystemMetric.Memory,
+            label: 'Memory',
+            color: $r('app.color.metric_memory')
+          })
+          PressureBar({
+            system: this.system,
+            metric: SystemMetric.Disk,
+            label: 'Disk',
+            color: $r('app.color.metric_disk')
+          })
         }
         .width('100%')
         .padding(18)
@@ -123,46 +140,47 @@ export struct SystemDetail {
     .scrollBar(BarState.Off)
   }
 
-  @Builder
-  private metricTile(label: string, value: number, suffix: string) {
-    Column({ space: 8 }) {
-      Text(label.toUpperCase())
-        .fontSize(11)
-        .fontColor($r('app.color.text_tertiary'))
-      Text(`${value.toFixed(0)}${suffix}`)
-        .fontSize(23)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(value >= 90 ? $r('app.color.error') : $r('app.color.text_primary'))
-    }
-    .alignItems(HorizontalAlign.Start)
-    .layoutWeight(1)
-    .padding(16)
-    .backgroundColor($r('app.color.surface'))
-    .borderRadius(15)
-  }
+  // @Builder
+  // private metricTile(label: string, value: number, suffix: string) {
+  //   Column({ space: 8 }) {
+  //     Text(label.toUpperCase())
+  //       .fontSize(11)
+  //       .fontColor($r('app.color.text_tertiary'))
+  //     Text(`${value.toFixed(0)}${suffix}`)
+  //       .fontSize(23)
+  //       .fontWeight(FontWeight.Medium)
+  //       .fontColor(value >= 90 ? $r('app.color.error') : $r('app.color.text_primary'))
+  //   }
+  //   .alignItems(HorizontalAlign.Start)
+  //   .layoutWeight(1)
+  //   .padding(16)
+  //   .backgroundColor($r('app.color.surface'))
+  //   .borderRadius(15)
+  // }
 
-  @Builder
-  private pressureBar(label: string, value: number, color: ResourceColor) {
-    Column({ space: 6 }) {
-      Row() {
-        Text(label)
-          .fontSize(13)
-          .fontColor($r('app.color.text_secondary'))
-          .layoutWeight(1)
-        Text(`${value.toFixed(0)}%`)
-          .fontSize(13)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.text_primary'))
-      }
-      Progress({ value: Math.min(value, 100), total: 100, type: ProgressType.Linear })
-        .width('100%')
-        .height(7)
-        .color(value >= 90 ? $r('app.color.metric_danger') : color)
-        .backgroundColor($r('app.color.progress_track'))
-        .borderRadius(4)
-    }
-    .width('100%')
-  }
+
+  // @Builder
+  // private pressureBar(label: string, value: number, color: ResourceColor) {
+  //   Column({ space: 6 }) {
+  //     Row() {
+  //       Text(label)
+  //         .fontSize(13)
+  //         .fontColor($r('app.color.text_secondary'))
+  //         .layoutWeight(1)
+  //       Text(`${value.toFixed(0)}%`)
+  //         .fontSize(13)
+  //         .fontWeight(FontWeight.Medium)
+  //         .fontColor($r('app.color.text_primary'))
+  //     }
+  //     Progress({ value: Math.min(value, 100), total: 100, type: ProgressType.Linear })
+  //       .width('100%')
+  //       .height(7)
+  //       .color(value >= 90 ? $r('app.color.metric_danger') : color)
+  //       .backgroundColor($r('app.color.progress_track'))
+  //       .borderRadius(4)
+  //   }
+  //   .width('100%')
+  // }
 
   @Builder
   private loadAverage() {

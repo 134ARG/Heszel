@@ -14,11 +14,6 @@ export struct DashboardView {
   onRefresh: () => void = () => {}
   onSignOut: () => void = () => {}
 
-  private selectedSystem(): SystemSummary {
-    const match = this.systems.find((system: SystemSummary) => system.id === this.selectedId)
-    return match ?? new SystemSummary()
-  }
-
   private onlineCount(): number {
     return this.systems.filter((system: SystemSummary) => system.isUp()).length
   }
@@ -68,7 +63,13 @@ export struct DashboardView {
             .width(1)
             .height('100%')
             .color($r('app.color.divider'))
-          SystemDetail({ system: this.selectedSystem(), compact: false })
+          ForEach(
+            this.systems.filter((system: SystemSummary) => system.id === this.selectedId),
+            (system: SystemSummary) => {
+              SystemDetail({ system: system, compact: false })
+            },
+            (system: SystemSummary) => system.id
+          )
         }
         .layoutWeight(1)
         .width('100%')
@@ -168,7 +169,13 @@ export struct DashboardView {
       .width('100%')
       .padding({ left: 16, right: 16, top: 12, bottom: 2 })
 
-      SystemDetail({ system: this.selectedSystem(), compact: true })
+      ForEach(
+        this.systems.filter((system: SystemSummary) => system.id === this.selectedId),
+        (system: SystemSummary) => {
+          SystemDetail({ system: system, compact: true })
+        },
+        (system: SystemSummary) => system.id
+      )
     }
     .layoutWeight(1)
     .width('100%')

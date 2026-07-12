@@ -47,6 +47,14 @@ export class BeszelSession {
   email: string = ''
 }
 
+export enum SystemMetric {
+  CPU,
+  Memory,
+  Disk,
+  GPU
+}
+
+@Observed
 export class SystemSummary {
   id: string = ''
   name: string = ''
@@ -81,6 +89,37 @@ export class SystemSummary {
     summary.loadFifteen = metric(info?.la?.[2])
     summary.uptimeSeconds = metric(info?.u)
     return summary
+  }
+
+  updateFrom(other: SystemSummary): void {
+    this.name = other.name
+    this.host = other.host
+    this.status = other.status
+    this.updated = other.updated
+    this.cpuPercent = other.cpuPercent
+    this.memoryPercent = other.memoryPercent
+    this.diskPercent = other.diskPercent
+    this.temperatureCelsius = other.temperatureCelsius
+    this.gpuPercent = other.gpuPercent
+    this.loadOne = other.loadOne
+    this.loadFive = other.loadFive
+    this.loadFifteen = other.loadFifteen
+    this.uptimeSeconds = other.uptimeSeconds
+  }
+
+  metricValue(metric: SystemMetric): number {
+    switch (metric) {
+      case SystemMetric.CPU:
+        return this.cpuPercent
+      case SystemMetric.Memory:
+        return this.memoryPercent
+      case SystemMetric.Disk:
+        return this.diskPercent
+      case SystemMetric.GPU:
+        return this.gpuPercent
+      default:
+        return 0
+    }
   }
 
   isUp(): boolean {
