@@ -107,6 +107,18 @@ export class SystemSummary {
     this.uptimeSeconds = other.uptimeSeconds
   }
 
+  updateMetrics(info: BeszelSystemInfoWire): void {
+    this.cpuPercent = metric(info.cpu)
+    this.memoryPercent = metric(info.mp)
+    this.diskPercent = metric(info.dp)
+    this.temperatureCelsius = metric(info.dt)
+    this.gpuPercent = metric(info.g)
+    this.loadOne = metric(info.la?.[0])
+    this.loadFive = metric(info.la?.[1])
+    this.loadFifteen = metric(info.la?.[2])
+    this.uptimeSeconds = metric(info.u)
+  }
+
   metricValue(metric: SystemMetric): number {
     switch (metric) {
       case SystemMetric.CPU:

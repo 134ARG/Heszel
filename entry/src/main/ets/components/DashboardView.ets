@@ -4,15 +4,18 @@ import { SystemDetail } from './SystemDetail'
 
 @Component
 export struct DashboardView {
-  @Prop systems: SystemSummary[] = []
+  @Link systems: SystemSummary[]
   @Link selectedId: string
   @Prop loading: boolean = false
   @Prop errorMessage: string = ''
   @Prop lastRefresh: string = ''
   @Prop expanded: boolean = false
-  @State private compactDetailVisible: boolean = false
+  @Link compactDetailVisible: boolean
+  @Prop liveMetrics: boolean = false
+  @Prop realtimeConnected: boolean = false
   onRefresh: () => void = () => {}
-  onSignOut: () => void = () => {}
+  onOpenSettings: () => void = () => {}
+  onLiveMetricsChange: (enabled: boolean) => void = () => {}
 
   private onlineCount(): number {
     return this.systems.filter((system: SystemSummary) => system.isUp()).length
@@ -86,39 +89,92 @@ export struct DashboardView {
 
   @Builder
   private header() {
-    Row({ space: 12 }) {
-      Column({ space: 2 }) {
-        Text('Heszel')
-          .fontSize(24)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.text_primary'))
-        Text(`${this.onlineCount()} of ${this.systems.length} systems online`)
-          .fontSize(12)
-          .fontColor($r('app.color.text_secondary'))
+    if (this.expanded) {
+      Row({ space: 12 }) {
+        this.titleBlock()
+        this.liveControl()
+        this.refreshButton()
+        this.settingsButton()
       }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
+      .width('100%')
+      .padding({ left: 18, right: 18, top: 18, bottom: 14 })
+      .backgroundColor($r('app.color.surface_header'))
+    } else {
+      Column({ space: 10 }) {
+        Row({ space: 12 }) {
+          this.titleBlock()
+          this.settingsButton()
+        }
+        .width('100%')
 
-      Button(this.loading ? '…' : 'Refresh')
-        .height(36)
-        .fontSize(13)
-        .fontColor($r('app.color.action'))
-        .backgroundColor($r('app.color.action_surface'))
-        .borderRadius(10)
-        .enabled(!this.loading)
-        .onClick(() => this.onRefresh())
-
-      Button('Sign out')
-        .height(36)
-        .fontSize(13)
-        .fontColor($r('app.color.neutral_action_text'))
-        .backgroundColor($r('app.color.surface_neutral'))
-        .borderRadius(10)
-        .onClick(() => this.onSignOut())
+        Row({ space: 12 }) {
+          this.liveControl()
+          Blank()
+            .layoutWeight(1)
+          this.refreshButton()
+        }
+        .width('100%')
+      }
+      .width('100%')
+      .padding({ left: 18, right: 18, top: 16, bottom: 12 })
+      .backgroundColor($r('app.color.surface_header'))
     }
-    .width('100%')
-    .padding({ left: 18, right: 18, top: 18, bottom: 14 })
-    .backgroundColor($r('app.color.surface_header'))
+  }
+
+  @Builder
+  private titleBlock() {
+    Column({ space: 2 }) {
+      Text('Heszel')
+        .fontSize(24)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.text_primary'))
+      Text(`${this.onlineCount()} of ${this.systems.length} systems online`)
+        .fontSize(12)
+        .fontColor($r('app.color.text_secondary'))
+    }
+    .alignItems(HorizontalAlign.Start)
+    .layoutWeight(1)
+  }
+
+  @Builder
+  private liveControl() {
+    Row({ space: 7 }) {
+      Row()
+        .width(7)
+        .height(7)
+        .borderRadius(4)
+        .backgroundColor(this.liveMetrics && this.realtimeConnected &&
+          (this.expanded || this.compactDetailVisible) ?
+          $r('app.color.status_up') : $r('app.color.text_tertiary'))
+      Text('Live')
+        .fontSize(13)
+        .fontColor($r('app.color.text_secondary'))
+      Toggle({ type: ToggleType.Switch, isOn: this.liveMetrics })
+        .onChange((enabled: boolean) => this.onLiveMetricsChange(enabled))
+    }
+  }
+
+  @Builder
+  private refreshButton() {
+    Button(this.loading ? '…' : 'Refresh')
+      .height(36)
+      .fontSize(13)
+      .fontColor($r('app.color.action'))
+      .backgroundColor($r('app.color.action_surface'))
+      .borderRadius(10)
+      .enabled(!this.loading)
+      .onClick(() => this.onRefresh())
+  }
+
+  @Builder
+  private settingsButton() {
+    Button('Settings')
+      .height(36)
+      .fontSize(13)
+      .fontColor($r('app.color.neutral_action_text'))
+      .backgroundColor($r('app.color.surface_neutral'))
+      .borderRadius(10)
+      .onClick(() => this.onOpenSettings())
   }
 
   @Builder

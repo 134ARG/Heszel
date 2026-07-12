@@ -1,6 +1,12 @@
 import { BeszelApiError, BeszelClient } from '../api/BeszelClient'
+import {
+  BeszelRealtimeClient,
+  BeszelRealtimeMetrics,
+  BeszelSystemRealtimeEvent
+} from '../api/BeszelRealtimeClient'
 import { DashboardView } from '../components/DashboardView'
 import { LoginView } from '../components/LoginView'
+import { SettingsView } from '../components/SettingsView'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
 import { SessionRepository, StoredSession } from '../repository/SessionRepository'
 
@@ -15,15 +21,22 @@ struct Index {
   @State private loginError: string = ''
   @State private dashboardError: string = ''
   @State private lastRefresh: string = ''
-  @State private expanded: boolean = false
+  @State @Watch('onDetailContextChanged') private expanded: boolean = false
+  @State @Watch('onDetailContextChanged') private settingsVisible: boolean = false
+  @State @Watch('onDetailContextChanged') private compactDetailVisible: boolean = false
+  @State @Watch('onLiveMetricsChanged') private liveMetrics: boolean = false
+  @State private realtimeConnected: boolean = false
   @State private restoringSession: boolean = true
   @State private savedServerUrl: string = ''
   @State private savedEmail: string = ''
   private client: BeszelClient | null = null
+  private realtimeClient: BeszelRealtimeClient | null = null
   private sessionRepository: SessionRepository | null = null
-  private pollTimer: number = -1
+  private pageVisible: boolean = false
   private refreshInFlight: boolean = false
   private manualRefreshPending: boolean = false
+  private metricRefreshPending: boolean = false
+  private metricRefreshTimer: number = -1
   private sessionRefreshPending: boolean = false
 
   aboutToAppear(): void {
@@ -31,18 +44,20 @@ struct Index {
   }
 
   onPageShow(): void {
+    this.pageVisible = true
     if (this.session.token.length > 0) {
-      this.startPolling()
-      this.refreshSystems(false)
+      this.resumeData()
     }
   }
 
   onPageHide(): void {
-    this.stopPolling()
+    this.pageVisible = false
+    this.stopRealtime()
   }
 
   aboutToDisappear(): void {
-    this.stopPolling()
+    this.pageVisible = false
+    this.stopRealtime()
   }
 
   build() {
@@ -71,19 +86,38 @@ struct Index {
             this.login(serverUrl, email, password)
           }
         })
+      } else if (this.settingsVisible) {
+        SettingsView({
+          baseUrl: this.session.baseUrl,
+          email: this.session.email,
+          expanded: this.expanded,
+          errorMessage: this.dashboardError,
+          onBack: () => {
+            this.settingsVisible = false
+          },
+          onSignOut: () => {
+            this.signOut()
+          }
+        })
       } else {
         DashboardView({
-          systems: this.systems,
+          systems: $systems,
           selectedId: $selectedId,
+          compactDetailVisible: $compactDetailVisible,
           loading: this.refreshing,
           errorMessage: this.dashboardError,
           lastRefresh: this.lastRefresh,
           expanded: this.expanded,
+          liveMetrics: this.liveMetrics,
+          realtimeConnected: this.realtimeConnected,
           onRefresh: () => {
-            this.refreshSystems(true)
+            this.handleManualRefresh()
           },
-          onSignOut: () => {
-            this.signOut()
+          onOpenSettings: () => {
+            this.settingsVisible = true
+          },
+          onLiveMetricsChange: (enabled: boolean) => {
+            this.liveMetrics = enabled
           }
         })
       }
@@ -115,7 +149,9 @@ struct Index {
       this.selectedId = ''
       await this.persistSession(session)
       await this.refreshSystems(true)
-      this.startPolling()
+      if (this.pageVisible && this.session.token.length > 0) {
+        this.startRealtime()
+      }
     } catch (error) {
       this.loginError = this.describeError(error, 'Unable to connect to Beszel.')
     } finally {
@@ -193,28 +229,172 @@ struct Index {
     return reconciled
   }
 
-  private startPolling(): void {
-    this.stopPolling()
-    this.pollTimer = setInterval(() => {
-      this.refreshSystems(false)
-    }, 15000)
-  }
-
-  private stopPolling(): void {
-    if (this.pollTimer >= 0) {
-      clearInterval(this.pollTimer)
-      this.pollTimer = -1
+  private async resumeData(): Promise<void> {
+    await this.refreshSystems(false)
+    if (this.pageVisible && this.session.token.length > 0) {
+      this.startRealtime()
     }
   }
 
+  private startRealtime(): void {
+    if (!this.pageVisible || this.session.token.length === 0) {
+      return
+    }
+    this.stopRealtime()
+    this.realtimeClient = new BeszelRealtimeClient(
+      this.session.baseUrl,
+      this.session.token,
+      (event: BeszelSystemRealtimeEvent) => this.handleSystemRealtimeEvent(event),
+      (systemId: string, metrics: BeszelRealtimeMetrics) => this.handleRealtimeMetrics(systemId, metrics),
+      (connected: boolean) => {
+        this.realtimeConnected = connected
+        if (connected) {
+          this.dashboardError = ''
+        }
+      },
+      (error: Error) => {
+        if (this.pageVisible && this.session.token.length > 0) {
+          this.dashboardError = `${error.message} Refresh remains available.`
+        }
+      }
+    )
+    this.realtimeClient.connect()
+    this.syncMetricSubscription()
+  }
+
+  private stopRealtime(): void {
+    this.cancelMetricRefresh()
+    if (this.realtimeClient !== null) {
+      this.realtimeClient.disconnect()
+      this.realtimeClient = null
+    }
+    this.realtimeConnected = false
+  }
+
+  private handleSystemRealtimeEvent(event: BeszelSystemRealtimeEvent): void {
+    if (event.action === 'delete') {
+      this.systems = this.systems.filter((system: SystemSummary) => system.id !== event.record.id)
+    } else if (event.action === 'create' || event.action === 'update') {
+      const fresh = SystemSummary.fromWire(event.record)
+      const existing = this.systems.find((system: SystemSummary) => system.id === fresh.id)
+      if (existing === undefined) {
+        const next = this.systems.slice()
+        next.push(fresh)
+        this.systems = this.sortSystems(next)
+      } else {
+        existing.updateFrom(fresh)
+        this.systems = this.systems.slice()
+      }
+    } else {
+      return
+    }
+
+    if (this.systems.length > 0 && !this.systems.some((system: SystemSummary) => system.id === this.selectedId)) {
+      this.selectedId = this.systems[0].id
+    } else if (this.systems.length === 0) {
+      this.selectedId = ''
+      this.compactDetailVisible = false
+    }
+    this.lastRefresh = new Date().toLocaleTimeString()
+  }
+
+  private sortSystems(systems: SystemSummary[]): SystemSummary[] {
+    systems.sort((left: SystemSummary, right: SystemSummary) => {
+      if (left.isUp() !== right.isUp()) {
+        return left.isUp() ? 1 : -1
+      }
+      return left.name.localeCompare(right.name)
+    })
+    return systems
+  }
+
+  private handleRealtimeMetrics(systemId: string, metrics: BeszelRealtimeMetrics): void {
+    if (metrics.info === undefined) {
+      return
+    }
+    const system = this.systems.find((candidate: SystemSummary) => candidate.id === systemId)
+    if (system === undefined) {
+      return
+    }
+
+    system.updateMetrics(metrics.info)
+    this.systems = this.systems.slice()
+    this.lastRefresh = new Date().toLocaleTimeString()
+
+    if (this.metricRefreshPending && systemId === this.selectedId) {
+      this.cancelMetricRefresh()
+      this.refreshing = false
+      this.syncMetricSubscription()
+    }
+  }
+
+  private handleManualRefresh(): void {
+    const selected = this.systems.find((system: SystemSummary) => system.id === this.selectedId)
+    if (!this.detailIsVisible() || selected === undefined || !selected.isUp() ||
+      this.realtimeClient === null || !this.realtimeConnected) {
+      this.refreshSystems(true)
+      return
+    }
+
+    this.dashboardError = ''
+    this.metricRefreshPending = true
+    this.refreshing = true
+    this.syncMetricSubscription()
+    this.metricRefreshTimer = setTimeout(() => {
+      if (!this.metricRefreshPending) {
+        return
+      }
+      this.cancelMetricRefresh()
+      this.syncMetricSubscription()
+      this.refreshSystems(true)
+    }, 8000)
+  }
+
+  private cancelMetricRefresh(): void {
+    this.metricRefreshPending = false
+    if (this.metricRefreshTimer >= 0) {
+      clearTimeout(this.metricRefreshTimer)
+      this.metricRefreshTimer = -1
+    }
+  }
+
+  private detailIsVisible(): boolean {
+    return !this.settingsVisible && this.selectedId.length > 0 && (this.expanded || this.compactDetailVisible)
+  }
+
+  private syncMetricSubscription(): void {
+    if (this.realtimeClient === null) {
+      return
+    }
+    if ((this.liveMetrics && this.detailIsVisible()) || this.metricRefreshPending) {
+      this.realtimeClient.setMetricsSystem(this.selectedId)
+    } else {
+      this.realtimeClient.setMetricsSystem('')
+    }
+  }
+
+  private onLiveMetricsChanged(): void {
+    this.syncMetricSubscription()
+  }
+
+  private onDetailContextChanged(): void {
+    if (!this.detailIsVisible() && this.metricRefreshPending) {
+      this.cancelMetricRefresh()
+      this.refreshing = false
+    }
+    this.syncMetricSubscription()
+  }
+
   private async signOut(): Promise<void> {
-    this.stopPolling()
+    this.stopRealtime()
     if (this.sessionRepository !== null) {
       try {
         await this.sessionRepository.clearToken()
       } catch (_) {
         this.dashboardError = 'Unable to remove the protected session token. Please try again.'
-        this.startPolling()
+        if (this.pageVisible && this.session.token.length > 0) {
+          this.startRealtime()
+        }
         return
       }
     }
@@ -223,6 +403,9 @@ struct Index {
     this.sessionRefreshPending = false
     this.systems = []
     this.selectedId = ''
+    this.compactDetailVisible = false
+    this.liveMetrics = false
+    this.settingsVisible = false
     this.dashboardError = ''
     this.lastRefresh = ''
   }
@@ -249,9 +432,9 @@ struct Index {
       const sessionReady = await this.retrySessionRefresh()
       if (sessionReady) {
         await this.refreshSystems(true, false)
-      }
-      if (this.session.token.length > 0) {
-        this.startPolling()
+        if (this.pageVisible && this.session.token.length > 0) {
+          this.startRealtime()
+        }
       }
     } catch (error) {
       this.loginError = this.describeError(error, 'Unable to restore the saved session.')
@@ -273,6 +456,11 @@ struct Index {
 
   private onSelectedIdChanged(): void {
     this.persistSelectedId()
+    if (this.metricRefreshPending) {
+      this.cancelMetricRefresh()
+      this.refreshing = false
+    }
+    this.syncMetricSubscription()
   }
 
   private async persistSelectedId(): Promise<void> {
@@ -315,7 +503,7 @@ struct Index {
   }
 
   private async expireSavedSession(): Promise<void> {
-    this.stopPolling()
+    this.stopRealtime()
     if (this.sessionRepository !== null) {
       try {
         await this.sessionRepository.clearToken()
@@ -327,6 +515,9 @@ struct Index {
     this.session = new BeszelSession()
     this.sessionRefreshPending = false
     this.systems = []
+    this.compactDetailVisible = false
+    this.liveMetrics = false
+    this.settingsVisible = false
     this.dashboardError = ''
     this.lastRefresh = ''
     this.loginError = 'Your saved session was rejected by Beszel. Sign in again.'
