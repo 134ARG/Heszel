@@ -32,6 +32,7 @@ export class BeszelApiError extends Error {
 export class BeszelClient {
   private readonly baseUrl: string
   private readonly gatewayKey: string
+  private activeRequests: Set<http.HttpRequest> = new Set<http.HttpRequest>()
 
   constructor(baseUrl: string, gatewayKey: string = '') {
     this.baseUrl = BeszelClient.normalizeBaseUrl(baseUrl)
@@ -50,7 +51,7 @@ export class BeszelClient {
   }
 
   async login(email: string, password: string): Promise<BeszelSession> {
-    const request = http.createHttp()
+    const request = this.createRequest()
     const body: LoginBody = {
       identity: email.trim(),
       password: password
@@ -93,12 +94,12 @@ export class BeszelClient {
     } catch (error) {
       throw this.asError(error, 'Unable to reach the Beszel hub.')
     } finally {
-      request.destroy()
+      this.finishRequest(request)
     }
   }
 
   async refreshSession(token: string, email: string): Promise<BeszelSession> {
-    const request = http.createHttp()
+    const request = this.createRequest()
     try {
       const response = await request.request(
         `${this.baseUrl}/api/collections/users/auth-refresh`,
@@ -135,12 +136,12 @@ export class BeszelClient {
     } catch (error) {
       throw this.asError(error, 'Unable to refresh the saved Beszel session.')
     } finally {
-      request.destroy()
+      this.finishRequest(request)
     }
   }
 
   async listSystems(token: string): Promise<SystemSummary[]> {
-    const request = http.createHttp()
+    const request = this.createRequest()
     const path = '/api/collections/systems/records' +
       '?page=1&perPage=500&sort=name&fields=id%2Cname%2Chost%2Cstatus%2Cinfo%2Cupdated'
 
@@ -178,12 +179,12 @@ export class BeszelClient {
     } catch (error) {
       throw this.asError(error, 'Unable to load systems from Beszel.')
     } finally {
-      request.destroy()
+      this.finishRequest(request)
     }
   }
 
   async getSystemDetails(token: string, systemId: string): Promise<BeszelSystemDetailsWire | null> {
-    const request = http.createHttp()
+    const request = this.createRequest()
     const fields = 'id,hostname,kernel,cores,threads,cpu,os,os_name,arch,memory,podman,updated'
     try {
       const response = await request.request(
@@ -210,12 +211,12 @@ export class BeszelClient {
     } catch (error) {
       throw this.asError(error, 'Unable to load system details.')
     } finally {
-      request.destroy()
+      this.finishRequest(request)
     }
   }
 
   async getLatestSystemStats(token: string, systemId: string): Promise<BeszelSystemStatsRecordWire | null> {
-    const request = http.createHttp()
+    const request = this.createRequest()
     const filter = encodeURIComponent(`system="${systemId}"`)
     const path = `/api/collections/system_stats/records?page=1&perPage=1&sort=-created&filter=${filter}&fields=created,stats`
     try {
@@ -238,12 +239,12 @@ export class BeszelClient {
     } catch (error) {
       throw this.asError(error, 'Unable to load detailed metrics.')
     } finally {
-      request.destroy()
+      this.finishRequest(request)
     }
   }
 
   async getLatestContainerStats(token: string, systemId: string): Promise<BeszelContainerStatsRecordWire | null> {
-    const request = http.createHttp()
+    const request = this.createRequest()
     const filter = encodeURIComponent(`system="${systemId}"`)
     const path = `/api/collections/container_stats/records?page=1&perPage=1&sort=-created&filter=${filter}&fields=created,stats`
     try {
@@ -266,6 +267,23 @@ export class BeszelClient {
     } catch (error) {
       throw this.asError(error, 'Unable to load container metrics.')
     } finally {
+      this.finishRequest(request)
+    }
+  }
+
+  cancelPendingRequests(): void {
+    this.activeRequests.forEach((request: http.HttpRequest) => request.destroy())
+    this.activeRequests.clear()
+  }
+
+  private createRequest(): http.HttpRequest {
+    const request = http.createHttp()
+    this.activeRequests.add(request)
+    return request
+  }
+
+  private finishRequest(request: http.HttpRequest): void {
+    if (this.activeRequests.delete(request)) {
       request.destroy()
     }
   }

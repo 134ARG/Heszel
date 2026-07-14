@@ -14,7 +14,7 @@ export class SessionRefreshService {
     try {
       return await operation(session)
     } catch (error) {
-      if (!SessionRefreshService.requestNeedsRefresh(error)) {
+      if (!SessionRefreshService.isAccessRejected(error)) {
         throw this.asError(error, 'The authenticated Beszel request failed.')
       }
     }
@@ -24,7 +24,7 @@ export class SessionRefreshService {
     try {
       return await operation(refreshed)
     } catch (error) {
-      if (SessionRefreshService.requestNeedsRefresh(error)) {
+      if (SessionRefreshService.isAccessRejected(error)) {
         throw new BeszelSessionRejectedError(this.message(error, 'The Beszel session was rejected.'))
       }
       throw this.asError(error, 'The authenticated Beszel request failed after refreshing the session.')
@@ -46,7 +46,7 @@ export class SessionRefreshService {
     return error instanceof BeszelSessionRejectedError
   }
 
-  private static requestNeedsRefresh(error: Object): boolean {
+  static isAccessRejected(error: Object): boolean {
     return error instanceof BeszelApiError && (error.responseCode === 401 || error.responseCode === 403)
   }
 

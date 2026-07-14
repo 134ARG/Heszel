@@ -61,6 +61,11 @@ struct Index {
   private pendingSelectedId: string = ''
   private lastPersistedSelectedId: string = ''
   private sessionRefreshService: SessionRefreshService = new SessionRefreshService()
+  private manualRefreshService: SystemRefreshService | null = null
+  private pendingGatewayClient: BeszelClient | null = null
+  private dataGeneration: number = 0
+  private detailLoadSequence: number = 0
+  private detailLoadTokens: Map<string, number> = new Map<string, number>()
 
   aboutToAppear(): void {
     this.restoreSession()
@@ -76,11 +81,13 @@ struct Index {
   onPageHide(): void {
     this.pageVisible = false
     this.flushSelectedId()
+    this.invalidateDataWork()
     this.stopRealtime()
   }
 
   aboutToDisappear(): void {
     this.pageVisible = false
+    this.invalidateDataWork()
     this.stopRealtime()
   }
 
@@ -154,10 +161,19 @@ struct Index {
     }
 
     this.signingIn = true
+    const generation = this.dataGeneration
+    let client: BeszelClient | null = null
     try {
-      const client = new BeszelClient(serverUrl, gatewayKey)
-      const session = await client.login(email, password)
-      this.client = client
+      const loginClient = new BeszelClient(serverUrl, gatewayKey)
+      client = loginClient
+      this.client = loginClient
+      const session = await loginClient.login(email, password)
+      if (!this.isDataWorkCurrent(generation)) {
+        if (this.client === loginClient) {
+          this.client = null
+        }
+        return
+      }
       this.session = session
       this.sessionRefreshPending = false
       this.savedServerUrl = session.baseUrl
@@ -167,11 +183,23 @@ struct Index {
       this.selectedId = ''
       this.clearDetailStates()
       await this.persistSession(session)
+      if (!this.isDataWorkCurrent(generation)) {
+        return
+      }
       await this.refreshSystems(true)
       if (this.pageVisible && this.session.token.length > 0) {
         this.startRealtime()
       }
     } catch (error) {
+      if (!this.isDataWorkCurrent(generation)) {
+        if (client !== null && this.client === client) {
+          this.client = null
+        }
+        return
+      }
+      if (client !== null && this.client === client) {
+        this.client = null
+      }
       this.loginError = this.describeError(error,
         this.localized('error_connect_beszel', 'Unable to connect to Beszel.'))
     } finally {
@@ -184,6 +212,7 @@ struct Index {
     if (client === null || this.session.token.length === 0) {
       return
     }
+    const generation = this.dataGeneration
     if (this.refreshInFlight) {
       if (showLoading) {
         this.manualRefreshPending = true
@@ -199,15 +228,19 @@ struct Index {
     this.dashboardError = ''
     try {
       if (retryPendingSession && this.sessionRefreshPending) {
-        const sessionReady = await this.retrySessionRefresh()
+        const sessionReady = await this.retrySessionRefresh(generation)
         if (!sessionReady) {
           return
         }
       }
 
       const incomingSystems = await this.executeAuthenticated(
-        (activeSession: BeszelSession) => client.listSystems(activeSession.token)
+        (activeSession: BeszelSession) => client.listSystems(activeSession.token),
+        generation
       )
+      if (!this.isDataWorkCurrent(generation)) {
+        return
+      }
       const systems = this.reconcileSystems(incomingSystems)
       this.systems = systems
       if (systems.length > 0 && !systems.some((system: SystemSummary) => system.id === this.selectedId)) {
@@ -219,6 +252,9 @@ struct Index {
         this.realtimeClient.retryNow()
       }
     } catch (error) {
+      if (!this.isDataWorkCurrent(generation)) {
+        return
+      }
       if (this.isSessionRejected(error)) {
         await this.expireSavedSession()
         return
@@ -226,13 +262,15 @@ struct Index {
       this.dashboardError = this.describeError(error,
         this.localized('error_refresh_systems', 'Unable to refresh systems.'))
     } finally {
-      this.refreshInFlight = false
-      if (this.manualRefreshPending && this.client !== null && this.session.token.length > 0) {
-        this.manualRefreshPending = false
-        await this.performManualRefresh()
-      } else {
-        this.manualRefreshPending = false
-        this.refreshing = false
+      if (this.isDataWorkCurrent(generation)) {
+        this.refreshInFlight = false
+        if (this.manualRefreshPending && this.client !== null && this.session.token.length > 0) {
+          this.manualRefreshPending = false
+          await this.performManualRefresh()
+        } else {
+          this.manualRefreshPending = false
+          this.refreshing = false
+        }
       }
     }
   }
@@ -259,6 +297,9 @@ struct Index {
 
   private async resumeData(): Promise<void> {
     await this.refreshSystems(false)
+    if (this.pageVisible && this.detailIsVisible()) {
+      this.loadSelectedDetail()
+    }
     if (this.pageVisible && this.session.token.length > 0) {
       this.startRealtime()
     }
@@ -367,26 +408,33 @@ struct Index {
     if (client === null || this.session.token.length === 0) {
       return
     }
+    const generation = this.dataGeneration
+    const refreshService = new SystemRefreshService()
+    this.manualRefreshService = refreshService
     this.refreshInFlight = true
     this.refreshing = true
     this.dashboardError = ''
     const requestedSystemId = this.selectedId
     try {
       if (this.sessionRefreshPending) {
-        const sessionReady = await this.retrySessionRefresh()
+        const sessionReady = await this.retrySessionRefresh(generation)
         if (!sessionReady || this.client === null) {
           return
         }
       }
       const alreadyReceivingMetrics = this.liveMetrics && this.realtimeConnected && this.detailIsVisible()
       const result = await this.executeAuthenticated(
-        (activeSession: BeszelSession) => new SystemRefreshService().refresh(
+        (activeSession: BeszelSession) => refreshService.refresh(
           client,
           activeSession,
           requestedSystemId,
           !alreadyReceivingMetrics
-        )
+        ),
+        generation
       )
+      if (!this.isDataWorkCurrent(generation)) {
+        return
+      }
       this.systems = this.reconcileSystems(result.systems)
       if (this.systems.length > 0 &&
         !this.systems.some((system: SystemSummary) => system.id === this.selectedId)) {
@@ -410,6 +458,9 @@ struct Index {
         this.realtimeClient.retryNow()
       }
     } catch (error) {
+      if (!this.isDataWorkCurrent(generation)) {
+        return
+      }
       if (this.isSessionRejected(error)) {
         await this.expireSavedSession()
         return
@@ -417,13 +468,18 @@ struct Index {
       this.dashboardError = this.describeError(error,
         this.localized('error_refresh_systems', 'Unable to refresh systems.'))
     } finally {
-      this.refreshInFlight = false
-      if (this.manualRefreshPending && this.client !== null && this.session.token.length > 0) {
-        this.manualRefreshPending = false
-        await this.performManualRefresh()
-      } else {
-        this.manualRefreshPending = false
-        this.refreshing = false
+      if (this.manualRefreshService === refreshService) {
+        this.manualRefreshService = null
+      }
+      if (this.isDataWorkCurrent(generation)) {
+        this.refreshInFlight = false
+        if (this.manualRefreshPending && this.client !== null && this.session.token.length > 0) {
+          this.manualRefreshPending = false
+          await this.performManualRefresh()
+        } else {
+          this.manualRefreshPending = false
+          this.refreshing = false
+        }
       }
     }
   }
@@ -456,6 +512,7 @@ struct Index {
 
   private async signOut(): Promise<void> {
     await this.flushSelectedId()
+    this.invalidateDataWork()
     this.stopRealtime()
     if (this.sessionRepository !== null) {
       try {
@@ -483,6 +540,7 @@ struct Index {
   }
 
   private async restoreSession(): Promise<void> {
+    const generation = this.dataGeneration
     try {
       const context = this.getUIContext().getHostContext()
       if (context === undefined) {
@@ -491,6 +549,9 @@ struct Index {
       this.sessionRepository = new SessionRepository(context)
       this.widgetRepository = new WidgetSnapshotRepository(context)
       const stored = await this.sessionRepository.load()
+      if (!this.isDataWorkCurrent(generation)) {
+        return
+      }
       this.savedServerUrl = stored.baseUrl
       this.savedEmail = stored.email
       this.savedGatewayKey = stored.gatewayKey
@@ -504,7 +565,7 @@ struct Index {
       this.session = this.toSession(stored)
       this.sessionRefreshPending = true
 
-      const sessionReady = await this.retrySessionRefresh()
+      const sessionReady = await this.retrySessionRefresh(generation)
       if (sessionReady) {
         await this.refreshSystems(true, false)
         if (this.pageVisible && this.session.token.length > 0) {
@@ -539,12 +600,20 @@ struct Index {
       return
     }
 
+    const generation = this.dataGeneration
     this.refreshing = true
     this.dashboardError = ''
     const client = new BeszelClient(this.session.baseUrl, gatewayKey)
+    this.pendingGatewayClient = client
     try {
       const incomingSystems = await client.listSystems(this.session.token)
+      if (!this.isDataWorkCurrent(generation)) {
+        return
+      }
       await this.sessionRepository.saveGatewayKey(gatewayKey)
+      if (!this.isDataWorkCurrent(generation)) {
+        return
+      }
 
       this.stopRealtime()
       const session = new BeszelSession()
@@ -562,10 +631,18 @@ struct Index {
         this.startRealtime()
       }
     } catch (error) {
+      if (!this.isDataWorkCurrent(generation)) {
+        return
+      }
       this.dashboardError = this.describeError(error,
         this.localized('error_gateway_rejected', 'The nginx gateway rejected this key.'))
     } finally {
-      this.refreshing = false
+      if (this.pendingGatewayClient === client) {
+        this.pendingGatewayClient = null
+      }
+      if (this.isDataWorkCurrent(generation)) {
+        this.refreshing = false
+      }
     }
   }
 
@@ -647,6 +724,7 @@ struct Index {
   }
 
   private clearDetailStates(): void {
+    this.detailLoadTokens.clear()
     this.detailStates.clear()
     this.detailState = new SystemDetailState()
   }
@@ -661,22 +739,39 @@ struct Index {
   private async loadSelectedDetail(): Promise<void> {
     const client = this.client
     const state = this.detailState
-    if (!this.detailVisible || client === null || this.session.token.length === 0 ||
+    if (!this.pageVisible || !this.detailVisible || client === null || this.session.token.length === 0 ||
       state.systemId.length === 0 || state.loading || state.loaded) {
       return
     }
 
+    const generation = this.dataGeneration
+    const loadToken = ++this.detailLoadSequence
+    this.detailLoadTokens.set(state.systemId, loadToken)
     state.loading = true
     state.errorMessage = ''
     try {
       const loaded = await this.executeAuthenticated(async (activeSession: BeszelSession) => {
+        const detailsRequest = client.getSystemDetails(activeSession.token, state.systemId)
+        const statsRequest = client.getLatestSystemStats(activeSession.token, state.systemId)
+        const containersRequest = this.getOptionalContainerStats(client, activeSession.token, state.systemId)
+        const responses = await Promise.all([
+          detailsRequest,
+          statsRequest,
+          containersRequest
+        ])
+        const details = responses[0] as BeszelSystemDetailsWire | null
+        const stats = responses[1] as BeszelSystemStatsRecordWire | null
+        const containers = responses[2] as BeszelContainerStatsRecordWire | null
         const result: LoadedSystemDetail = {
-          details: await client.getSystemDetails(activeSession.token, state.systemId),
-          stats: await client.getLatestSystemStats(activeSession.token, state.systemId),
-          containers: await client.getLatestContainerStats(activeSession.token, state.systemId)
+          details: details,
+          stats: stats,
+          containers: containers
         }
         return result
-      })
+      }, generation)
+      if (!this.isDataWorkCurrent(generation) || this.detailLoadTokens.get(state.systemId) !== loadToken) {
+        return
+      }
       state.applyHardware(loaded.details)
       state.initializeCapabilities(loaded.stats?.stats, loaded.containers?.stats)
       if (loaded.stats !== null && loaded.stats.stats !== undefined && loaded.stats.stats !== null) {
@@ -686,6 +781,9 @@ struct Index {
       }
       state.loaded = true
     } catch (error) {
+      if (!this.isDataWorkCurrent(generation) || this.detailLoadTokens.get(state.systemId) !== loadToken) {
+        return
+      }
       if (this.isSessionRejected(error)) {
         await this.expireSavedSession()
         return
@@ -693,7 +791,22 @@ struct Index {
       state.errorMessage = this.describeError(error,
         this.localized('error_load_detail', 'Unable to load detailed system data.'))
     } finally {
-      state.loading = false
+      if (this.detailLoadTokens.get(state.systemId) === loadToken) {
+        this.detailLoadTokens.delete(state.systemId)
+        state.loading = false
+      }
+    }
+  }
+
+  private async getOptionalContainerStats(client: BeszelClient, token: string,
+    systemId: string): Promise<BeszelContainerStatsRecordWire | null> {
+    try {
+      return await client.getLatestContainerStats(token, systemId)
+    } catch (error) {
+      if (SessionRefreshService.isAccessRejected(error)) {
+        throw error instanceof Error ? error : new Error('Container metrics access was rejected.')
+      }
+      return null
     }
   }
 
@@ -701,18 +814,27 @@ struct Index {
     return SessionRefreshService.isSessionRejected(error)
   }
 
-  private async retrySessionRefresh(): Promise<boolean> {
+  private async retrySessionRefresh(generation: number = this.dataGeneration): Promise<boolean> {
     if (this.client === null || !this.sessionRefreshPending) {
       return true
     }
 
     try {
       const refreshed = await this.sessionRefreshService.refresh(this.client, this.session)
+      if (!this.isDataWorkCurrent(generation)) {
+        return false
+      }
       this.session = refreshed
       this.sessionRefreshPending = false
       await this.persistSession(refreshed)
+      if (!this.isDataWorkCurrent(generation)) {
+        return false
+      }
       return true
     } catch (error) {
+      if (!this.isDataWorkCurrent(generation)) {
+        return false
+      }
       if (this.isSessionRejected(error)) {
         await this.expireSavedSession()
         return false
@@ -725,17 +847,18 @@ struct Index {
     }
   }
 
-  private async executeAuthenticated<T>(operation: (activeSession: BeszelSession) => Promise<T>): Promise<T> {
+  private async executeAuthenticated<T>(operation: (activeSession: BeszelSession) => Promise<T>,
+    generation: number = this.dataGeneration): Promise<T> {
     const client = this.client
-    if (client === null || this.session.token.length === 0) {
+    if (client === null || this.session.token.length === 0 || !this.isDataWorkCurrent(generation)) {
       throw new Error('No active Beszel session.')
     }
-    return this.sessionRefreshService.execute(
+    const result = await this.sessionRefreshService.execute(
       client,
       this.session,
       operation,
       async (refreshed: BeszelSession) => {
-        if (this.client !== client || this.session.token.length === 0) {
+        if (this.client !== client || this.session.token.length === 0 || !this.isDataWorkCurrent(generation)) {
           throw new Error('The active Beszel session changed during refresh.')
         }
         const restartRealtime = this.pageVisible && this.realtimeClient !== null
@@ -745,14 +868,42 @@ struct Index {
         this.session = refreshed
         this.sessionRefreshPending = false
         await this.persistSession(refreshed)
+        if (!this.isDataWorkCurrent(generation)) {
+          throw new Error('The active Beszel session changed while it was being saved.')
+        }
         if (restartRealtime) {
           this.startRealtime()
         }
       }
     )
+    if (!this.isDataWorkCurrent(generation)) {
+      throw new Error('The Beszel request completed after its lifecycle ended.')
+    }
+    return result
+  }
+
+  private isDataWorkCurrent(generation: number): boolean {
+    return generation === this.dataGeneration
+  }
+
+  private invalidateDataWork(): void {
+    this.dataGeneration += 1
+    this.client?.cancelPendingRequests()
+    this.pendingGatewayClient?.cancelPendingRequests()
+    this.pendingGatewayClient = null
+    this.manualRefreshService?.cancel()
+    this.manualRefreshService = null
+    this.refreshInFlight = false
+    this.manualRefreshPending = false
+    this.refreshing = false
+    this.detailLoadTokens.clear()
+    this.detailStates.forEach((state: SystemDetailState) => {
+      state.loading = false
+    })
   }
 
   private async expireSavedSession(): Promise<void> {
+    this.invalidateDataWork()
     this.stopRealtime()
     if (this.sessionRepository !== null) {
       try {

@@ -12,10 +12,16 @@ export class SystemRefreshResult {
 }
 
 export class SystemRefreshService {
+  private cancelled: boolean = false
+  private cancelMetricsRequest: (() => void) | null = null
+
   async refresh(client: BeszelClient, session: BeszelSession, selectedSystemId: string,
     requestRealtimeMetrics: boolean = true): Promise<SystemRefreshResult> {
     const result = new SystemRefreshResult()
     result.systems = await client.listSystems(session.token)
+    if (this.cancelled) {
+      throw new Error('Refresh cancelled.')
+    }
     const selected = result.systems.find((system: SystemSummary) => system.id === selectedSystemId)
     if (requestRealtimeMetrics && selected !== undefined && selected.isUp()) {
       try {
@@ -31,11 +37,21 @@ export class SystemRefreshService {
     return result
   }
 
+  cancel(): void {
+    this.cancelled = true
+    const cancel = this.cancelMetricsRequest
+    this.cancelMetricsRequest = null
+    if (cancel !== null) {
+      cancel()
+    }
+  }
+
   private requestMetrics(session: BeszelSession, systemId: string): Promise<BeszelRealtimeMetrics> {
     return new Promise((resolve: (metrics: BeszelRealtimeMetrics) => void, reject: (error: Error) => void) => {
       let realtime: BeszelRealtimeClient | null = null
       let timeout: number = -1
       let complete: boolean = false
+      let cancel: (() => void) | null = null
 
       const finish = (metrics: BeszelRealtimeMetrics | null, error: Error | null): void => {
         if (complete) {
@@ -50,12 +66,18 @@ export class SystemRefreshService {
           realtime.disconnect()
           realtime = null
         }
+        if (cancel !== null && this.cancelMetricsRequest === cancel) {
+          this.cancelMetricsRequest = null
+        }
         if (metrics !== null) {
           resolve(metrics)
         } else {
           reject(error ?? new Error('Unable to receive realtime metrics.'))
         }
       }
+
+      cancel = () => finish(null, new Error('Refresh cancelled.'))
+      this.cancelMetricsRequest = cancel
 
       realtime = new BeszelRealtimeClient(
         session.baseUrl,
