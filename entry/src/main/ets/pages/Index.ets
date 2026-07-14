@@ -52,6 +52,7 @@ struct Index {
   private sessionRepository: SessionRepository | null = null
   private widgetRepository: WidgetSnapshotRepository | null = null
   private pageVisible: boolean = false
+  private detailScrolling: boolean = false
   private refreshInFlight: boolean = false
   private manualRefreshPending: boolean = false
   private sessionRefreshPending: boolean = false
@@ -139,6 +140,12 @@ struct Index {
           },
           onDetailVisibilityChange: (visible: boolean) => {
             this.detailVisible = visible
+            if (!visible) {
+              this.detailScrolling = false
+            }
+          },
+          onDetailScrollingChange: (scrolling: boolean) => {
+            this.detailScrolling = scrolling
           },
           onGatewayKeyChange: (gatewayKey: string) => {
             this.updateGatewayKey(gatewayKey)
@@ -379,6 +386,9 @@ struct Index {
   }
 
   private handleRealtimeMetrics(systemId: string, metrics: BeszelRealtimeMetrics): void {
+    if (this.detailScrolling) {
+      return
+    }
     const system = this.systems.find((candidate: SystemSummary) => candidate.id === systemId)
     if (system !== undefined && metrics.info !== undefined) {
       system.updateCardMetrics(metrics.info)
@@ -896,6 +906,7 @@ struct Index {
     this.refreshInFlight = false
     this.manualRefreshPending = false
     this.refreshing = false
+    this.detailScrolling = false
     this.detailLoadTokens.clear()
     this.detailStates.forEach((state: SystemDetailState) => {
       state.loading = false

@@ -29,6 +29,7 @@ export struct DashboardView {
   onRefresh: () => void = () => {}
   onLiveMetricsChange: (enabled: boolean) => void = () => {}
   onDetailVisibilityChange: (visible: boolean) => void = () => {}
+  onDetailScrollingChange: (scrolling: boolean) => void = () => {}
   onGatewayKeyChange: (gatewayKey: string) => void = () => {}
   onSignOut: () => void = () => {}
   private pathStack: NavPathStack = new NavPathStack()
@@ -169,7 +170,8 @@ export struct DashboardView {
             host: system.host,
             status: system.status,
             agentVersion: system.agentVersion,
-            compact: !this.expanded
+            compact: !this.expanded,
+            onScrollingChange: (scrolling: boolean) => this.onDetailScrollingChange(scrolling)
           })
         },
         (system: SystemSummary) => system.id

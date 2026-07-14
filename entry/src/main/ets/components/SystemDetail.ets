@@ -17,6 +17,7 @@ export struct SystemDetail {
   @Prop status: string = 'unknown'
   @Prop agentVersion: string = ''
   @Prop compact: boolean = false
+  onScrollingChange: (scrolling: boolean) => void = () => {}
 
   build() {
     Scroll() {
@@ -120,6 +121,8 @@ export struct SystemDetail {
     .layoutWeight(1)
     .height('100%')
     .scrollBar(BarState.Off)
+    .onScrollStart(() => this.onScrollingChange(true))
+    .onScrollStop(() => this.onScrollingChange(false))
   }
 
   @Builder
