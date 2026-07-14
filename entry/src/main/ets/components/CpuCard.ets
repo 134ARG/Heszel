@@ -7,16 +7,23 @@ struct CpuCoreChip {
   @ObjectLink core: CpuCoreMetric
 
   build() {
-    Text(`${this.core.index}  ${this.core.usagePercent.toFixed(0)}%`)
+    Text(`${this.core.index}  ${this.fixedPercent()}%`)
       .fontSize(11)
       .fontColor(this.core.usagePercent >= 90 ? $r('app.color.error') : $r('app.color.text_primary'))
       .textAlign(TextAlign.Center)
-      .width(78)
-      .height(30)
+      .width(66)
+      .height(27)
       .margin({ right: 6, bottom: 6 })
       .backgroundColor($r('app.color.surface_input'))
       .borderRadius(8)
       .maxLines(1)
+  }
+
+  private fixedPercent(): string {
+    const percent = this.core.usagePercent.toFixed(0)
+    if (percent.length === 1) return `  ${percent}`
+    if (percent.length === 2) return ` ${percent}`
+    return percent
   }
 }
 
