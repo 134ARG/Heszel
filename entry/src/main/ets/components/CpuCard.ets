@@ -27,10 +27,13 @@ export struct CpuCard {
             Text(`${index}  ${value.toFixed(0)}%`)
               .fontSize(11)
               .fontColor(value >= 90 ? $r('app.color.error') : $r('app.color.text_primary'))
-              .padding({ left: 9, right: 9, top: 6, bottom: 6 })
+              .textAlign(TextAlign.Center)
+              .width(78)
+              .height(30)
               .margin({ right: 6, bottom: 6 })
               .backgroundColor($r('app.color.surface_input'))
               .borderRadius(8)
+              .maxLines(1)
           }, (value: number, index: number) =>
             `${index}:${value.toFixed(0)}:${value >= 90}`)
         }
