@@ -5,7 +5,8 @@ import { BeszelClient } from '../api/BeszelClient'
 import { BeszelSession } from '../model/BeszelModels'
 import { SessionRepository } from '../repository/SessionRepository'
 import { WidgetSnapshotRepository } from '../repository/WidgetSnapshotRepository'
-import { SystemRefreshService } from '../service/SystemRefreshService'
+import { SessionRefreshService } from '../service/SessionRefreshService'
+import { SystemRefreshResult, SystemRefreshService } from '../service/SystemRefreshService'
 
 const DOMAIN = 0x0000
 const TAG = 'HeszelWidget'
@@ -78,7 +79,9 @@ export default class EntryFormAbility extends FormExtensionAbility {
     }
     this.refreshInFlight = true
     try {
-      const session = await new SessionRepository(this.context).load()
+      const sessionRepository = new SessionRepository(this.context)
+      const widgetRepository = new WidgetSnapshotRepository(this.context)
+      const session = await sessionRepository.load()
       if (!session.canRestore()) {
         hilog.warn(DOMAIN, TAG, 'Manual card refresh has no restorable session.')
         return
@@ -90,8 +93,24 @@ export default class EntryFormAbility extends FormExtensionAbility {
       refreshSession.email = session.email
       refreshSession.token = session.token
       refreshSession.gatewayKey = session.gatewayKey
-      const result = await new SystemRefreshService().refresh(client, refreshSession, systemId)
-      await new WidgetSnapshotRepository(this.context).saveSnapshot(result.systems, result.refreshedAt)
+      let result: SystemRefreshResult
+      try {
+        result = await new SessionRefreshService().execute(
+          client,
+          refreshSession,
+          (activeSession: BeszelSession) => new SystemRefreshService().refresh(client, activeSession, systemId),
+          async (refreshed: BeszelSession) => {
+            await sessionRepository.saveSession(refreshed, session.selectedSystemId)
+          }
+        )
+      } catch (error) {
+        if (SessionRefreshService.isSessionRejected(error)) {
+          await sessionRepository.clearToken()
+          await widgetRepository.clearSnapshot()
+        }
+        throw error instanceof Error ? error : new Error('Unable to refresh the systems widget.')
+      }
+      await widgetRepository.saveSnapshot(result.systems, result.refreshedAt)
       if (result.metricsError !== null) {
         hilog.warn(DOMAIN, TAG, 'Card list refreshed without realtime metrics: %{public}s',
           this.errorMessage(result.metricsError))

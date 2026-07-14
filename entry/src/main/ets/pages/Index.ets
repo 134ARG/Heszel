@@ -1,4 +1,4 @@
-import { BeszelApiError, BeszelClient } from '../api/BeszelClient'
+import { BeszelClient } from '../api/BeszelClient'
 import {
   BeszelRealtimeClient,
   BeszelRealtimeMetrics,
@@ -15,10 +15,17 @@ import {
 } from '../model/SystemDetailModels'
 import { SessionRepository, StoredSession } from '../repository/SessionRepository'
 import { WidgetSnapshotRepository } from '../repository/WidgetSnapshotRepository'
+import { SessionRefreshService } from '../service/SessionRefreshService'
 import { SystemRefreshService } from '../service/SystemRefreshService'
 
 const DETAIL_CACHE_LIMIT = 10
 const SELECTION_PERSIST_DELAY_MS = 750
+
+interface LoadedSystemDetail {
+  details: BeszelSystemDetailsWire | null
+  stats: BeszelSystemStatsRecordWire | null
+  containers: BeszelContainerStatsRecordWire | null
+}
 
 @Entry
 @Component
@@ -53,6 +60,7 @@ struct Index {
   private selectionPersistTask: Promise<void> | null = null
   private pendingSelectedId: string = ''
   private lastPersistedSelectedId: string = ''
+  private sessionRefreshService: SessionRefreshService = new SessionRefreshService()
 
   aboutToAppear(): void {
     this.restoreSession()
@@ -172,7 +180,8 @@ struct Index {
   }
 
   private async refreshSystems(showLoading: boolean, retryPendingSession: boolean = true): Promise<void> {
-    if (this.client === null || this.session.token.length === 0) {
+    const client = this.client
+    if (client === null || this.session.token.length === 0) {
       return
     }
     if (this.refreshInFlight) {
@@ -196,7 +205,9 @@ struct Index {
         }
       }
 
-      const incomingSystems = await this.client.listSystems(this.session.token)
+      const incomingSystems = await this.executeAuthenticated(
+        (activeSession: BeszelSession) => client.listSystems(activeSession.token)
+      )
       const systems = this.reconcileSystems(incomingSystems)
       this.systems = systems
       if (systems.length > 0 && !systems.some((system: SystemSummary) => system.id === this.selectedId)) {
@@ -352,7 +363,8 @@ struct Index {
   }
 
   private async performManualRefresh(): Promise<void> {
-    if (this.client === null || this.session.token.length === 0) {
+    const client = this.client
+    if (client === null || this.session.token.length === 0) {
       return
     }
     this.refreshInFlight = true
@@ -367,11 +379,13 @@ struct Index {
         }
       }
       const alreadyReceivingMetrics = this.liveMetrics && this.realtimeConnected && this.detailIsVisible()
-      const result = await new SystemRefreshService().refresh(
-        this.client,
-        this.session,
-        requestedSystemId,
-        !alreadyReceivingMetrics
+      const result = await this.executeAuthenticated(
+        (activeSession: BeszelSession) => new SystemRefreshService().refresh(
+          client,
+          activeSession,
+          requestedSystemId,
+          !alreadyReceivingMetrics
+        )
       )
       this.systems = this.reconcileSystems(result.systems)
       if (this.systems.length > 0 &&
@@ -655,19 +669,20 @@ struct Index {
     state.loading = true
     state.errorMessage = ''
     try {
-      const details: BeszelSystemDetailsWire | null =
-        await client.getSystemDetails(this.session.token, state.systemId)
-      state.applyHardware(details)
-
-      const stats: BeszelSystemStatsRecordWire | null =
-        await client.getLatestSystemStats(this.session.token, state.systemId)
-      const containers: BeszelContainerStatsRecordWire | null =
-        await client.getLatestContainerStats(this.session.token, state.systemId)
-      state.initializeCapabilities(stats?.stats, containers?.stats)
-      if (stats !== null && stats.stats !== undefined && stats.stats !== null) {
-        state.applyMetrics(stats.stats, containers?.stats)
-      } else if (containers?.stats !== undefined && containers.stats !== null) {
-        state.applyContainers(containers.stats)
+      const loaded = await this.executeAuthenticated(async (activeSession: BeszelSession) => {
+        const result: LoadedSystemDetail = {
+          details: await client.getSystemDetails(activeSession.token, state.systemId),
+          stats: await client.getLatestSystemStats(activeSession.token, state.systemId),
+          containers: await client.getLatestContainerStats(activeSession.token, state.systemId)
+        }
+        return result
+      })
+      state.applyHardware(loaded.details)
+      state.initializeCapabilities(loaded.stats?.stats, loaded.containers?.stats)
+      if (loaded.stats !== null && loaded.stats.stats !== undefined && loaded.stats.stats !== null) {
+        state.applyMetrics(loaded.stats.stats, loaded.containers?.stats)
+      } else if (loaded.containers?.stats !== undefined && loaded.containers.stats !== null) {
+        state.applyContainers(loaded.containers.stats)
       }
       state.loaded = true
     } catch (error) {
@@ -683,8 +698,7 @@ struct Index {
   }
 
   private isSessionRejected(error: Object): boolean {
-    return error instanceof BeszelApiError &&
-      (error.responseCode === 400 || error.responseCode === 401 || error.responseCode === 403)
+    return SessionRefreshService.isSessionRejected(error)
   }
 
   private async retrySessionRefresh(): Promise<boolean> {
@@ -693,7 +707,7 @@ struct Index {
     }
 
     try {
-      const refreshed = await this.client.refreshSession(this.session.token, this.session.email)
+      const refreshed = await this.sessionRefreshService.refresh(this.client, this.session)
       this.session = refreshed
       this.sessionRefreshPending = false
       await this.persistSession(refreshed)
@@ -709,6 +723,33 @@ struct Index {
         'Beszel is unreachable. Your saved session is safe; connect Tailscale or restore networking, then retry.')
       return false
     }
+  }
+
+  private async executeAuthenticated<T>(operation: (activeSession: BeszelSession) => Promise<T>): Promise<T> {
+    const client = this.client
+    if (client === null || this.session.token.length === 0) {
+      throw new Error('No active Beszel session.')
+    }
+    return this.sessionRefreshService.execute(
+      client,
+      this.session,
+      operation,
+      async (refreshed: BeszelSession) => {
+        if (this.client !== client || this.session.token.length === 0) {
+          throw new Error('The active Beszel session changed during refresh.')
+        }
+        const restartRealtime = this.pageVisible && this.realtimeClient !== null
+        if (restartRealtime) {
+          this.stopRealtime()
+        }
+        this.session = refreshed
+        this.sessionRefreshPending = false
+        await this.persistSession(refreshed)
+        if (restartRealtime) {
+          this.startRealtime()
+        }
+      }
+    )
   }
 
   private async expireSavedSession(): Promise<void> {
