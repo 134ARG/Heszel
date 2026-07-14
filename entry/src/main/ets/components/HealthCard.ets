@@ -3,6 +3,19 @@ import { DetailCardHeader } from './DetailCardHeader'
 import { DetailValueRow } from './DetailValueRow'
 
 @Component
+struct SensorRow {
+  @ObjectLink sensor: SensorMetric
+
+  build() {
+    DetailValueRow({
+      label: this.sensor.name,
+      value: `${this.sensor.temperatureCelsius.toFixed(0)} °C`,
+      warning: this.sensor.temperatureCelsius >= 80
+    })
+  }
+}
+
+@Component
 export struct HealthCard {
   @ObjectLink state: HealthMetricsState
 
@@ -27,13 +40,8 @@ export struct HealthCard {
         })
       }
       ForEach(this.state.sensors, (sensor: SensorMetric) => {
-        DetailValueRow({
-          label: sensor.name,
-          value: `${sensor.temperatureCelsius.toFixed(0)} °C`,
-          warning: sensor.temperatureCelsius >= 80
-        })
-      }, (sensor: SensorMetric) =>
-        `${sensor.name}:${sensor.temperatureCelsius.toFixed(0)}:${sensor.temperatureCelsius >= 80}`)
+        SensorRow({ sensor: sensor })
+      }, (sensor: SensorMetric) => sensor.name)
     }
     .width('100%')
     .padding(18)

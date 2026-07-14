@@ -109,15 +109,6 @@ function numberArraysEqual(left: number[], right: number[]): boolean {
   return true
 }
 
-function numberArrayPrefixEqual(left: number[], right: number[], limit: number): boolean {
-  const comparedLength = Math.min(right.length, limit)
-  if (left.length !== comparedLength) return false
-  for (let index = 0; index < comparedLength; index += 1) {
-    if (left[index] !== right[index]) return false
-  }
-  return true
-}
-
 export class SystemHardwareDetails {
   hostname: string = ''
   kernel: string = ''
@@ -148,6 +139,18 @@ export class SystemHardwareDetails {
   }
 }
 
+@Observed
+export class CpuCoreMetric {
+  index: number = 0
+  usagePercent: number = 0
+
+  update(index: number, usagePercent: number): void {
+    if (this.index !== index) this.index = index
+    if (this.usagePercent !== usagePercent) this.usagePercent = usagePercent
+  }
+}
+
+@Observed
 export class FilesystemMetric {
   name: string = ''
   totalGb: number = 0
@@ -157,8 +160,27 @@ export class FilesystemMetric {
   ioPercent: number = 0
   readAwaitMs: number = 0
   writeAwaitMs: number = 0
+
+  update(name: string, source: BeszelFilesystemStatsWire): void {
+    const totalGb = safeNumber(source.d)
+    const usedGb = safeNumber(source.du)
+    const readBytesPerSecond = source.rb !== undefined ? safeNumber(source.rb) : safeNumber(source.r) * 1048576
+    const writeBytesPerSecond = source.wb !== undefined ? safeNumber(source.wb) : safeNumber(source.w) * 1048576
+    const ioPercent = arrayNumber(source.dios, 2)
+    const readAwaitMs = arrayNumber(source.dios, 3)
+    const writeAwaitMs = arrayNumber(source.dios, 4)
+    if (this.name !== name) this.name = name
+    if (this.totalGb !== totalGb) this.totalGb = totalGb
+    if (this.usedGb !== usedGb) this.usedGb = usedGb
+    if (this.readBytesPerSecond !== readBytesPerSecond) this.readBytesPerSecond = readBytesPerSecond
+    if (this.writeBytesPerSecond !== writeBytesPerSecond) this.writeBytesPerSecond = writeBytesPerSecond
+    if (this.ioPercent !== ioPercent) this.ioPercent = ioPercent
+    if (this.readAwaitMs !== readAwaitMs) this.readAwaitMs = readAwaitMs
+    if (this.writeAwaitMs !== writeAwaitMs) this.writeAwaitMs = writeAwaitMs
+  }
 }
 
+@Observed
 export class GpuMetric {
   id: string = ''
   name: string = ''
@@ -168,21 +190,59 @@ export class GpuMetric {
   powerWatts: number = 0
   hasMemory: boolean = false
   hasPower: boolean = false
+
+  update(id: string, source: BeszelGpuStatsWire): void {
+    const name = source.n ?? id
+    const usagePercent = safeNumber(source.u)
+    const memoryUsedMb = safeNumber(source.mu)
+    const memoryTotalMb = safeNumber(source.mt)
+    const powerWatts = source.pp !== undefined ? safeNumber(source.pp) : safeNumber(source.p)
+    const hasMemory = this.hasMemory || source.mu !== undefined || source.mt !== undefined
+    const hasPower = this.hasPower || source.pp !== undefined || source.p !== undefined
+    if (this.id !== id) this.id = id
+    if (this.name !== name) this.name = name
+    if (this.usagePercent !== usagePercent) this.usagePercent = usagePercent
+    if (this.memoryUsedMb !== memoryUsedMb) this.memoryUsedMb = memoryUsedMb
+    if (this.memoryTotalMb !== memoryTotalMb) this.memoryTotalMb = memoryTotalMb
+    if (this.powerWatts !== powerWatts) this.powerWatts = powerWatts
+    if (this.hasMemory !== hasMemory) this.hasMemory = hasMemory
+    if (this.hasPower !== hasPower) this.hasPower = hasPower
+  }
 }
 
+@Observed
 export class SensorMetric {
   name: string = ''
   temperatureCelsius: number = 0
+
+  update(name: string, temperatureCelsius: number): void {
+    if (this.name !== name) this.name = name
+    if (this.temperatureCelsius !== temperatureCelsius) this.temperatureCelsius = temperatureCelsius
+  }
 }
 
+@Observed
 export class NetworkInterfaceMetric {
   name: string = ''
   uploadBytesPerSecond: number = 0
   downloadBytesPerSecond: number = 0
   totalUploadBytes: number = 0
   totalDownloadBytes: number = 0
+
+  update(name: string, source: number[]): void {
+    const uploadBytesPerSecond = arrayNumber(source, 0)
+    const downloadBytesPerSecond = arrayNumber(source, 1)
+    const totalUploadBytes = arrayNumber(source, 2)
+    const totalDownloadBytes = arrayNumber(source, 3)
+    if (this.name !== name) this.name = name
+    if (this.uploadBytesPerSecond !== uploadBytesPerSecond) this.uploadBytesPerSecond = uploadBytesPerSecond
+    if (this.downloadBytesPerSecond !== downloadBytesPerSecond) this.downloadBytesPerSecond = downloadBytesPerSecond
+    if (this.totalUploadBytes !== totalUploadBytes) this.totalUploadBytes = totalUploadBytes
+    if (this.totalDownloadBytes !== totalDownloadBytes) this.totalDownloadBytes = totalDownloadBytes
+  }
 }
 
+@Observed
 export class ContainerMetric {
   name: string = ''
   cpuPercent: number = 0
@@ -191,96 +251,22 @@ export class ContainerMetric {
   downloadBytesPerSecond: number = 0
   hasNetwork: boolean = false
 
-  static fromWire(wire: BeszelContainerStatsWire, previous: ContainerMetric | null = null): ContainerMetric {
-    const container = new ContainerMetric()
-    container.name = wire.n ?? 'Container'
-    container.cpuPercent = safeNumber(wire.c)
-    container.memoryGb = safeNumber(wire.m)
-    container.uploadBytesPerSecond = wire.b !== undefined && wire.b !== null ?
+  update(wire: BeszelContainerStatsWire): void {
+    const name = wire.n ?? 'Container'
+    const cpuPercent = safeNumber(wire.c)
+    const memoryGb = safeNumber(wire.m)
+    const uploadBytesPerSecond = wire.b !== undefined && wire.b !== null ?
       arrayNumber(wire.b, 0) : safeNumber(wire.ns) * 1024 * 1024
-    container.downloadBytesPerSecond = wire.b !== undefined && wire.b !== null ?
+    const downloadBytesPerSecond = wire.b !== undefined && wire.b !== null ?
       arrayNumber(wire.b, 1) : safeNumber(wire.nr) * 1024 * 1024
-    container.hasNetwork = previous?.hasNetwork === true || wire.b !== undefined && wire.b !== null ||
+    const hasNetwork = this.hasNetwork || wire.b !== undefined && wire.b !== null ||
       wire.ns !== undefined || wire.nr !== undefined
-    return container
-  }
-}
-
-class MetricConverters {
-  static filesystemsFromWire(wire: Record<string, BeszelFilesystemStatsWire> | null | undefined): FilesystemMetric[] {
-    if (wire === undefined || wire === null) {
-      return []
-    }
-    const filesystems: FilesystemMetric[] = []
-    Object.keys(wire).forEach((name: string) => {
-      const source = wire[name]
-      const filesystem = new FilesystemMetric()
-      filesystem.name = name
-      filesystem.totalGb = safeNumber(source.d)
-      filesystem.usedGb = safeNumber(source.du)
-      filesystem.readBytesPerSecond = source.rb !== undefined ? safeNumber(source.rb) : safeNumber(source.r) * 1024 * 1024
-      filesystem.writeBytesPerSecond = source.wb !== undefined ? safeNumber(source.wb) : safeNumber(source.w) * 1024 * 1024
-      filesystem.ioPercent = arrayNumber(source.dios, 2)
-      filesystem.readAwaitMs = arrayNumber(source.dios, 3)
-      filesystem.writeAwaitMs = arrayNumber(source.dios, 4)
-      filesystems.push(filesystem)
-    })
-    return filesystems
-  }
-
-  static gpusFromWire(wire: Record<string, BeszelGpuStatsWire> | null | undefined,
-    previous: GpuMetric[]): GpuMetric[] {
-    if (wire === undefined || wire === null) {
-      return []
-    }
-    const gpus: GpuMetric[] = []
-    Object.keys(wire).forEach((id: string) => {
-      const source = wire[id]
-      const old = previous.find((candidate: GpuMetric) => candidate.id === id)
-      const gpu = new GpuMetric()
-      gpu.id = id
-      gpu.name = source.n ?? id
-      gpu.usagePercent = safeNumber(source.u)
-      gpu.memoryUsedMb = safeNumber(source.mu)
-      gpu.memoryTotalMb = safeNumber(source.mt)
-      gpu.powerWatts = source.pp !== undefined ? safeNumber(source.pp) : safeNumber(source.p)
-      gpu.hasMemory = old?.hasMemory === true || source.mu !== undefined || source.mt !== undefined
-      gpu.hasPower = old?.hasPower === true || source.pp !== undefined || source.p !== undefined
-      gpus.push(gpu)
-    })
-    return gpus
-  }
-
-  static sensorsFromWire(wire: Record<string, number> | null | undefined): SensorMetric[] {
-    if (wire === undefined || wire === null) {
-      return []
-    }
-    const sensors: SensorMetric[] = []
-    Object.keys(wire).forEach((name: string) => {
-      const sensor = new SensorMetric()
-      sensor.name = name
-      sensor.temperatureCelsius = safeNumber(wire[name])
-      sensors.push(sensor)
-    })
-    return sensors
-  }
-
-  static interfacesFromWire(wire: Record<string, number[]> | null | undefined): NetworkInterfaceMetric[] {
-    if (wire === undefined || wire === null) {
-      return []
-    }
-    const interfaces: NetworkInterfaceMetric[] = []
-    Object.keys(wire).forEach((name: string) => {
-      const source = wire[name]
-      const networkInterface = new NetworkInterfaceMetric()
-      networkInterface.name = name
-      networkInterface.uploadBytesPerSecond = arrayNumber(source, 0)
-      networkInterface.downloadBytesPerSecond = arrayNumber(source, 1)
-      networkInterface.totalUploadBytes = arrayNumber(source, 2)
-      networkInterface.totalDownloadBytes = arrayNumber(source, 3)
-      interfaces.push(networkInterface)
-    })
-    return interfaces
+    if (this.name !== name) this.name = name
+    if (this.cpuPercent !== cpuPercent) this.cpuPercent = cpuPercent
+    if (this.memoryGb !== memoryGb) this.memoryGb = memoryGb
+    if (this.uploadBytesPerSecond !== uploadBytesPerSecond) this.uploadBytesPerSecond = uploadBytesPerSecond
+    if (this.downloadBytesPerSecond !== downloadBytesPerSecond) this.downloadBytesPerSecond = downloadBytesPerSecond
+    if (this.hasNetwork !== hasNetwork) this.hasNetwork = hasNetwork
   }
 }
 
@@ -375,7 +361,7 @@ export class OverviewMetricsState {
 export class CpuMetricsState {
   available: boolean = false
   breakdown: number[] = []
-  cores: number[] = []
+  cores: CpuCoreMetric[] = []
   coreCount: number = 0
   initialize(wire: BeszelSystemStatsWire): void {
     this.available = wire.cpub !== undefined && wire.cpub !== null || wire.cpus !== undefined && wire.cpus !== null
@@ -392,7 +378,20 @@ export class CpuMetricsState {
     }
     if (wire.cpus !== undefined && wire.cpus !== null) {
       if (this.coreCount !== wire.cpus.length) this.coreCount = wire.cpus.length
-      if (!numberArrayPrefixEqual(this.cores, wire.cpus, 32)) this.cores = wire.cpus.slice(0, 32)
+      const visibleCount = Math.min(wire.cpus.length, 32)
+      if (this.cores.length !== visibleCount) {
+        const next: CpuCoreMetric[] = []
+        for (let index = 0; index < visibleCount; index += 1) {
+          const core = index < this.cores.length ? this.cores[index] : new CpuCoreMetric()
+          core.update(index, safeNumber(wire.cpus[index]))
+          next.push(core)
+        }
+        this.cores = next
+      } else {
+        for (let index = 0; index < visibleCount; index += 1) {
+          this.cores[index].update(index, safeNumber(wire.cpus[index]))
+        }
+      }
     }
   }
 
@@ -460,9 +459,8 @@ export class StorageMetricsState {
 
   private applyWire(wire: BeszelSystemStatsWire): void {
     this.setNumbers(wire)
-    if (wire.efs !== undefined && wire.efs !== null) {
-      const filesystems = MetricConverters.filesystemsFromWire(wire.efs)
-      if (filesystems.length > 0) this.filesystems = filesystems
+    if (wire.efs !== undefined && wire.efs !== null && Object.keys(wire.efs).length > 0) {
+      this.updateFilesystems(wire.efs)
     }
   }
 
@@ -501,6 +499,32 @@ export class StorageMetricsState {
       }
     }
   }
+
+  private updateFilesystems(wire: Record<string, BeszelFilesystemStatsWire>): void {
+    const names = Object.keys(wire)
+    let structureChanged = names.length !== this.filesystems.length
+    if (!structureChanged) {
+      for (let index = 0; index < names.length; index += 1) {
+        if (this.filesystems[index].name !== names[index]) {
+          structureChanged = true
+          break
+        }
+      }
+    }
+    if (structureChanged) {
+      const existing = new Map<string, FilesystemMetric>()
+      this.filesystems.forEach((item: FilesystemMetric) => existing.set(item.name, item))
+      const next: FilesystemMetric[] = []
+      names.forEach((name: string) => {
+        const filesystem = existing.get(name) ?? new FilesystemMetric()
+        filesystem.update(name, wire[name])
+        next.push(filesystem)
+      })
+      this.filesystems = next
+      return
+    }
+    names.forEach((name: string, index: number) => this.filesystems[index].update(name, wire[name]))
+  }
 }
 
 @Observed
@@ -535,13 +559,38 @@ export class NetworkMetricsState {
         this.downloadBytesPerSecond = safeNumber(wire.nr) * 1048576
       }
     }
-    if (wire.ni !== undefined && wire.ni !== null) {
-      const interfaces = MetricConverters.interfacesFromWire(wire.ni)
-      if (interfaces.length > 0) this.interfaces = interfaces
+    if (wire.ni !== undefined && wire.ni !== null && Object.keys(wire.ni).length > 0) {
+      this.updateInterfaces(wire.ni)
     }
   }
 
   isVisible(): boolean { return this.available }
+
+  private updateInterfaces(wire: Record<string, number[]>): void {
+    const names = Object.keys(wire)
+    let structureChanged = names.length !== this.interfaces.length
+    if (!structureChanged) {
+      for (let index = 0; index < names.length; index += 1) {
+        if (this.interfaces[index].name !== names[index]) {
+          structureChanged = true
+          break
+        }
+      }
+    }
+    if (structureChanged) {
+      const existing = new Map<string, NetworkInterfaceMetric>()
+      this.interfaces.forEach((item: NetworkInterfaceMetric) => existing.set(item.name, item))
+      const next: NetworkInterfaceMetric[] = []
+      names.forEach((name: string) => {
+        const networkInterface = existing.get(name) ?? new NetworkInterfaceMetric()
+        networkInterface.update(name, wire[name])
+        next.push(networkInterface)
+      })
+      this.interfaces = next
+      return
+    }
+    names.forEach((name: string, index: number) => this.interfaces[index].update(name, wire[name]))
+  }
 }
 
 @Observed
@@ -557,13 +606,38 @@ export class GpuMetricsState {
   }
 
   private applyWire(wire: BeszelSystemStatsWire): void {
-    if (wire.g !== undefined && wire.g !== null) {
-      const gpus = MetricConverters.gpusFromWire(wire.g, this.gpus)
-      if (gpus.length > 0) this.gpus = gpus
+    if (wire.g !== undefined && wire.g !== null && Object.keys(wire.g).length > 0) {
+      this.updateGpus(wire.g)
     }
   }
 
   isVisible(): boolean { return this.available }
+
+  private updateGpus(wire: Record<string, BeszelGpuStatsWire>): void {
+    const ids = Object.keys(wire)
+    let structureChanged = ids.length !== this.gpus.length
+    if (!structureChanged) {
+      for (let index = 0; index < ids.length; index += 1) {
+        if (this.gpus[index].id !== ids[index]) {
+          structureChanged = true
+          break
+        }
+      }
+    }
+    if (structureChanged) {
+      const existing = new Map<string, GpuMetric>()
+      this.gpus.forEach((item: GpuMetric) => existing.set(item.id, item))
+      const next: GpuMetric[] = []
+      ids.forEach((id: string) => {
+        const gpu = existing.get(id) ?? new GpuMetric()
+        gpu.update(id, wire[id])
+        next.push(gpu)
+      })
+      this.gpus = next
+      return
+    }
+    ids.forEach((id: string, index: number) => this.gpus[index].update(id, wire[id]))
+  }
 }
 
 @Observed
@@ -620,9 +694,8 @@ export class HealthMetricsState {
   }
 
   private applyWire(wire: BeszelSystemStatsWire): void {
-    if (this.sensorsAvailable && wire.t !== undefined && wire.t !== null) {
-      const sensors = MetricConverters.sensorsFromWire(wire.t)
-      if (sensors.length > 0) this.sensors = sensors
+    if (this.sensorsAvailable && wire.t !== undefined && wire.t !== null && Object.keys(wire.t).length > 0) {
+      this.updateSensors(wire.t)
     }
     if (this.batteryAvailable && wire.bat !== undefined && wire.bat !== null) {
       if (wire.bat.length > 0 && this.batteryPercent !== arrayNumber(wire.bat, 0)) {
@@ -639,6 +712,32 @@ export class HealthMetricsState {
   }
   batteryVisible(): boolean { return this.batteryAvailable }
   servicesVisible(): boolean { return this.servicesAvailable }
+
+  private updateSensors(wire: Record<string, number>): void {
+    const names = Object.keys(wire)
+    let structureChanged = names.length !== this.sensors.length
+    if (!structureChanged) {
+      for (let index = 0; index < names.length; index += 1) {
+        if (this.sensors[index].name !== names[index]) {
+          structureChanged = true
+          break
+        }
+      }
+    }
+    if (structureChanged) {
+      const existing = new Map<string, SensorMetric>()
+      this.sensors.forEach((item: SensorMetric) => existing.set(item.name, item))
+      const next: SensorMetric[] = []
+      names.forEach((name: string) => {
+        const sensor = existing.get(name) ?? new SensorMetric()
+        sensor.update(name, safeNumber(wire[name]))
+        next.push(sensor)
+      })
+      this.sensors = next
+      return
+    }
+    names.forEach((name: string, index: number) => this.sensors[index].update(name, safeNumber(wire[name])))
+  }
 }
 
 @Observed
@@ -661,12 +760,26 @@ export class ContainerMetricsState {
     this.containers.forEach((previous: ContainerMetric) => {
       const item = incoming.get(previous.name)
       if (item !== undefined) {
-        next.push(ContainerMetric.fromWire(item, previous))
+        previous.update(item)
+        next.push(previous)
         incoming.delete(previous.name)
       }
     })
-    incoming.forEach((item: BeszelContainerStatsWire) => next.push(ContainerMetric.fromWire(item)))
-    this.containers = next
+    incoming.forEach((item: BeszelContainerStatsWire) => {
+      const container = new ContainerMetric()
+      container.update(item)
+      next.push(container)
+    })
+    let structureChanged = next.length !== this.containers.length
+    if (!structureChanged) {
+      for (let index = 0; index < next.length; index += 1) {
+        if (next[index] !== this.containers[index]) {
+          structureChanged = true
+          break
+        }
+      }
+    }
+    if (structureChanged) this.containers = next
   }
 
   isVisible(): boolean { return this.available }

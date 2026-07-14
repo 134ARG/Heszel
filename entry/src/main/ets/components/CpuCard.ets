@@ -1,6 +1,24 @@
-import { CpuMetricsState } from '../model/SystemDetailModels'
+import { CpuCoreMetric, CpuMetricsState } from '../model/SystemDetailModels'
 import { DetailValueRow } from './DetailValueRow'
 import { DetailCardHeader } from './DetailCardHeader'
+
+@Component
+struct CpuCoreChip {
+  @ObjectLink core: CpuCoreMetric
+
+  build() {
+    Text(`${this.core.index}  ${this.core.usagePercent.toFixed(0)}%`)
+      .fontSize(11)
+      .fontColor(this.core.usagePercent >= 90 ? $r('app.color.error') : $r('app.color.text_primary'))
+      .textAlign(TextAlign.Center)
+      .width(78)
+      .height(30)
+      .margin({ right: 6, bottom: 6 })
+      .backgroundColor($r('app.color.surface_input'))
+      .borderRadius(8)
+      .maxLines(1)
+  }
+}
 
 @Component
 export struct CpuCard {
@@ -23,24 +41,14 @@ export struct CpuCard {
           .fontColor($r('app.color.text_tertiary'))
           .width('100%')
         Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(this.visibleCores(), (value: number, index: number) => {
-            Text(`${index}  ${value.toFixed(0)}%`)
-              .fontSize(11)
-              .fontColor(value >= 90 ? $r('app.color.error') : $r('app.color.text_primary'))
-              .textAlign(TextAlign.Center)
-              .width(78)
-              .height(30)
-              .margin({ right: 6, bottom: 6 })
-              .backgroundColor($r('app.color.surface_input'))
-              .borderRadius(8)
-              .maxLines(1)
-          }, (value: number, index: number) =>
-            `${index}:${value.toFixed(0)}:${value >= 90}`)
+          ForEach(this.state.cores, (core: CpuCoreMetric) => {
+            CpuCoreChip({ core: core })
+          }, (core: CpuCoreMetric) => core.index.toString())
         }
         .width('100%')
 
-        if (this.state.coreCount > this.visibleCoreLimit()) {
-          Text($r('app.string.showing_threads', this.visibleCoreLimit(), this.state.coreCount))
+        if (this.state.coreCount > this.state.cores.length) {
+          Text($r('app.string.showing_threads', this.state.cores.length, this.state.coreCount))
             .fontSize(11)
             .fontColor($r('app.color.text_tertiary'))
             .width('100%')
@@ -54,11 +62,4 @@ export struct CpuCard {
     .borderRadius(16)
   }
 
-  private visibleCoreLimit(): number {
-    return 32
-  }
-
-  private visibleCores(): number[] {
-    return this.state.cores.slice(0, this.visibleCoreLimit())
-  }
 }

@@ -4,6 +4,34 @@ import { DetailCardHeader } from './DetailCardHeader'
 import { PressureBar } from './PressureBar'
 
 @Component
+struct GpuSection {
+  @ObjectLink gpu: GpuMetric
+  @Prop showDivider: boolean = false
+
+  build() {
+    Column() {
+      if (this.showDivider) {
+        Divider().color($r('app.color.divider'))
+      }
+      Column({ space: 9 }) {
+        PressureBar({ value: this.gpu.usagePercent, label: this.gpu.name, color: $r('app.color.metric_cpu') })
+        if (this.gpu.hasMemory) {
+          DetailValueRow({
+            label: $r('app.string.gpu_memory'),
+            value: `${this.gpu.memoryUsedMb.toFixed(0)} / ${this.gpu.memoryTotalMb.toFixed(0)} MB`
+          })
+        }
+        if (this.gpu.hasPower) {
+          DetailValueRow({ label: $r('app.string.power'), value: `${this.gpu.powerWatts.toFixed(1)} W` })
+        }
+      }
+      .width('100%')
+    }
+    .width('100%')
+  }
+}
+
+@Component
 export struct GpuCard {
   @ObjectLink state: GpuMetricsState
 
@@ -12,25 +40,8 @@ export struct GpuCard {
       DetailCardHeader({ title: 'GPU' })
 
       ForEach(this.state.gpus, (gpu: GpuMetric, index: number) => {
-        if (index > 0) {
-          Divider().color($r('app.color.divider'))
-        }
-        Column({ space: 9 }) {
-          PressureBar({ value: gpu.usagePercent, label: gpu.name, color: $r('app.color.metric_cpu') })
-          if (gpu.hasMemory) {
-            DetailValueRow({
-              label: $r('app.string.gpu_memory'),
-              value: `${gpu.memoryUsedMb.toFixed(0)} / ${gpu.memoryTotalMb.toFixed(0)} MB`
-            })
-          }
-          if (gpu.hasPower) {
-            DetailValueRow({ label: $r('app.string.power'), value: `${gpu.powerWatts.toFixed(1)} W` })
-          }
-        }
-        .width('100%')
-      }, (gpu: GpuMetric) =>
-        `${gpu.id}:${gpu.usagePercent.toFixed(0)}:${gpu.memoryUsedMb.toFixed(0)}:` +
-          `${gpu.memoryTotalMb.toFixed(0)}:${gpu.powerWatts.toFixed(1)}:${gpu.hasMemory}:${gpu.hasPower}`)
+        GpuSection({ gpu: gpu, showDivider: index > 0 })
+      }, (gpu: GpuMetric) => gpu.id)
     }
     .width('100%')
     .padding(18)

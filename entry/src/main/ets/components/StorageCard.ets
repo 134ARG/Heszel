@@ -5,6 +5,38 @@ import { DetailValueRow } from './DetailValueRow'
 import { PressureBar } from './PressureBar'
 
 @Component
+struct FilesystemSection {
+  @ObjectLink filesystem: FilesystemMetric
+
+  build() {
+    Column() {
+      Divider().color($r('app.color.divider'))
+      Column({ space: 9 }) {
+        PressureBar({
+          value: this.percent(),
+          label: this.filesystem.name,
+          color: $r('app.color.metric_disk')
+        })
+        DetailValueRow({
+          label: $r('app.string.used'),
+          value: `${formatGigabytes(this.filesystem.usedGb)} / ${formatGigabytes(this.filesystem.totalGb)}`
+        })
+        DetailValueRow({
+          label: $r('app.string.read_write'),
+          value: `${formatRate(this.filesystem.readBytesPerSecond)} · ${formatRate(this.filesystem.writeBytesPerSecond)}`
+        })
+      }
+      .width('100%')
+    }
+    .width('100%')
+  }
+
+  private percent(): number {
+    return this.filesystem.totalGb > 0 ? this.filesystem.usedGb / this.filesystem.totalGb * 100 : 0
+  }
+}
+
+@Component
 export struct StorageCard {
   @ObjectLink state: StorageMetricsState
 
@@ -33,36 +65,13 @@ export struct StorageCard {
       }
 
       ForEach(this.state.filesystems, (filesystem: FilesystemMetric) => {
-        Divider().color($r('app.color.divider'))
-        Column({ space: 9 }) {
-          PressureBar({
-            value: this.filesystemPercent(filesystem),
-            label: filesystem.name,
-            color: $r('app.color.metric_disk')
-          })
-          DetailValueRow({
-            label: $r('app.string.used'),
-            value: `${formatGigabytes(filesystem.usedGb)} / ${formatGigabytes(filesystem.totalGb)}`
-          })
-          DetailValueRow({
-            label: $r('app.string.read_write'),
-            value: `${formatRate(filesystem.readBytesPerSecond)} · ${formatRate(filesystem.writeBytesPerSecond)}`
-          })
-        }
-        .width('100%')
-      }, (filesystem: FilesystemMetric) =>
-        `${filesystem.name}:${this.filesystemPercent(filesystem).toFixed(0)}:` +
-          `${formatGigabytes(filesystem.usedGb)}:${formatGigabytes(filesystem.totalGb)}:` +
-          `${formatRate(filesystem.readBytesPerSecond)}:${formatRate(filesystem.writeBytesPerSecond)}`)
+        FilesystemSection({ filesystem: filesystem })
+      }, (filesystem: FilesystemMetric) => filesystem.name)
     }
     .width('100%')
     .padding(18)
     .backgroundColor($r('app.color.surface'))
     .border({ width: 1, color: $r('app.color.card_border') })
     .borderRadius(16)
-  }
-
-  private filesystemPercent(filesystem: FilesystemMetric): number {
-    return filesystem.totalGb > 0 ? filesystem.usedGb / filesystem.totalGb * 100 : 0
   }
 }
