@@ -7,18 +7,24 @@ const METRICS_TIMEOUT_MS = 8000
 export class SystemRefreshResult {
   systems: SystemSummary[] = []
   metrics: BeszelRealtimeMetrics | null = null
+  metricsError: Error | null = null
   refreshedAt: string = ''
 }
 
 export class SystemRefreshService {
-  async refresh(client: BeszelClient, session: BeszelSession, selectedSystemId: string): Promise<SystemRefreshResult> {
+  async refresh(client: BeszelClient, session: BeszelSession, selectedSystemId: string,
+    requestRealtimeMetrics: boolean = true): Promise<SystemRefreshResult> {
     const result = new SystemRefreshResult()
     result.systems = await client.listSystems(session.token)
     const selected = result.systems.find((system: SystemSummary) => system.id === selectedSystemId)
-    if (selected !== undefined && selected.isUp()) {
-      result.metrics = await this.requestMetrics(session, selected.id)
-      if (result.metrics.info !== undefined) {
-        selected.updateCardMetrics(result.metrics.info)
+    if (requestRealtimeMetrics && selected !== undefined && selected.isUp()) {
+      try {
+        result.metrics = await this.requestMetrics(session, selected.id)
+        if (result.metrics.info !== undefined) {
+          selected.updateCardMetrics(result.metrics.info)
+        }
+      } catch (error) {
+        result.metricsError = error instanceof Error ? error : new Error('Unable to receive realtime metrics.')
       }
     }
     result.refreshedAt = new Date().toLocaleTimeString()

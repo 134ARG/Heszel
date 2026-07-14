@@ -366,7 +366,13 @@ struct Index {
           return
         }
       }
-      const result = await new SystemRefreshService().refresh(this.client, this.session, requestedSystemId)
+      const alreadyReceivingMetrics = this.liveMetrics && this.realtimeConnected && this.detailIsVisible()
+      const result = await new SystemRefreshService().refresh(
+        this.client,
+        this.session,
+        requestedSystemId,
+        !alreadyReceivingMetrics
+      )
       this.systems = this.reconcileSystems(result.systems)
       if (this.systems.length > 0 &&
         !this.systems.some((system: SystemSummary) => system.id === this.selectedId)) {
@@ -380,6 +386,12 @@ struct Index {
       }
       this.lastRefresh = result.refreshedAt
       await this.publishWidgetSnapshot()
+      if (result.metricsError !== null) {
+        this.dashboardError = this.localized(
+          'error_refresh_metrics_partial',
+          'Systems refreshed, but fresh realtime metrics were unavailable.'
+        )
+      }
       if (this.realtimeClient !== null && !this.realtimeConnected) {
         this.realtimeClient.retryNow()
       }

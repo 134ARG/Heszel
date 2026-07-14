@@ -133,6 +133,7 @@
     { "name": "error_load_detail", "value": "无法加载系统详细数据。" },
     { "name": "error_network_saved_session", "value": "无法连接 Beszel。已保存的会话仍然安全；请连接 Tailscale 或恢复网络后重试。" },
     { "name": "error_session_rejected", "value": "Beszel 拒绝了已保存的会话，请重新登录。" },
-    { "name": "error_refresh_available", "value": "%s 仍可使用刷新功能。" }
+    { "name": "error_refresh_available", "value": "%s 仍可使用刷新功能。" },
+    { "name": "error_refresh_metrics_partial", "value": "系统列表已刷新，但暂时无法获取最新实时指标。" }
   ]
 }

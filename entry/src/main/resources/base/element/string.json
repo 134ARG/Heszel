@@ -133,6 +133,7 @@
     { "name": "error_load_detail", "value": "Unable to load detailed system data." },
     { "name": "error_network_saved_session", "value": "Beszel is unreachable. Your saved session is safe; connect Tailscale or restore networking, then retry." },
     { "name": "error_session_rejected", "value": "Your saved session was rejected by Beszel. Sign in again." },
-    { "name": "error_refresh_available", "value": "%s Refresh remains available." }
+    { "name": "error_refresh_available", "value": "%s Refresh remains available." },
+    { "name": "error_refresh_metrics_partial", "value": "Systems refreshed, but fresh realtime metrics were unavailable." }
   ]
 }

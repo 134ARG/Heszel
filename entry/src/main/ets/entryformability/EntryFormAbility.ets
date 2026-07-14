@@ -92,6 +92,10 @@ export default class EntryFormAbility extends FormExtensionAbility {
       refreshSession.gatewayKey = session.gatewayKey
       const result = await new SystemRefreshService().refresh(client, refreshSession, systemId)
       await new WidgetSnapshotRepository(this.context).saveSnapshot(result.systems, result.refreshedAt)
+      if (result.metricsError !== null) {
+        hilog.warn(DOMAIN, TAG, 'Card list refreshed without realtime metrics: %{public}s',
+          this.errorMessage(result.metricsError))
+      }
       hilog.info(DOMAIN, TAG, 'Manual card refresh published %{public}d systems.', result.systems.length)
     } finally {
       this.refreshInFlight = false
