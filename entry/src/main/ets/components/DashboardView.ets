@@ -22,12 +22,14 @@ export struct DashboardView {
   @Prop lastRefresh: string = ''
   @Prop @Watch('onExpandedChanged') expanded: boolean = false
   @Prop liveMetrics: boolean = false
+  @Prop updateWhileScrolling: boolean = false
   @Prop realtimeConnected: boolean = false
   @Prop baseUrl: string = ''
   @Prop email: string = ''
   @State private detailVisible: boolean = false
   onRefresh: () => void = () => {}
   onLiveMetricsChange: (enabled: boolean) => void = () => {}
+  onUpdateWhileScrollingChange: (enabled: boolean) => void = () => {}
   onDetailVisibilityChange: (visible: boolean) => void = () => {}
   onDetailScrollingChange: (scrolling: boolean) => void = () => {}
   onGatewayKeyChange: (gatewayKey: string) => void = () => {}
@@ -112,6 +114,7 @@ export struct DashboardView {
           email: this.email,
           expanded: this.expanded,
           errorMessage: this.errorMessage,
+          updateWhileScrolling: this.updateWhileScrolling,
           onBack: () => {
             this.pathStack.pop()
           },
@@ -120,6 +123,9 @@ export struct DashboardView {
           },
           onGatewayKeyChange: (gatewayKey: string) => {
             this.onGatewayKeyChange(gatewayKey)
+          },
+          onUpdateWhileScrollingChange: (enabled: boolean) => {
+            this.onUpdateWhileScrollingChange(enabled)
           }
         })
       }

@@ -42,6 +42,7 @@ struct Index {
   @State @Watch('onDetailContextChanged') private detailVisible: boolean = false
   @State private detailState: SystemDetailState = new SystemDetailState()
   @State @Watch('onLiveMetricsChanged') private liveMetrics: boolean = false
+  @State private updateWhileScrolling: boolean = false
   @State private realtimeConnected: boolean = false
   @State private restoringSession: boolean = true
   @State private savedServerUrl: string = ''
@@ -129,6 +130,7 @@ struct Index {
           lastRefresh: this.lastRefresh,
           expanded: this.curScreenSizeString === 'lg',
           liveMetrics: this.liveMetrics,
+          updateWhileScrolling: this.updateWhileScrolling,
           realtimeConnected: this.realtimeConnected,
           baseUrl: this.session.baseUrl,
           email: this.session.email,
@@ -137,6 +139,9 @@ struct Index {
           },
           onLiveMetricsChange: (enabled: boolean) => {
             this.liveMetrics = enabled
+          },
+          onUpdateWhileScrollingChange: (enabled: boolean) => {
+            this.updateScrollingPreference(enabled)
           },
           onDetailVisibilityChange: (visible: boolean) => {
             this.detailVisible = visible
@@ -386,7 +391,7 @@ struct Index {
   }
 
   private handleRealtimeMetrics(systemId: string, metrics: BeszelRealtimeMetrics): void {
-    if (this.detailScrolling) {
+    if (this.detailScrolling && !this.updateWhileScrolling) {
       return
     }
     const system = this.systems.find((candidate: SystemSummary) => candidate.id === systemId)
@@ -565,6 +570,7 @@ struct Index {
       this.savedServerUrl = stored.baseUrl
       this.savedEmail = stored.email
       this.savedGatewayKey = stored.gatewayKey
+      this.updateWhileScrolling = stored.updateWhileScrolling
       this.lastPersistedSelectedId = stored.selectedSystemId
       this.selectedId = stored.selectedSystemId
       if (!stored.canRestore()) {
@@ -601,6 +607,23 @@ struct Index {
     } catch (_) {
       this.dashboardError = this.localized(
         'error_save_session', 'Signed in, but HarmonyOS could not save this session.')
+    }
+  }
+
+  private async updateScrollingPreference(enabled: boolean): Promise<void> {
+    const previous = this.updateWhileScrolling
+    this.updateWhileScrolling = enabled
+    if (this.sessionRepository === null) {
+      return
+    }
+    try {
+      await this.sessionRepository.saveUpdateWhileScrolling(enabled)
+    } catch (_) {
+      if (this.updateWhileScrolling === enabled) {
+        this.updateWhileScrolling = previous
+      }
+      this.dashboardError = this.localized(
+        'error_save_settings', 'Unable to save the scrolling update preference.')
     }
   }
 

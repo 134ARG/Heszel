@@ -9,6 +9,7 @@ const PREFERENCES_NAME = 'heszel_session'
 const KEY_BASE_URL = 'base_url'
 const KEY_EMAIL = 'email'
 const KEY_SELECTED_SYSTEM = 'selected_system'
+const KEY_UPDATE_WHILE_SCROLLING = 'update_while_scrolling'
 const TOKEN_ALIAS = 'heszel.beszel.auth-token'
 const GATEWAY_KEY_ALIAS = 'heszel.gateway.header-key'
 const ASSET_NOT_FOUND = 24000002
@@ -19,6 +20,7 @@ export class StoredSession {
   token: string = ''
   gatewayKey: string = ''
   selectedSystemId: string = ''
+  updateWhileScrolling: boolean = false
 
   canRestore(): boolean {
     return this.baseUrl.length > 0 && this.email.length > 0 && this.token.length > 0
@@ -42,6 +44,7 @@ export class SessionRepository {
       stored.baseUrl = await store.get(KEY_BASE_URL, '') as string
       stored.email = await store.get(KEY_EMAIL, '') as string
       stored.selectedSystemId = await store.get(KEY_SELECTED_SYSTEM, '') as string
+      stored.updateWhileScrolling = await store.get(KEY_UPDATE_WHILE_SCROLLING, false) as boolean
       stored.token = await this.readToken()
       stored.gatewayKey = await this.readSecret(GATEWAY_KEY_ALIAS)
       return stored
@@ -76,6 +79,16 @@ export class SessionRepository {
 
   async saveGatewayKey(gatewayKey: string): Promise<void> {
     await this.replaceSecret(GATEWAY_KEY_ALIAS, gatewayKey.trim())
+  }
+
+  async saveUpdateWhileScrolling(enabled: boolean): Promise<void> {
+    try {
+      const store = await this.getStore()
+      await store.put(KEY_UPDATE_WHILE_SCROLLING, enabled)
+      await store.flush()
+    } catch (error) {
+      throw this.storageError(error, 'Unable to save the scrolling update preference.')
+    }
   }
 
   async clearToken(): Promise<void> {

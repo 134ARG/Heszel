@@ -6,11 +6,13 @@ export struct SettingsView {
   @Prop email: string = ''
   @Prop expanded: boolean = false
   @Prop errorMessage: string = ''
+  @Prop updateWhileScrolling: boolean = false
   @State private gatewayKeyInput: string = ''
   @State private languageCode: string = 'default'
   onBack: () => void = () => {}
   onSignOut: () => void = () => {}
   onGatewayKeyChange: (gatewayKey: string) => void = () => {}
+  onUpdateWhileScrollingChange: (enabled: boolean) => void = () => {}
 
   aboutToAppear(): void {
     try {
@@ -86,6 +88,36 @@ export struct SettingsView {
                 .fontSize(11)
                 .fontColor($r('app.color.text_tertiary'))
                 .width('100%')
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor($r('app.color.surface'))
+            .borderRadius(16)
+          }
+          .width('100%')
+
+          Column({ space: 12 }) {
+            Text($r('app.string.live_metrics_section'))
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_tertiary'))
+              .width('100%')
+
+            Row({ space: 12 }) {
+              Column({ space: 4 }) {
+                Text($r('app.string.update_while_scrolling'))
+                  .fontSize(14)
+                  .fontColor($r('app.color.text_primary'))
+                Text($r('app.string.update_while_scrolling_hint'))
+                  .fontSize(11)
+                  .fontColor($r('app.color.text_tertiary'))
+                  .maxLines(2)
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+
+              Toggle({ type: ToggleType.Switch, isOn: this.updateWhileScrolling })
+                .onChange((enabled: boolean) => this.onUpdateWhileScrollingChange(enabled))
             }
             .width('100%')
             .padding(16)
@@ -201,6 +233,12 @@ export struct SettingsView {
             .borderRadius(16)
           }
           .width('100%')
+
+          Text($r('app.string.app_version'))
+            .fontSize(11)
+            .fontColor($r('app.color.text_tertiary'))
+            .textAlign(TextAlign.Center)
+            .width('100%')
         }
         .width(this.expanded ? 620 : '100%')
         .padding({ left: 18, right: 18, top: 18, bottom: 30 })
