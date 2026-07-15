@@ -1,10 +1,11 @@
-import { OverviewMetricsState } from '../model/SystemDetailModels'
+import { HealthMetricsState, OverviewMetricsState } from '../model/SystemDetailModels'
 import { MetricTile } from './MetricTile'
 import { PressureBar } from './PressureBar'
 
 @Component
 export struct SystemOverview {
   @ObjectLink metrics: OverviewMetricsState
+  @ObjectLink health: HealthMetricsState
   @Prop compact: boolean = false
 
   build() {
@@ -50,6 +51,10 @@ export struct SystemOverview {
           this.loadAverage()
           Divider().color($r('app.color.divider'))
           this.temperature()
+          if (this.health.servicesVisible()) {
+            Divider().color($r('app.color.divider'))
+            this.services()
+          }
         }
         .alignItems(HorizontalAlign.Start)
         .width('100%')
@@ -61,6 +66,9 @@ export struct SystemOverview {
         Row({ space: 12 }) {
           Row() { this.loadAverage() }.layoutWeight(1)
           Row() { this.temperature() }.layoutWeight(1)
+          if (this.health.servicesVisible()) {
+            Row() { this.services() }.layoutWeight(1)
+          }
         }
         .width('100%')
         .padding(18)
@@ -96,6 +104,24 @@ export struct SystemOverview {
         .fontSize(11)
         .fontColor($r('app.color.text_tertiary'))
     }.alignItems(HorizontalAlign.Start).width('100%')
+  }
+
+  @Builder
+  private services() {
+    Column({ space: 8 }) {
+      Text($r('app.string.services')).fontSize(11).fontColor($r('app.color.text_tertiary'))
+      Text(this.servicesStatus())
+        .fontSize(20)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.health.servicesFailed > 0 ? $r('app.color.error_text') : $r('app.color.status_up'))
+        .maxLines(2)
+    }.alignItems(HorizontalAlign.Start).width('100%')
+  }
+
+  private servicesStatus(): ResourceStr {
+    return this.health.servicesFailed > 0 ?
+      $r('app.string.services_failed', this.health.servicesFailed, this.health.servicesTotal) :
+      $r('app.string.services_healthy', this.health.servicesTotal)
   }
 
   private formatUptime(seconds: number): string {

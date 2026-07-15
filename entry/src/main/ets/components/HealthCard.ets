@@ -30,15 +30,6 @@ export struct HealthCard {
           warning: this.batteryPercent() < 20
         })
       }
-      if (this.state.servicesVisible()) {
-        DetailValueRow({
-          label: $r('app.string.services'),
-          value: this.state.servicesFailed > 0 ?
-            $r('app.string.services_failed', this.state.servicesFailed, this.state.servicesTotal) :
-            $r('app.string.services_healthy', this.state.servicesTotal),
-          warning: this.state.servicesFailed > 0
-        })
-      }
       ForEach(this.state.sensors, (sensor: SensorMetric) => {
         SensorRow({ sensor: sensor })
       }, (sensor: SensorMetric) => sensor.name)

@@ -55,7 +55,11 @@ export struct SystemDetail {
         }
         .width('100%')
 
-        SystemOverview({ metrics: this.detail.overview, compact: this.compact })
+        SystemOverview({
+          metrics: this.detail.overview,
+          health: this.detail.healthMetrics,
+          compact: this.compact
+        })
 
         if (this.detail.loading && !this.detail.loaded) {
           Row({ space: 10 }) {
@@ -133,7 +137,7 @@ export struct SystemDetail {
     if (this.detail.storageMetrics.isVisible()) {
       StorageCard({ state: this.detail.storageMetrics })
     }
-    if (this.detail.healthMetrics.isVisible()) {
+    if (this.detail.healthMetrics.cardVisible()) {
       HealthCard({ state: this.detail.healthMetrics })
     }
   }

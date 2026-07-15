@@ -712,6 +712,7 @@ export class HealthMetricsState {
   isVisible(): boolean {
     return this.sensorsAvailable || this.batteryAvailable || this.servicesAvailable
   }
+  cardVisible(): boolean { return this.sensorsAvailable || this.batteryAvailable }
   batteryVisible(): boolean { return this.batteryAvailable }
   servicesVisible(): boolean { return this.servicesAvailable }
 
@@ -816,11 +817,11 @@ export class SystemDetailState {
   }
 
   applySummary(system: SystemSummary): void {
-    const healthWasVisible = this.healthMetrics.isVisible()
+    const healthWasVisible = this.healthMetrics.cardVisible()
     if (!this.capabilitiesInitialized) this.healthMetrics.initializeSummary(system)
     this.overview.updateFromSummary(system)
     this.healthMetrics.updateSummary(system)
-    if (healthWasVisible !== this.healthMetrics.isVisible()) this.layoutVersion += 1
+    if (healthWasVisible !== this.healthMetrics.cardVisible()) this.layoutVersion += 1
   }
 
   initializeCapabilities(stats: BeszelSystemStatsWire | null | undefined,
@@ -846,7 +847,7 @@ export class SystemDetailState {
 
   applyRealtime(info: BeszelSystemInfoWire | undefined, stats: BeszelSystemStatsWire | undefined,
     containers: BeszelContainerStatsWire[] | null | undefined): void {
-    const healthWasVisible = this.healthMetrics.isVisible()
+    const healthWasVisible = this.healthMetrics.cardVisible()
     this.overview.updateRealtime(info, stats)
     if (info !== undefined) this.healthMetrics.updateInfo(info)
     if (stats !== undefined) {
@@ -854,7 +855,7 @@ export class SystemDetailState {
     } else {
       this.containerMetrics.update(containers)
     }
-    if (healthWasVisible !== this.healthMetrics.isVisible()) this.layoutVersion += 1
+    if (healthWasVisible !== this.healthMetrics.cardVisible()) this.layoutVersion += 1
   }
 
   private updateMetricGroups(stats: BeszelSystemStatsWire,
