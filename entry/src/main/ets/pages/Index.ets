@@ -258,6 +258,7 @@ struct Index {
       if (systems.length > 0 && !systems.some((system: SystemSummary) => system.id === this.selectedId)) {
         this.selectedId = systems[0].id
       }
+      this.syncSelectedDetailSummary()
       this.lastRefresh = new Date().toLocaleTimeString()
       await this.publishWidgetSnapshot()
       if (this.realtimeClient !== null && !this.realtimeConnected) {
@@ -376,6 +377,9 @@ struct Index {
       this.selectedId = this.systems[0].id
     } else if (this.systems.length === 0) {
       this.selectedId = ''
+    }
+    if (event.record.id === this.selectedId || this.detailState.systemId !== this.selectedId) {
+      this.syncSelectedDetailSummary()
     }
     this.lastRefresh = new Date().toLocaleTimeString()
   }
@@ -753,6 +757,17 @@ struct Index {
     this.detailState = state
     if (this.detailVisible) {
       this.loadSelectedDetail()
+    }
+  }
+
+  private syncSelectedDetailSummary(): void {
+    if (this.detailState.systemId !== this.selectedId) {
+      this.selectDetailState()
+      return
+    }
+    const system = this.systems.find((candidate: SystemSummary) => candidate.id === this.selectedId)
+    if (system !== undefined) {
+      this.detailState.applySummary(system)
     }
   }
 
