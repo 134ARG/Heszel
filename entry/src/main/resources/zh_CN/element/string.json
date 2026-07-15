@@ -113,7 +113,7 @@
     { "name": "battery_discharging", "value": "放电中" },
     { "name": "battery_full", "value": "已充满" },
     { "name": "services", "value": "服务" },
-    { "name": "services_failed", "value": "%d/%d 个服务失败" },
+    { "name": "services_failed_count", "value": "%d 个失败" },
     { "name": "services_healthy", "value": "%d 个服务正常" },
 
     { "name": "containers_count", "value": "容器 · %d" },

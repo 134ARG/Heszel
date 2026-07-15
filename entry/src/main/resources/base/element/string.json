@@ -113,7 +113,7 @@
     { "name": "battery_discharging", "value": "Discharging" },
     { "name": "battery_full", "value": "Full" },
     { "name": "services", "value": "Services" },
-    { "name": "services_failed", "value": "%d failed of %d" },
+    { "name": "services_failed_count", "value": "%d failed" },
     { "name": "services_healthy", "value": "%d healthy" },
 
     { "name": "containers_count", "value": "Containers · %d" },

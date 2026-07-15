@@ -110,18 +110,18 @@ export struct SystemOverview {
   private services() {
     Column({ space: 8 }) {
       Text($r('app.string.services')).fontSize(11).fontColor($r('app.color.text_tertiary'))
-      Text(this.servicesStatus())
+      Text($r('app.string.services_failed_count', this.health.servicesFailed))
         .fontSize(20)
         .fontWeight(FontWeight.Medium)
-        .fontColor(this.health.servicesFailed > 0 ? $r('app.color.error_text') : $r('app.color.status_up'))
-        .maxLines(2)
+        .fontColor(this.health.servicesFailed > 0 ? $r('app.color.error_text') : $r('app.color.text_primary'))
+      Text($r('app.string.services_healthy', this.healthyServices()))
+        .fontSize(11)
+        .fontColor($r('app.color.text_tertiary'))
     }.alignItems(HorizontalAlign.Start).width('100%')
   }
 
-  private servicesStatus(): ResourceStr {
-    return this.health.servicesFailed > 0 ?
-      $r('app.string.services_failed', this.health.servicesFailed, this.health.servicesTotal) :
-      $r('app.string.services_healthy', this.health.servicesTotal)
+  private healthyServices(): number {
+    return Math.max(0, this.health.servicesTotal - this.health.servicesFailed)
   }
 
   private formatUptime(seconds: number): string {
