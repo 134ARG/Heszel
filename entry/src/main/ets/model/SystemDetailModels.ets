@@ -656,7 +656,7 @@ export class HealthMetricsState {
   }
 
   initializeSummary(system: SystemSummary): void {
-    this.servicesAvailable = this.servicesAvailable || system.servicesTotal > 0
+    this.servicesAvailable = this.servicesAvailable || system.servicesReported
     this.batteryAvailable = this.batteryAvailable || system.batteryPercent > 0
   }
 
@@ -666,9 +666,10 @@ export class HealthMetricsState {
   }
 
   updateSummary(system: SystemSummary): void {
-    if (system.servicesTotal > 0) {
+    if (system.servicesReported) {
       if (this.servicesTotal !== system.servicesTotal) this.servicesTotal = system.servicesTotal
       if (this.servicesFailed !== system.servicesFailed) this.servicesFailed = system.servicesFailed
+      this.servicesAvailable = true
     }
     if (this.batteryAvailable && system.batteryPercent > 0) {
       this.batteryPercent = system.batteryPercent
@@ -677,13 +678,14 @@ export class HealthMetricsState {
   }
 
   updateInfo(info: BeszelSystemInfoWire): void {
-    if (this.servicesAvailable && info.sv !== undefined) {
+    if (info.sv !== undefined) {
       if (info.sv.length > 0 && this.servicesTotal !== safeNumber(info.sv[0])) {
         this.servicesTotal = safeNumber(info.sv[0])
       }
       if (info.sv.length > 1 && this.servicesFailed !== safeNumber(info.sv[1])) {
         this.servicesFailed = safeNumber(info.sv[1])
       }
+      this.servicesAvailable = true
     }
     if (this.batteryAvailable && info.bat !== undefined && info.bat !== null) {
       const percent = arrayNumber(info.bat, 0)
@@ -844,6 +846,7 @@ export class SystemDetailState {
 
   applyRealtime(info: BeszelSystemInfoWire | undefined, stats: BeszelSystemStatsWire | undefined,
     containers: BeszelContainerStatsWire[] | null | undefined): void {
+    const healthWasVisible = this.healthMetrics.isVisible()
     this.overview.updateRealtime(info, stats)
     if (info !== undefined) this.healthMetrics.updateInfo(info)
     if (stats !== undefined) {
@@ -851,6 +854,7 @@ export class SystemDetailState {
     } else {
       this.containerMetrics.update(containers)
     }
+    if (healthWasVisible !== this.healthMetrics.isVisible()) this.layoutVersion += 1
   }
 
   private updateMetricGroups(stats: BeszelSystemStatsWire,

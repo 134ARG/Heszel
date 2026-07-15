@@ -79,6 +79,7 @@ export class SystemSummary {
   batteryState: number = 0
   servicesTotal: number = 0
   servicesFailed: number = 0
+  servicesReported: boolean = false
 
   static fromWire(record: BeszelSystemWire): SystemSummary {
     const summary = new SystemSummary()
@@ -102,6 +103,7 @@ export class SystemSummary {
     summary.batteryState = metric(info?.bat?.[1])
     summary.servicesTotal = metric(info?.sv?.[0])
     summary.servicesFailed = metric(info?.sv?.[1])
+    summary.servicesReported = info?.sv !== undefined
     return summary
   }
 
@@ -122,8 +124,11 @@ export class SystemSummary {
     this.agentVersion = other.agentVersion
     this.batteryPercent = other.batteryPercent
     this.batteryState = other.batteryState
-    this.servicesTotal = other.servicesTotal
-    this.servicesFailed = other.servicesFailed
+    if (other.servicesReported) {
+      this.servicesTotal = other.servicesTotal
+      this.servicesFailed = other.servicesFailed
+      this.servicesReported = true
+    }
   }
 
   updateCardMetrics(info: BeszelSystemInfoWire): void {
@@ -145,6 +150,7 @@ export class SystemSummary {
       this.batteryState = metric(info.bat[1])
     }
     if (info.sv !== undefined) {
+      this.servicesReported = true
       this.servicesTotal = metric(info.sv[0])
       this.servicesFailed = metric(info.sv[1])
     }
