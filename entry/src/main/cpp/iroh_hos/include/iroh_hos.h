@@ -7,7 +7,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define IROH_HOS_ABI_VERSION 1u
+
+#define IROH_HOS_ABI_VERSION 2u
 #define IROH_HOS_SECRET_KEY_LENGTH 32u
 #define IROH_HOS_ENDPOINT_ID_CAPACITY 128u
 
@@ -94,6 +95,9 @@ size_t iroh_hos_tunnel_last_error(
 );
 
 int32_t iroh_hos_tunnel_stop(const IrohHosTunnel *tunnel);
+
+/* Immediately tears down the local runtime without waiting for QUIC drain acknowledgements. */
+int32_t iroh_hos_tunnel_abort(const IrohHosTunnel *tunnel);
 
 /* Stops the tunnel if necessary and releases the opaque handle. */
 void iroh_hos_tunnel_free(IrohHosTunnel *tunnel);

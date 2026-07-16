@@ -1058,12 +1058,16 @@ struct Index {
     return this.connectionRuntime.open(profile)
   }
 
-  private async closeConnection(mode: ConnectionMode): Promise<void> {
+  private async closeConnection(mode: ConnectionMode, immediate: boolean = false): Promise<void> {
     if (mode !== ConnectionMode.IROH || this.connectionRuntime === null) {
       return
     }
     try {
-      await this.connectionRuntime.close()
+      if (immediate) {
+        await this.connectionRuntime.closeImmediately()
+      } else {
+        await this.connectionRuntime.close()
+      }
     } catch (_) {
       // Lifecycle cleanup is best effort; a later open starts from native state.
     }
@@ -1074,7 +1078,7 @@ struct Index {
       return
     }
     this.client = null
-    this.closeConnection(ConnectionMode.IROH)
+    this.closeConnection(ConnectionMode.IROH, true)
   }
 
   private async resumeConnection(): Promise<void> {

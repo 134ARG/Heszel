@@ -39,11 +39,19 @@ export class ConnectionRuntimeService {
   }
 
   async close(): Promise<void> {
+    await this.closeWithMode(false)
+  }
+
+  async closeImmediately(): Promise<void> {
+    await this.closeWithMode(true)
+  }
+
+  private async closeWithMode(immediate: boolean): Promise<void> {
     if (this.closeTask !== null) {
       await this.closeTask
       return
     }
-    const task = this.closeIroh()
+    const task = this.closeIroh(immediate)
     this.closeTask = task
     try {
       await task
@@ -90,7 +98,7 @@ export class ConnectionRuntimeService {
     }
   }
 
-  private async closeIroh(): Promise<void> {
+  private async closeIroh(immediate: boolean): Promise<void> {
     if (this.openTask !== null) {
       try {
         await this.openTask
@@ -103,8 +111,12 @@ export class ConnectionRuntimeService {
       return
     }
     try {
-      iroh.suspendTunnel()
-      await iroh.stopTunnel()
+      if (immediate) {
+        await iroh.abortTunnel()
+      } else {
+        iroh.suspendTunnel()
+        await iroh.stopTunnel()
+      }
     } finally {
       this.irohRunning = false
     }

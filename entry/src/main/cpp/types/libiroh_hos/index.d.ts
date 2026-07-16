@@ -27,6 +27,7 @@ export interface TunnelInfo {
 declare const irohHos: {
   startTunnel: (config: TunnelConfig) => Promise<TunnelInfo>;
   stopTunnel: () => Promise<void>;
+  abortTunnel: () => Promise<void>;
   suspendTunnel: () => void;
   resumeTunnel: () => void;
   networkChange: () => void;

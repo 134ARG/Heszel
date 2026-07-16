@@ -46,6 +46,7 @@ struct StopWork {
     napi_env env = nullptr;
     napi_deferred deferred = nullptr;
     napi_async_work work = nullptr;
+    bool graceful = true;
     int32_t result = IROH_HOS_OK;
 };
 
@@ -448,7 +449,7 @@ void ExecuteStop(napi_env, void *data) {
     if (gTunnel == nullptr) {
         return;
     }
-    work->result = iroh_hos_tunnel_stop(gTunnel);
+    work->result = work->graceful ? iroh_hos_tunnel_stop(gTunnel) : iroh_hos_tunnel_abort(gTunnel);
     iroh_hos_tunnel_free(gTunnel);
     gTunnel = nullptr;
 }
@@ -464,12 +465,17 @@ void CompleteStop(napi_env env, napi_status status, void *data) {
     delete work;
 }
 
-napi_value StopTunnel(napi_env env, napi_callback_info) {
+napi_value QueueStop(napi_env env, bool graceful) {
     auto *work = new StopWork();
     work->env = env;
+    work->graceful = graceful;
     napi_value promise = nullptr;
     napi_value resourceName = nullptr;
-    napi_create_string_utf8(env, "IrohHosStopTunnel", NAPI_AUTO_LENGTH, &resourceName);
+    napi_create_string_utf8(
+        env,
+        graceful ? "IrohHosStopTunnel" : "IrohHosAbortTunnel",
+        NAPI_AUTO_LENGTH,
+        &resourceName);
     if (!NapiOk(env, napi_create_promise(env, &work->deferred, &promise), "Failed to create stopTunnel promise") ||
         !NapiOk(
             env,
@@ -490,6 +496,14 @@ napi_value StopTunnel(napi_env env, napi_callback_info) {
         return nullptr;
     }
     return promise;
+}
+
+napi_value StopTunnel(napi_env env, napi_callback_info) {
+    return QueueStop(env, true);
+}
+
+napi_value AbortTunnel(napi_env env, napi_callback_info) {
+    return QueueStop(env, false);
 }
 
 using TunnelCommand = int32_t (*)(const IrohHosTunnel *);
@@ -621,6 +635,7 @@ napi_value Init(napi_env env, napi_value exports) {
     napi_property_descriptor properties[] = {
         {"startTunnel", nullptr, StartTunnel, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"stopTunnel", nullptr, StopTunnel, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"abortTunnel", nullptr, AbortTunnel, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"suspendTunnel", nullptr, SuspendTunnel, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"resumeTunnel", nullptr, ResumeTunnel, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"networkChange", nullptr, NetworkChange, nullptr, nullptr, nullptr, napi_default, nullptr},

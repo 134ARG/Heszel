@@ -142,7 +142,7 @@ export default class EntryFormAbility extends FormExtensionAbility {
     } finally {
       if (irohOpened && connectionRuntime !== null) {
         try {
-          await connectionRuntime.close()
+          await connectionRuntime.closeImmediately()
         } catch (error) {
           hilog.warn(DOMAIN, TAG, 'Unable to stop the temporary Iroh tunnel: %{public}s', this.errorMessage(error))
         }
