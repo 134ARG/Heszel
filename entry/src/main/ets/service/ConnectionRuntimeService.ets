@@ -1,4 +1,4 @@
-import iroh from 'libiroh_hos.so'
+import iroh, { TunnelConfig, TunnelInfo } from 'libiroh_hos.so'
 import { ConnectionMode, ConnectionProfile } from '../model/ConnectionModels'
 import { SessionRepository } from '../repository/SessionRepository'
 
@@ -59,26 +59,30 @@ export class ConnectionRuntimeService {
       throw new Error('Scan a valid Heszel Iroh pairing QR code first.')
     }
 
-    if (iroh.getTunnelInfo().state !== 'stopped') {
+    const currentInfo: TunnelInfo = iroh.getTunnelInfo()
+    if (currentInfo.state !== 'stopped') {
       await iroh.stopTunnel()
       this.irohRunning = false
     }
     const secretKey = await this.loadOrCreateSecretKey()
     try {
-      const info = await iroh.startTunnel({
+      const config: TunnelConfig = {
         serverEndpointId: profile.iroh.serverEndpointId,
-        serverRelayUrl: profile.iroh.serverRelayUrl.length > 0 ? profile.iroh.serverRelayUrl : undefined,
         serverDirectAddresses: profile.iroh.serverDirectAddresses,
         secretKey: secretKey,
         alpn: profile.iroh.alpn
-      })
+      }
+      if (profile.iroh.serverRelayUrl.length > 0) {
+        config.serverRelayUrl = profile.iroh.serverRelayUrl
+      }
+      const info: TunnelInfo = await iroh.startTunnel(config)
       if (info.localPort <= 0) {
         throw new Error('Iroh did not provide a local tunnel port.')
       }
       this.irohRunning = true
       return `http://127.0.0.1:${info.localPort}`
     } catch (error) {
-      const nativeError = iroh.getLastError()
+      const nativeError: string = iroh.getLastError()
       if (nativeError.length > 0) {
         throw new Error(nativeError)
       }
@@ -94,7 +98,8 @@ export class ConnectionRuntimeService {
         // A failed open has no live tunnel to preserve.
       }
     }
-    if (!this.irohRunning && iroh.getTunnelInfo().state === 'stopped') {
+    const currentInfo: TunnelInfo = iroh.getTunnelInfo()
+    if (!this.irohRunning && currentInfo.state === 'stopped') {
       return
     }
     try {
@@ -110,7 +115,8 @@ export class ConnectionRuntimeService {
     if (stored.length === IROH_SECRET_BYTES) {
       return stored
     }
-    const generated = new Uint8Array(iroh.generateSecretKey())
+    const generatedBuffer: ArrayBuffer = iroh.generateSecretKey()
+    const generated = new Uint8Array(generatedBuffer)
     if (generated.length !== IROH_SECRET_BYTES) {
       throw new Error('Iroh generated an invalid phone identity key.')
     }
