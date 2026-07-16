@@ -3,8 +3,10 @@ import { formBindingData, FormExtensionAbility, formInfo } from '@kit.FormKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { BeszelClient } from '../api/BeszelClient'
 import { BeszelSession } from '../model/BeszelModels'
+import { ConnectionMode } from '../model/ConnectionModels'
 import { SessionRepository } from '../repository/SessionRepository'
 import { WidgetSnapshotRepository } from '../repository/WidgetSnapshotRepository'
+import { ConnectionRuntimeService } from '../service/ConnectionRuntimeService'
 import { SessionRefreshService } from '../service/SessionRefreshService'
 import { SystemRefreshResult, SystemRefreshService } from '../service/SystemRefreshService'
 
@@ -78,8 +80,11 @@ export default class EntryFormAbility extends FormExtensionAbility {
       return
     }
     this.refreshInFlight = true
+    let connectionRuntime: ConnectionRuntimeService | null = null
+    let irohOpened: boolean = false
     try {
       const sessionRepository = new SessionRepository(this.context)
+      connectionRuntime = new ConnectionRuntimeService(sessionRepository)
       const widgetRepository = new WidgetSnapshotRepository(this.context)
       const session = await sessionRepository.load()
       if (!session.canRestore()) {
@@ -87,12 +92,15 @@ export default class EntryFormAbility extends FormExtensionAbility {
         return
       }
       hilog.info(DOMAIN, TAG, 'Manual card refresh is requesting systems.')
-      const client = new BeszelClient(session.baseUrl, session.gatewayKey)
+      const connection = session.connectionProfile()
+      const activeBaseUrl = await connectionRuntime.open(connection)
+      irohOpened = connection.mode === ConnectionMode.IROH
+      const client = new BeszelClient(activeBaseUrl, connection.gatewayKey)
       const refreshSession = new BeszelSession()
-      refreshSession.baseUrl = session.baseUrl
+      refreshSession.baseUrl = activeBaseUrl
       refreshSession.email = session.email
       refreshSession.token = session.token
-      refreshSession.gatewayKey = session.gatewayKey
+      refreshSession.gatewayKey = connection.gatewayKey
       let result: SystemRefreshResult
       try {
         result = await new SessionRefreshService().execute(
@@ -100,7 +108,7 @@ export default class EntryFormAbility extends FormExtensionAbility {
           refreshSession,
           (activeSession: BeszelSession) => new SystemRefreshService().refresh(client, activeSession, systemId),
           async (refreshed: BeszelSession) => {
-            await sessionRepository.saveSession(refreshed, session.selectedSystemId)
+            await sessionRepository.saveSession(refreshed, session.selectedSystemId, connection)
           }
         )
       } catch (error) {
@@ -117,6 +125,13 @@ export default class EntryFormAbility extends FormExtensionAbility {
       }
       hilog.info(DOMAIN, TAG, 'Manual card refresh published %{public}d systems.', result.systems.length)
     } finally {
+      if (irohOpened && connectionRuntime !== null) {
+        try {
+          await connectionRuntime.close()
+        } catch (error) {
+          hilog.warn(DOMAIN, TAG, 'Unable to stop the temporary Iroh tunnel: %{public}s', this.errorMessage(error))
+        }
+      }
       this.refreshInFlight = false
     }
   }

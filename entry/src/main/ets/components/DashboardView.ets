@@ -1,4 +1,5 @@
 import { SystemSummary } from '../model/BeszelModels'
+import { ConnectionMode } from '../model/ConnectionModels'
 import { SystemDetailState } from '../model/SystemDetailModels'
 import { SettingsView } from './SettingsView'
 import { SystemCard } from './SystemCard'
@@ -24,7 +25,9 @@ export struct DashboardView {
   @Prop liveMetrics: boolean = false
   @Prop updateWhileScrolling: boolean = false
   @Prop realtimeConnected: boolean = false
-  @Prop baseUrl: string = ''
+  @Prop connectionMode: ConnectionMode = ConnectionMode.HTTP
+  @Prop connectionLabel: string = ''
+  @Prop connectionDetail: string = ''
   @Prop email: string = ''
   @State private detailVisible: boolean = false
   onRefresh: () => void = () => {}
@@ -110,7 +113,9 @@ export struct DashboardView {
         this.detailDestination(param)
       } else if (name === 'settings') {
         SettingsView({
-          baseUrl: this.baseUrl,
+          connectionMode: this.connectionMode,
+          connectionLabel: this.connectionLabel,
+          connectionDetail: this.connectionDetail,
           email: this.email,
           expanded: this.expanded,
           errorMessage: this.errorMessage,

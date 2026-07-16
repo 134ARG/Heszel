@@ -1,8 +1,11 @@
 import { i18n } from '@kit.LocalizationKit'
+import { ConnectionMode } from '../model/ConnectionModels'
 
 @Component
 export struct SettingsView {
-  @Prop baseUrl: string = ''
+  @Prop connectionMode: ConnectionMode = ConnectionMode.HTTP
+  @Prop connectionLabel: string = ''
+  @Prop connectionDetail: string = ''
   @Prop email: string = ''
   @Prop expanded: boolean = false
   @Prop errorMessage: string = ''
@@ -126,54 +129,56 @@ export struct SettingsView {
           }
           .width('100%')
 
-          Column({ space: 12 }) {
-            Text($r('app.string.gateway_access'))
-              .fontSize(11)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.text_tertiary'))
-              .width('100%')
-
+          if (this.connectionMode === ConnectionMode.HTTP) {
             Column({ space: 12 }) {
-              Text($r('app.string.gateway_security_note'))
-                .fontSize(12)
-                .fontColor($r('app.color.text_secondary'))
-                .width('100%')
-
-              TextInput({ placeholder: $r('app.string.enter_replacement_key'), text: this.gatewayKeyInput })
-                .type(InputType.Password)
-                .showPasswordIcon(false)
-                .height(48)
-                .width('100%')
-                .fontColor($r('app.color.text_primary'))
-                .placeholderColor($r('app.color.text_tertiary'))
-                .caretColor($r('app.color.action'))
-                .backgroundColor($r('app.color.surface_input'))
-                .borderRadius(12)
-                .onChange((value: string) => {
-                  this.gatewayKeyInput = value
-                })
-
-              Button($r('app.string.verify_and_update'))
-                .height(44)
-                .width('100%')
-                .fontSize(14)
+              Text($r('app.string.gateway_access'))
+                .fontSize(11)
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.text_on_action'))
-                .backgroundColor($r('app.color.action'))
-                .borderRadius(12)
-                .enabled(this.gatewayKeyInput.trim().length > 0)
-                .onClick(() => {
-                  const replacement = this.gatewayKeyInput.trim()
-                  this.gatewayKeyInput = ''
-                  this.onGatewayKeyChange(replacement)
-                })
+                .fontColor($r('app.color.text_tertiary'))
+                .width('100%')
+
+              Column({ space: 12 }) {
+                Text($r('app.string.gateway_security_note'))
+                  .fontSize(12)
+                  .fontColor($r('app.color.text_secondary'))
+                  .width('100%')
+
+                TextInput({ placeholder: $r('app.string.enter_replacement_key'), text: this.gatewayKeyInput })
+                  .type(InputType.Password)
+                  .showPasswordIcon(false)
+                  .height(48)
+                  .width('100%')
+                  .fontColor($r('app.color.text_primary'))
+                  .placeholderColor($r('app.color.text_tertiary'))
+                  .caretColor($r('app.color.action'))
+                  .backgroundColor($r('app.color.surface_input'))
+                  .borderRadius(12)
+                  .onChange((value: string) => {
+                    this.gatewayKeyInput = value
+                  })
+
+                Button($r('app.string.verify_and_update'))
+                  .height(44)
+                  .width('100%')
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.text_on_action'))
+                  .backgroundColor($r('app.color.action'))
+                  .borderRadius(12)
+                  .enabled(this.gatewayKeyInput.trim().length > 0)
+                  .onClick(() => {
+                    const replacement = this.gatewayKeyInput.trim()
+                    this.gatewayKeyInput = ''
+                    this.onGatewayKeyChange(replacement)
+                  })
+              }
+              .width('100%')
+              .padding(16)
+              .backgroundColor($r('app.color.surface'))
+              .borderRadius(16)
             }
             .width('100%')
-            .padding(16)
-            .backgroundColor($r('app.color.surface'))
-            .borderRadius(16)
           }
-          .width('100%')
 
           Column({ space: 12 }) {
             Text($r('app.string.account'))
@@ -184,14 +189,41 @@ export struct SettingsView {
 
             Column() {
               Column({ space: 4 }) {
-                Text($r('app.string.beszel_hub'))
+                Text($r('app.string.connection'))
                   .fontSize(11)
                   .fontColor($r('app.color.text_tertiary'))
-                Text(this.baseUrl)
+                Text(this.connectionMode === ConnectionMode.IROH ?
+                  $r('app.string.connection_iroh') : $r('app.string.connection_http'))
+                  .fontSize(14)
+                  .fontColor($r('app.color.text_primary'))
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+              }
+              .alignItems(HorizontalAlign.Start)
+              .width('100%')
+              .padding(16)
+
+              Divider()
+                .color($r('app.color.divider'))
+                .margin({ left: 16, right: 16 })
+
+              Column({ space: 4 }) {
+                Text(this.connectionMode === ConnectionMode.IROH ?
+                  $r('app.string.iroh_gateway') : $r('app.string.beszel_hub'))
+                  .fontSize(11)
+                  .fontColor($r('app.color.text_tertiary'))
+                Text(this.connectionLabel)
                   .fontSize(14)
                   .fontColor($r('app.color.text_primary'))
                   .maxLines(2)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
+                if (this.connectionDetail.length > 0) {
+                  Text(this.connectionDetail)
+                    .fontSize(11)
+                    .fontColor($r('app.color.text_tertiary'))
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
               }
               .alignItems(HorizontalAlign.Start)
               .width('100%')

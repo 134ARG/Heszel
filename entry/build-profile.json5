@@ -1,6 +1,12 @@
 {
   "apiType": "stageMode",
   "buildOption": {
+    "externalNativeOptions": {
+      "path": "./src/main/cpp/iroh_hos/CMakeLists.txt",
+      "abiFilters": [
+        "arm64-v8a"
+      ]
+    },
     "resOptions": {
       "copyCodeResource": {
         "enable": false

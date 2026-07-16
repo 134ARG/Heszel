@@ -5,6 +5,7 @@
   "main": "",
   "author": "",
   "license": "",
-  "dependencies": {}
+  "dependencies": {
+    "libiroh_hos.so": "file:./src/main/cpp/types/libiroh_hos"
+  }
 }
-

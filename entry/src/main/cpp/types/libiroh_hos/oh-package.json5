@@ -1,0 +1,6 @@
+{
+  "name": "libiroh_hos.so",
+  "version": "0.1.0",
+  "description": "HarmonyOS N-API bindings for the iroh loopback tunnel",
+  "types": "./index.d.ts"
+}

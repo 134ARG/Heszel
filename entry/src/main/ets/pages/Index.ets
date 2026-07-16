@@ -7,6 +7,7 @@ import {
 import { DashboardView } from '../components/DashboardView'
 import { LoginView } from '../components/LoginView'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
+import { ConnectionMode, ConnectionProfile, LoginRequest } from '../model/ConnectionModels'
 import {
   BeszelContainerStatsRecordWire,
   BeszelSystemDetailsWire,
@@ -16,6 +17,8 @@ import {
 } from '../model/SystemDetailModels'
 import { SessionRepository, StoredSession } from '../repository/SessionRepository'
 import { WidgetSnapshotRepository } from '../repository/WidgetSnapshotRepository'
+import { ConnectionRuntimeService } from '../service/ConnectionRuntimeService'
+import { IrohPairingService } from '../service/IrohPairingService'
 import { SessionRefreshService } from '../service/SessionRefreshService'
 import { SystemRefreshService } from '../service/SystemRefreshService'
 
@@ -49,10 +52,15 @@ struct Index {
   @State private savedServerUrl: string = ''
   @State private savedEmail: string = ''
   @State private savedGatewayKey: string = ''
+  @State private savedConnectionMode: ConnectionMode = ConnectionMode.HTTP
+  @State private savedIrohPairingJson: string = ''
   private client: BeszelClient | null = null
   private realtimeClient: BeszelRealtimeClient | null = null
   private sessionRepository: SessionRepository | null = null
   private widgetRepository: WidgetSnapshotRepository | null = null
+  private connectionRuntime: ConnectionRuntimeService | null = null
+  private connectionProfile: ConnectionProfile = new ConnectionProfile()
+  private connectionResumeTask: Promise<void> | null = null
   private pageVisible: boolean = false
   private detailScrolling: boolean = false
   private refreshInFlight: boolean = false
@@ -77,7 +85,7 @@ struct Index {
   onPageShow(): void {
     this.pageVisible = true
     if (this.session.token.length > 0) {
-      this.resumeData()
+      this.resumeConnection()
     }
   }
 
@@ -86,12 +94,14 @@ struct Index {
     this.flushSelectedId()
     this.invalidateDataWork()
     this.stopRealtime()
+    this.stopBackgroundConnection()
   }
 
   aboutToDisappear(): void {
     this.pageVisible = false
     this.invalidateDataWork()
     this.stopRealtime()
+    this.stopBackgroundConnection()
   }
 
   build() {
@@ -114,11 +124,13 @@ struct Index {
         LoginView({
           loading: this.signingIn,
           errorMessage: this.loginError,
+          initialConnectionMode: this.savedConnectionMode,
           initialServerUrl: this.savedServerUrl,
           initialEmail: this.savedEmail,
           initialGatewayKey: this.savedGatewayKey,
-          onLogin: (serverUrl: string, email: string, password: string, gatewayKey: string) => {
-            this.login(serverUrl, email, password, gatewayKey)
+          initialIrohPairingJson: this.savedIrohPairingJson,
+          onLogin: (request: LoginRequest) => {
+            this.login(request)
           }
         })
       } else {
@@ -133,7 +145,9 @@ struct Index {
           liveMetrics: this.liveMetrics,
           updateWhileScrolling: this.updateWhileScrolling,
           realtimeConnected: this.realtimeConnected,
-          baseUrl: this.session.baseUrl,
+          connectionMode: this.connectionProfile.mode,
+          connectionLabel: this.connectionLabel(),
+          connectionDetail: this.connectionDetail(),
           email: this.session.email,
           onRefresh: () => {
             this.handleManualRefresh()
@@ -166,10 +180,13 @@ struct Index {
     .height('100%')
   }
 
-  private async login(serverUrl: string, email: string, password: string, gatewayKey: string): Promise<void> {
+  private async login(request: LoginRequest): Promise<void> {
     this.loginError = ''
-    if (serverUrl.trim().length === 0 || email.trim().length === 0 || password.length === 0) {
-      this.loginError = this.localized('error_enter_credentials', 'Enter the hub address, email, and password.')
+    const profile = request.toConnectionProfile()
+    if (!profile.canConnect() || request.email.trim().length === 0 || request.password.length === 0) {
+      this.loginError = profile.mode === ConnectionMode.IROH ?
+        this.localized('error_enter_iroh_credentials', 'Scan an Iroh pairing QR code and enter your email and password.') :
+        this.localized('error_enter_credentials', 'Enter the hub address, email, and password.')
       return
     }
 
@@ -177,21 +194,30 @@ struct Index {
     const generation = this.dataGeneration
     let client: BeszelClient | null = null
     try {
-      const loginClient = new BeszelClient(serverUrl, gatewayKey)
+      const activeBaseUrl = await this.openConnection(profile)
+      if (!this.isDataWorkCurrent(generation)) {
+        await this.closeConnection(profile.mode)
+        return
+      }
+      const loginClient = new BeszelClient(activeBaseUrl, profile.gatewayKey)
       client = loginClient
       this.client = loginClient
-      const session = await loginClient.login(email, password)
+      const session = await loginClient.login(request.email, request.password)
       if (!this.isDataWorkCurrent(generation)) {
         if (this.client === loginClient) {
           this.client = null
         }
+        await this.closeConnection(profile.mode)
         return
       }
+      this.connectionProfile = profile
       this.session = session
       this.sessionRefreshPending = false
-      this.savedServerUrl = session.baseUrl
+      this.savedConnectionMode = profile.mode
+      this.savedServerUrl = profile.httpBaseUrl
       this.savedEmail = session.email
-      this.savedGatewayKey = session.gatewayKey
+      this.savedGatewayKey = profile.gatewayKey
+      this.savedIrohPairingJson = IrohPairingService.stringify(profile.iroh)
       this.systems = []
       this.selectedId = ''
       this.clearDetailStates()
@@ -213,6 +239,7 @@ struct Index {
       if (client !== null && this.client === client) {
         this.client = null
       }
+      await this.closeConnection(profile.mode)
       this.loginError = this.describeError(error,
         this.localized('error_connect_beszel', 'Unable to connect to Beszel.'))
     } finally {
@@ -546,6 +573,7 @@ struct Index {
         return
       }
     }
+    await this.closeConnection(this.connectionProfile.mode)
     this.client = null
     this.session = new BeszelSession()
     this.sessionRefreshPending = false
@@ -567,6 +595,7 @@ struct Index {
         return
       }
       this.sessionRepository = new SessionRepository(context)
+      this.connectionRuntime = new ConnectionRuntimeService(this.sessionRepository)
       this.widgetRepository = new WidgetSnapshotRepository(context)
       const stored = await this.sessionRepository.load()
       if (!this.isDataWorkCurrent(generation)) {
@@ -575,6 +604,9 @@ struct Index {
       this.savedServerUrl = stored.baseUrl
       this.savedEmail = stored.email
       this.savedGatewayKey = stored.gatewayKey
+      this.savedConnectionMode = stored.connectionMode
+      this.savedIrohPairingJson = IrohPairingService.stringify(stored.irohPairing)
+      this.connectionProfile = stored.connectionProfile()
       this.updateWhileScrolling = stored.updateWhileScrolling
       this.lastPersistedSelectedId = stored.selectedSystemId
       this.selectedId = stored.selectedSystemId
@@ -582,8 +614,13 @@ struct Index {
         return
       }
 
-      this.client = new BeszelClient(stored.baseUrl, stored.gatewayKey)
-      this.session = this.toSession(stored)
+      const activeBaseUrl = await this.openConnection(this.connectionProfile)
+      if (!this.isDataWorkCurrent(generation)) {
+        await this.closeConnection(this.connectionProfile.mode)
+        return
+      }
+      this.client = new BeszelClient(activeBaseUrl, this.connectionProfile.gatewayKey)
+      this.session = this.toSession(stored, activeBaseUrl)
       this.sessionRefreshPending = true
 
       const sessionReady = await this.retrySessionRefresh(generation)
@@ -594,6 +631,7 @@ struct Index {
         }
       }
     } catch (error) {
+      await this.closeConnection(this.connectionProfile.mode)
       this.loginError = this.describeError(error,
         this.localized('error_restore_session', 'Unable to restore the saved session.'))
     } finally {
@@ -606,7 +644,7 @@ struct Index {
       return
     }
     try {
-      await this.sessionRepository.saveSession(session, this.selectedId)
+      await this.sessionRepository.saveSession(session, this.selectedId, this.connectionProfile)
       this.pendingSelectedId = this.selectedId
       this.lastPersistedSelectedId = this.selectedId
     } catch (_) {
@@ -634,7 +672,8 @@ struct Index {
 
   private async updateGatewayKey(value: string): Promise<void> {
     const gatewayKey = value.trim()
-    if (gatewayKey === this.session.gatewayKey || this.sessionRepository === null || this.session.token.length === 0) {
+    if (this.connectionProfile.mode !== ConnectionMode.HTTP || gatewayKey === this.session.gatewayKey ||
+      this.sessionRepository === null || this.session.token.length === 0) {
       return
     }
 
@@ -661,6 +700,7 @@ struct Index {
       session.gatewayKey = gatewayKey
       this.session = session
       this.client = client
+      this.connectionProfile.gatewayKey = gatewayKey
       this.savedGatewayKey = gatewayKey
       this.systems = this.reconcileSystems(incomingSystems)
       this.lastRefresh = new Date().toLocaleTimeString()
@@ -891,7 +931,7 @@ struct Index {
 
       this.dashboardError = this.localized(
         'error_network_saved_session',
-        'Beszel is unreachable. Your saved session is safe; connect Tailscale or restore networking, then retry.')
+        'Beszel is unreachable. Your saved session is safe; restore the network or gateway, then retry.')
       return false
     }
   }
@@ -962,6 +1002,7 @@ struct Index {
         // The rejected in-memory token is still discarded for this process.
       }
     }
+    await this.closeConnection(this.connectionProfile.mode)
     this.client = null
     this.session = new BeszelSession()
     this.sessionRefreshPending = false
@@ -998,13 +1039,106 @@ struct Index {
     }
   }
 
-  private toSession(stored: StoredSession): BeszelSession {
+  private toSession(stored: StoredSession, activeBaseUrl: string): BeszelSession {
     const session = new BeszelSession()
-    session.baseUrl = stored.baseUrl
+    session.baseUrl = activeBaseUrl
     session.email = stored.email
     session.token = stored.token
-    session.gatewayKey = stored.gatewayKey
+    session.gatewayKey = this.connectionProfile.gatewayKey
     return session
+  }
+
+  private async openConnection(profile: ConnectionProfile): Promise<string> {
+    if (this.connectionRuntime === null) {
+      if (this.sessionRepository === null) {
+        throw new Error('Heszel storage is not ready.')
+      }
+      this.connectionRuntime = new ConnectionRuntimeService(this.sessionRepository)
+    }
+    return this.connectionRuntime.open(profile)
+  }
+
+  private async closeConnection(mode: ConnectionMode): Promise<void> {
+    if (mode !== ConnectionMode.IROH || this.connectionRuntime === null) {
+      return
+    }
+    try {
+      await this.connectionRuntime.close()
+    } catch (_) {
+      // Lifecycle cleanup is best effort; a later open starts from native state.
+    }
+  }
+
+  private stopBackgroundConnection(): void {
+    if (this.connectionProfile.mode !== ConnectionMode.IROH) {
+      return
+    }
+    this.client = null
+    this.closeConnection(ConnectionMode.IROH)
+  }
+
+  private async resumeConnection(): Promise<void> {
+    if (this.connectionResumeTask !== null) {
+      await this.connectionResumeTask
+      if (!this.pageVisible || this.session.token.length === 0 ||
+        this.connectionProfile.mode === ConnectionMode.HTTP || this.client !== null) {
+        return
+      }
+    }
+    const task = this.performResumeConnection()
+    this.connectionResumeTask = task
+    try {
+      await task
+    } finally {
+      if (this.connectionResumeTask === task) {
+        this.connectionResumeTask = null
+      }
+    }
+  }
+
+  private async performResumeConnection(): Promise<void> {
+    if (!this.pageVisible || this.session.token.length === 0) {
+      return
+    }
+    if (this.connectionProfile.mode === ConnectionMode.HTTP) {
+      await this.resumeData()
+      return
+    }
+
+    const generation = this.dataGeneration
+    try {
+      const activeBaseUrl = await this.openConnection(this.connectionProfile)
+      if (!this.pageVisible || !this.isDataWorkCurrent(generation)) {
+        await this.closeConnection(ConnectionMode.IROH)
+        return
+      }
+      const resumed = new BeszelSession()
+      resumed.baseUrl = activeBaseUrl
+      resumed.email = this.session.email
+      resumed.token = this.session.token
+      resumed.gatewayKey = ''
+      this.session = resumed
+      this.client = new BeszelClient(activeBaseUrl)
+      await this.resumeData()
+    } catch (error) {
+      if (this.pageVisible && this.isDataWorkCurrent(generation)) {
+        this.dashboardError = this.describeError(error,
+          this.localized('error_resume_iroh', 'Unable to reconnect the Iroh tunnel.'))
+      }
+    }
+  }
+
+  private connectionLabel(): string {
+    if (this.connectionProfile.mode === ConnectionMode.HTTP) {
+      return this.connectionProfile.httpBaseUrl
+    }
+    return this.connectionProfile.iroh.displayName.length > 0 ?
+      this.connectionProfile.iroh.displayName : this.localized('iroh_gateway', 'Iroh gateway')
+  }
+
+  private connectionDetail(): string {
+    return this.connectionProfile.mode === ConnectionMode.IROH ?
+      this.connectionProfile.iroh.shortEndpointId() : ''
   }
 
   private describeError(error: Object, fallback: string): string {
