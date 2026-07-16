@@ -1,5 +1,6 @@
 import { BusinessError } from '@kit.BasicServicesKit'
 import { ConnectionMode, IrohPairing, LoginRequest } from '../model/ConnectionModels'
+import { IrohPairingCodec } from '../service/IrohPairingCodec'
 import { IrohPairingService } from '../service/IrohPairingService'
 
 @Component
@@ -28,7 +29,7 @@ export struct LoginView {
     this.gatewayKey = this.initialGatewayKey
     if (this.initialIrohPairingJson.length > 0) {
       try {
-        this.pairing = IrohPairingService.parse(this.initialIrohPairingJson)
+        this.pairing = IrohPairingCodec.parse(this.initialIrohPairingJson)
       } catch (_) {
         this.pairing = new IrohPairing()
       }

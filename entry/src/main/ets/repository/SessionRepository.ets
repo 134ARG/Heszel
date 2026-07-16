@@ -5,7 +5,7 @@ import { asset } from '@kit.AssetStoreKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { BeszelSession } from '../model/BeszelModels'
 import { ConnectionMode, ConnectionProfile, IrohPairing } from '../model/ConnectionModels'
-import { IrohPairingService } from '../service/IrohPairingService'
+import { IrohPairingCodec } from '../service/IrohPairingCodec'
 
 const PREFERENCES_NAME = 'heszel_session'
 const KEY_BASE_URL = 'base_url'
@@ -65,7 +65,7 @@ export class SessionRepository {
       const pairingJson = await store.get(KEY_IROH_PAIRING, '') as string
       if (pairingJson.length > 0) {
         try {
-          stored.irohPairing = IrohPairingService.parse(pairingJson)
+          stored.irohPairing = IrohPairingCodec.parse(pairingJson)
         } catch (_) {
           stored.irohPairing = new IrohPairing()
         }
@@ -88,7 +88,7 @@ export class SessionRepository {
       await store.put(KEY_CONNECTION_MODE, connection.mode)
       await store.put(KEY_BASE_URL, connection.mode === ConnectionMode.HTTP ? connection.httpBaseUrl : '')
       await store.put(KEY_IROH_PAIRING,
-        connection.mode === ConnectionMode.IROH ? IrohPairingService.stringify(connection.iroh) : '')
+        connection.mode === ConnectionMode.IROH ? IrohPairingCodec.stringify(connection.iroh) : '')
       await store.put(KEY_EMAIL, session.email)
       await store.put(KEY_SELECTED_SYSTEM, selectedSystemId)
       await store.flush()

@@ -4,11 +4,12 @@ import { hilog } from '@kit.PerformanceAnalysisKit'
 import { BeszelClient } from '../api/BeszelClient'
 import { BeszelSession } from '../model/BeszelModels'
 import { ConnectionMode } from '../model/ConnectionModels'
+import { BeszelSystemStatsWire } from '../model/SystemDetailModels'
 import { SessionRepository } from '../repository/SessionRepository'
 import { WidgetSnapshotRepository } from '../repository/WidgetSnapshotRepository'
 import { ConnectionRuntimeService } from '../service/ConnectionRuntimeService'
 import { SessionRefreshService } from '../service/SessionRefreshService'
-import { SystemRefreshResult, SystemRefreshService } from '../service/SystemRefreshService'
+import { SystemRealtimeSample, SystemRefreshResult, SystemRefreshService } from '../service/SystemRefreshService'
 
 const DOMAIN = 0x0000
 const TAG = 'HeszelWidget'
@@ -16,7 +17,6 @@ const TAG = 'HeszelWidget'
 interface WidgetEvent {
   event?: string
   page?: string
-  systemId?: string
 }
 
 export default class EntryFormAbility extends FormExtensionAbility {
@@ -46,7 +46,7 @@ export default class EntryFormAbility extends FormExtensionAbility {
       return
     }
     hilog.info(DOMAIN, TAG, 'Manual card refresh requested.')
-    this.refreshSystems(event.systemId ?? '').catch((error: Object) => {
+    this.refreshSystems().catch((error: Object) => {
       hilog.error(DOMAIN, TAG, 'Manual card refresh failed: %{public}s', this.errorMessage(error))
     })
   }
@@ -75,17 +75,23 @@ export default class EntryFormAbility extends FormExtensionAbility {
     }
   }
 
-  private async refreshSystems(systemId: string): Promise<void> {
+  private async refreshSystems(): Promise<void> {
     if (this.refreshInFlight) {
       return
     }
     this.refreshInFlight = true
     let connectionRuntime: ConnectionRuntimeService | null = null
+    let widgetRepository: WidgetSnapshotRepository | null = null
     let irohOpened: boolean = false
     try {
       const sessionRepository = new SessionRepository(this.context)
       connectionRuntime = new ConnectionRuntimeService(sessionRepository)
-      const widgetRepository = new WidgetSnapshotRepository(this.context)
+      widgetRepository = new WidgetSnapshotRepository(this.context)
+      try {
+        await widgetRepository.setRefreshing(true)
+      } catch (error) {
+        hilog.warn(DOMAIN, TAG, 'Unable to publish card refresh state: %{public}s', this.errorMessage(error))
+      }
       const session = await sessionRepository.load()
       if (!session.canRestore()) {
         hilog.warn(DOMAIN, TAG, 'Manual card refresh has no restorable session.')
@@ -106,7 +112,7 @@ export default class EntryFormAbility extends FormExtensionAbility {
         result = await new SessionRefreshService().execute(
           client,
           refreshSession,
-          (activeSession: BeszelSession) => new SystemRefreshService().refresh(client, activeSession, systemId),
+          (activeSession: BeszelSession) => new SystemRefreshService().refreshAll(client, activeSession),
           async (refreshed: BeszelSession) => {
             await sessionRepository.saveSession(refreshed, session.selectedSystemId, connection)
           }
@@ -118,7 +124,13 @@ export default class EntryFormAbility extends FormExtensionAbility {
         }
         throw error instanceof Error ? error : new Error('Unable to refresh the systems widget.')
       }
-      await widgetRepository.saveSnapshot(result.systems, result.refreshedAt, systemId, result.metrics?.stats ?? null)
+      const statsBySystem = new Map<string, BeszelSystemStatsWire>()
+      result.systemMetrics.forEach((sample: SystemRealtimeSample) => {
+        if (sample.metrics.stats !== undefined) {
+          statsBySystem.set(sample.systemId, sample.metrics.stats)
+        }
+      })
+      await widgetRepository.saveSnapshot(result.systems, result.refreshedAt, '', null, statsBySystem)
       if (result.metricsError !== null) {
         hilog.warn(DOMAIN, TAG, 'Card list refreshed without realtime metrics: %{public}s',
           this.errorMessage(result.metricsError))
@@ -130,6 +142,13 @@ export default class EntryFormAbility extends FormExtensionAbility {
           await connectionRuntime.close()
         } catch (error) {
           hilog.warn(DOMAIN, TAG, 'Unable to stop the temporary Iroh tunnel: %{public}s', this.errorMessage(error))
+        }
+      }
+      if (widgetRepository !== null) {
+        try {
+          await widgetRepository.setRefreshing(false)
+        } catch (error) {
+          hilog.warn(DOMAIN, TAG, 'Unable to clear card refresh state: %{public}s', this.errorMessage(error))
         }
       }
       this.refreshInFlight = false

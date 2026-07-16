@@ -18,7 +18,7 @@ import {
 import { SessionRepository, StoredSession } from '../repository/SessionRepository'
 import { WidgetSnapshotRepository } from '../repository/WidgetSnapshotRepository'
 import { ConnectionRuntimeService } from '../service/ConnectionRuntimeService'
-import { IrohPairingService } from '../service/IrohPairingService'
+import { IrohPairingCodec } from '../service/IrohPairingCodec'
 import { SessionRefreshService } from '../service/SessionRefreshService'
 import { SystemRefreshService } from '../service/SystemRefreshService'
 
@@ -217,7 +217,7 @@ struct Index {
       this.savedServerUrl = profile.httpBaseUrl
       this.savedEmail = session.email
       this.savedGatewayKey = profile.gatewayKey
-      this.savedIrohPairingJson = IrohPairingService.stringify(profile.iroh)
+      this.savedIrohPairingJson = IrohPairingCodec.stringify(profile.iroh)
       this.systems = []
       this.selectedId = ''
       this.clearDetailStates()
@@ -605,7 +605,7 @@ struct Index {
       this.savedEmail = stored.email
       this.savedGatewayKey = stored.gatewayKey
       this.savedConnectionMode = stored.connectionMode
-      this.savedIrohPairingJson = IrohPairingService.stringify(stored.irohPairing)
+      this.savedIrohPairingJson = IrohPairingCodec.stringify(stored.irohPairing)
       this.connectionProfile = stored.connectionProfile()
       this.updateWhileScrolling = stored.updateWhileScrolling
       this.lastPersistedSelectedId = stored.selectedSystemId

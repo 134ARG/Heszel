@@ -7,7 +7,6 @@ struct SystemsCard {
   @LocalStorageProp('r') private updated: string = 'No cached data'
   @LocalStorageProp('c') private count: string = '0'
   @LocalStorageProp('p') private page: string = '0'
-  @LocalStorageProp('i') private systemId: string = ''
   @LocalStorageProp('n') private name: string = ''
   @LocalStorageProp('h') private host: string = ''
   @LocalStorageProp('u') private up: string = '0'
@@ -21,6 +20,7 @@ struct SystemsCard {
   @LocalStorageProp('nu') private networkUp: string = '--'
   @LocalStorageProp('dr') private diskRead: string = '--'
   @LocalStorageProp('dw') private diskWrite: string = '--'
+  @LocalStorageProp('q') private refreshing: string = '0'
 
   build() {
     Column() {
@@ -247,10 +247,19 @@ struct SystemsCard {
       .alignItems(VerticalAlign.Center)
 
       Row() {
-        Text('↻')
-          .fontSize(22)
-          .fontColor($r('app.color.action'))
-          .textAlign(TextAlign.Center)
+        Stack() {
+          if (this.refreshing === '1') {
+            LoadingProgress()
+              .width(18)
+              .height(18)
+              .color($r('app.color.action'))
+          } else {
+            Text('↻')
+              .fontSize(22)
+              .fontColor($r('app.color.action'))
+              .textAlign(TextAlign.Center)
+          }
+        }
           .width(34)
           .height(28)
           .onClick(() => this.refreshCard())
@@ -303,11 +312,14 @@ struct SystemsCard {
   }
 
   private refreshCard(): void {
+    if (this.refreshing === '1') {
+      return
+    }
+    this.refreshing = '1'
     postCardAction(this, {
       action: 'message',
       params: {
-        event: 'refresh',
-        systemId: this.systemId
+        event: 'refresh'
       }
     })
   }

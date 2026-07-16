@@ -48,7 +48,7 @@ export class BeszelRealtimeClient {
   private decoder: util.TextDecoder = util.TextDecoder.create('utf-8')
   private buffer: string = ''
   private clientId: string = ''
-  private metricsSystemId: string = ''
+  private metricsSystemIds: string[] = []
   private reconnectTimer: number = -1
   private generation: number = 0
   private shouldConnect: boolean = false
@@ -86,7 +86,7 @@ export class BeszelRealtimeClient {
 
   disconnect(): void {
     this.shouldConnect = false
-    this.metricsSystemId = ''
+    this.metricsSystemIds = []
     this.clientId = ''
     this.buffer = ''
     this.submitPending = false
@@ -105,10 +105,21 @@ export class BeszelRealtimeClient {
   }
 
   setMetricsSystem(systemId: string): void {
-    if (this.metricsSystemId === systemId) {
+    this.setMetricsSystems(systemId.length > 0 ? [systemId] : [])
+  }
+
+  setMetricsSystems(systemIds: string[]): void {
+    const normalized: string[] = []
+    systemIds.forEach((systemId: string) => {
+      if (systemId.length > 0 && !normalized.includes(systemId)) {
+        normalized.push(systemId)
+      }
+    })
+    if (normalized.length === this.metricsSystemIds.length &&
+      normalized.every((systemId: string, index: number) => systemId === this.metricsSystemIds[index])) {
       return
     }
-    this.metricsSystemId = systemId
+    this.metricsSystemIds = normalized
     this.submitSubscriptions()
   }
 
@@ -233,7 +244,7 @@ export class BeszelRealtimeClient {
     const marker = 'options='
     const markerIndex = topic.indexOf(marker)
     if (markerIndex < 0) {
-      return this.metricsSystemId
+      return this.metricsSystemIds.length > 0 ? this.metricsSystemIds[0] : ''
     }
     const encoded = topic.slice(markerIndex + marker.length).split('&')[0]
     const options = JSON.parse(decodeURIComponent(encoded)) as RealtimeTopicOptions
@@ -242,11 +253,11 @@ export class BeszelRealtimeClient {
 
   private topics(): string[] {
     const topics: string[] = ['systems/*']
-    if (this.metricsSystemId.length > 0) {
+    this.metricsSystemIds.forEach((systemId: string) => {
       const options = new RealtimeTopicOptions()
-      options.query.system = this.metricsSystemId
+      options.query.system = systemId
       topics.push(`rt_metrics?options=${encodeURIComponent(JSON.stringify(options))}`)
-    }
+    })
     return topics
   }
 

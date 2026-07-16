@@ -150,7 +150,6 @@ export class WidgetFormData {
   r: string = 'No cached data'
   c: string = '0'
   p: string = '0'
-  i: string = ''
   n: string = ''
   h: string = ''
   u: string = '0'
@@ -164,9 +163,12 @@ export class WidgetFormData {
   nu: string = '--'
   dr: string = '--'
   dw: string = '--'
+  q: string = '0'
 
-  static fromSnapshot(snapshot: WidgetSnapshotData, requestedPage: number): WidgetFormData {
+  static fromSnapshot(snapshot: WidgetSnapshotData, requestedPage: number,
+    refreshing: boolean = false): WidgetFormData {
     const data = new WidgetFormData()
+    data.q = refreshing ? '1' : '0'
     const count = snapshot.systems.length
     const page = count > 0 ? Math.min(Math.max(0, Math.floor(requestedPage)), count - 1) : 0
     data.s = snapshot.summary
@@ -177,7 +179,6 @@ export class WidgetFormData {
       return data
     }
     const system = snapshot.systems[page]
-    data.i = system.id
     data.n = system.name
     data.h = system.host
     data.u = system.up
@@ -215,12 +216,18 @@ export class WidgetSnapshotRepository {
   }
 
   async saveSnapshot(systems: SystemSummary[], updated: string, systemId: string = '',
-    stats: BeszelSystemStatsWire | null = null): Promise<void> {
+    stats: BeszelSystemStatsWire | null = null,
+    statsBySystem: Map<string, BeszelSystemStatsWire> | null = null): Promise<void> {
     try {
       const store = await this.getStore()
       const snapshot = WidgetSnapshotData.fromSystems(systems, updated, this.context.resourceManager)
       snapshot.keepTraffic(await this.readSnapshot(store))
       snapshot.updateTraffic(systemId, stats)
+      if (statsBySystem !== null) {
+        statsBySystem.forEach((systemStats: BeszelSystemStatsWire, id: string) => {
+          snapshot.updateTraffic(id, systemStats)
+        })
+      }
       await store.put(KEY_SNAPSHOT, JSON.stringify(snapshot))
       await store.flush()
       await this.updateForms(store, snapshot)
@@ -237,6 +244,15 @@ export class WidgetSnapshotRepository {
       await this.updateForms(store, WidgetSnapshotData.empty(this.context.resourceManager))
     } catch (error) {
       throw this.storageError(error, 'Unable to clear the widget snapshot.')
+    }
+  }
+
+  async setRefreshing(refreshing: boolean): Promise<void> {
+    try {
+      const store = await this.getStore()
+      await this.updateForms(store, await this.readSnapshot(store), refreshing)
+    } catch (error) {
+      throw this.storageError(error, 'Unable to update the widget refresh state.')
     }
   }
 
@@ -292,11 +308,12 @@ export class WidgetSnapshotRepository {
     }
   }
 
-  private async updateForms(store: preferences.Preferences, snapshot: WidgetSnapshotData): Promise<void> {
+  private async updateForms(store: preferences.Preferences, snapshot: WidgetSnapshotData,
+    refreshing: boolean = false): Promise<void> {
     const forms = await this.readForms(store)
     for (const form of forms) {
       try {
-        const data = WidgetFormData.fromSnapshot(snapshot, form.page)
+        const data = WidgetFormData.fromSnapshot(snapshot, form.page, refreshing)
         form.page = Number(data.p)
         await this.publish(form.id, data)
       } catch (_) {
