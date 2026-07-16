@@ -17,7 +17,12 @@ constexpr size_t ERROR_CAPACITY = 1024;
 
 std::mutex gTunnelMutex;
 IrohHosTunnel *gTunnel = nullptr;
-std::vector<napi_env> gCleanupEnvironments;
+
+struct CleanupRegistration {
+    napi_env env = nullptr;
+};
+
+std::vector<CleanupRegistration *> gCleanupRegistrations;
 
 struct StartWork {
     napi_env env = nullptr;
@@ -597,12 +602,13 @@ napi_value AbiVersion(napi_env env, napi_callback_info) {
 }
 
 void Cleanup(void *data) {
-    auto *env = static_cast<napi_env>(data);
+    auto *registration = static_cast<CleanupRegistration *>(data);
     std::lock_guard<std::mutex> lock(gTunnelMutex);
-    gCleanupEnvironments.erase(
-        std::remove(gCleanupEnvironments.begin(), gCleanupEnvironments.end(), env),
-        gCleanupEnvironments.end());
-    if (!gCleanupEnvironments.empty()) {
+    gCleanupRegistrations.erase(
+        std::remove(gCleanupRegistrations.begin(), gCleanupRegistrations.end(), registration),
+        gCleanupRegistrations.end());
+    delete registration;
+    if (!gCleanupRegistrations.empty()) {
         return;
     }
     if (gTunnel != nullptr) {
@@ -626,24 +632,28 @@ napi_value Init(napi_env env, napi_value exports) {
         {"abiVersion", nullptr, AbiVersion, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
     napi_define_properties(env, exports, sizeof(properties) / sizeof(properties[0]), properties);
-    bool registerCleanup = false;
+    CleanupRegistration *registration = nullptr;
     {
         std::lock_guard<std::mutex> lock(gTunnelMutex);
-        if (std::find(gCleanupEnvironments.begin(), gCleanupEnvironments.end(), env) ==
-            gCleanupEnvironments.end()) {
-            gCleanupEnvironments.push_back(env);
-            registerCleanup = true;
+        const auto existing = std::find_if(
+            gCleanupRegistrations.begin(),
+            gCleanupRegistrations.end(),
+            [env](const CleanupRegistration *candidate) { return candidate->env == env; });
+        if (existing == gCleanupRegistrations.end()) {
+            registration = new CleanupRegistration{env};
+            gCleanupRegistrations.push_back(registration);
         }
     }
-    if (registerCleanup &&
+    if (registration != nullptr &&
         !NapiOk(
             env,
-            napi_add_env_cleanup_hook(env, Cleanup, static_cast<void *>(env)),
+            napi_add_env_cleanup_hook(env, Cleanup, registration),
             "Failed to register Iroh environment cleanup")) {
         std::lock_guard<std::mutex> lock(gTunnelMutex);
-        gCleanupEnvironments.erase(
-            std::remove(gCleanupEnvironments.begin(), gCleanupEnvironments.end(), env),
-            gCleanupEnvironments.end());
+        gCleanupRegistrations.erase(
+            std::remove(gCleanupRegistrations.begin(), gCleanupRegistrations.end(), registration),
+            gCleanupRegistrations.end());
+        delete registration;
     }
     return exports;
 }

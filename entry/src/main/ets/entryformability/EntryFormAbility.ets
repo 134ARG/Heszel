@@ -130,12 +130,15 @@ export default class EntryFormAbility extends FormExtensionAbility {
           statsBySystem.set(sample.systemId, sample.metrics.stats)
         }
       })
-      await widgetRepository.saveSnapshot(result.systems, result.refreshedAt, '', null, statsBySystem)
+      // Keep the current form data untouched while Iroh shuts down so the
+      // LoadingProgress animation keeps running. The finally block publishes
+      // this stored snapshot together with q=0 after shutdown completes.
+      await widgetRepository.saveSnapshot(result.systems, result.refreshedAt, '', null, statsBySystem, false)
       if (result.metricsError !== null) {
         hilog.warn(DOMAIN, TAG, 'Card list refreshed without realtime metrics: %{public}s',
           this.errorMessage(result.metricsError))
       }
-      hilog.info(DOMAIN, TAG, 'Manual card refresh published %{public}d systems.', result.systems.length)
+      hilog.info(DOMAIN, TAG, 'Manual card refresh stored %{public}d systems.', result.systems.length)
     } finally {
       if (irohOpened && connectionRuntime !== null) {
         try {

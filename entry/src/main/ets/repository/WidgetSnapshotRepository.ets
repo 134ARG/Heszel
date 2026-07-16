@@ -217,7 +217,8 @@ export class WidgetSnapshotRepository {
 
   async saveSnapshot(systems: SystemSummary[], updated: string, systemId: string = '',
     stats: BeszelSystemStatsWire | null = null,
-    statsBySystem: Map<string, BeszelSystemStatsWire> | null = null): Promise<void> {
+    statsBySystem: Map<string, BeszelSystemStatsWire> | null = null,
+    publish: boolean = true): Promise<void> {
     try {
       const store = await this.getStore()
       const snapshot = WidgetSnapshotData.fromSystems(systems, updated, this.context.resourceManager)
@@ -230,7 +231,9 @@ export class WidgetSnapshotRepository {
       }
       await store.put(KEY_SNAPSHOT, JSON.stringify(snapshot))
       await store.flush()
-      await this.updateForms(store, snapshot)
+      if (publish) {
+        await this.updateForms(store, snapshot)
+      }
     } catch (error) {
       throw this.storageError(error, 'Unable to save the widget snapshot.')
     }
