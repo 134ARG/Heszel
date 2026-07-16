@@ -13,6 +13,7 @@ import { SystemRealtimeSample, SystemRefreshResult, SystemRefreshService } from 
 
 const DOMAIN = 0x0000
 const TAG = 'HeszelWidget'
+const REFRESH_REPLAY_INTERVAL_MS = 1500
 
 interface WidgetEvent {
   event?: string
@@ -21,6 +22,9 @@ interface WidgetEvent {
 
 export default class EntryFormAbility extends FormExtensionAbility {
   private refreshInFlight: boolean = false
+  private refreshReplayTimer: number = -1
+  private refreshReplayTask: Promise<void> | null = null
+  private refreshReplayPhase: number = 0
 
   onAddForm(want: Want): formBindingData.FormBindingData {
     const formId = this.readFormId(want)
@@ -88,10 +92,11 @@ export default class EntryFormAbility extends FormExtensionAbility {
       connectionRuntime = new ConnectionRuntimeService(sessionRepository)
       widgetRepository = new WidgetSnapshotRepository(this.context)
       try {
-        await widgetRepository.setRefreshing(true)
+        await widgetRepository.setRefreshing(true, this.refreshReplayPhase)
       } catch (error) {
         hilog.warn(DOMAIN, TAG, 'Unable to publish card refresh state: %{public}s', this.errorMessage(error))
       }
+      this.startRefreshReplay(widgetRepository)
       const session = await sessionRepository.load()
       if (!session.canRestore()) {
         hilog.warn(DOMAIN, TAG, 'Manual card refresh has no restorable session.')
@@ -130,9 +135,7 @@ export default class EntryFormAbility extends FormExtensionAbility {
           statsBySystem.set(sample.systemId, sample.metrics.stats)
         }
       })
-      // Keep the current form data untouched while Iroh shuts down so the
-      // LoadingProgress animation keeps running. The finally block publishes
-      // this stored snapshot together with q=0 after shutdown completes.
+      // The final q=0 update publishes this stored snapshot after teardown.
       await widgetRepository.saveSnapshot(result.systems, result.refreshedAt, '', null, statsBySystem, false)
       if (result.metricsError !== null) {
         hilog.warn(DOMAIN, TAG, 'Card list refreshed without realtime metrics: %{public}s',
@@ -140,6 +143,7 @@ export default class EntryFormAbility extends FormExtensionAbility {
       }
       hilog.info(DOMAIN, TAG, 'Manual card refresh stored %{public}d systems.', result.systems.length)
     } finally {
+      await this.stopRefreshReplay()
       if (irohOpened && connectionRuntime !== null) {
         try {
           await connectionRuntime.closeImmediately()
@@ -156,6 +160,48 @@ export default class EntryFormAbility extends FormExtensionAbility {
       }
       this.refreshInFlight = false
     }
+  }
+
+  private startRefreshReplay(repository: WidgetSnapshotRepository): void {
+    if (this.refreshReplayTimer >= 0) {
+      clearInterval(this.refreshReplayTimer)
+    }
+    this.refreshReplayPhase = 0
+    this.refreshReplayTimer = setInterval(() => {
+      if (this.refreshReplayTask !== null) {
+        return
+      }
+      this.refreshReplayPhase = this.refreshReplayPhase === 0 ? 1 : 0
+      const task = repository.setRefreshing(true, this.refreshReplayPhase)
+      this.refreshReplayTask = task
+      task.then(
+        (): void => this.finishRefreshReplay(task),
+        (): void => this.finishRefreshReplay(task)
+      )
+    }, REFRESH_REPLAY_INTERVAL_MS)
+  }
+
+  private finishRefreshReplay(task: Promise<void>): void {
+    if (this.refreshReplayTask === task) {
+      this.refreshReplayTask = null
+    }
+  }
+
+  private async stopRefreshReplay(): Promise<void> {
+    if (this.refreshReplayTimer >= 0) {
+      clearInterval(this.refreshReplayTimer)
+      this.refreshReplayTimer = -1
+    }
+    const task = this.refreshReplayTask
+    if (task !== null) {
+      try {
+        await task
+      } catch (_) {
+        // The final q=0 publication below remains authoritative.
+      }
+    }
+    this.refreshReplayTask = null
+    this.refreshReplayPhase = 0
   }
 
   private errorMessage(error: Object): string {

@@ -21,6 +21,7 @@ struct SystemsCard {
   @LocalStorageProp('dr') private diskRead: string = '--'
   @LocalStorageProp('dw') private diskWrite: string = '--'
   @LocalStorageProp('q') private refreshing: string = '0'
+  @LocalStorageProp('e') private refreshReplay: string = '0'
 
   build() {
     Column() {
@@ -249,10 +250,19 @@ struct SystemsCard {
       Row() {
         Stack() {
           if (this.refreshing === '1') {
-            LoadingProgress()
-              .width(18)
-              .height(18)
-              .color($r('app.color.action'))
+            // These intentionally separate branches give the loader a new
+            // element identity whenever the form host stops its animation.
+            if (this.refreshReplay === '0') {
+              LoadingProgress()
+                .width(18)
+                .height(18)
+                .color($r('app.color.action'))
+            } else {
+              LoadingProgress()
+                .width(18)
+                .height(18)
+                .color($r('app.color.action'))
+            }
           } else {
             Text('↻')
               .fontSize(22)
@@ -316,6 +326,7 @@ struct SystemsCard {
       return
     }
     this.refreshing = '1'
+    this.refreshReplay = '0'
     postCardAction(this, {
       action: 'message',
       params: {
