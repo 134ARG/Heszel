@@ -110,7 +110,7 @@ export default class EntryFormAbility extends FormExtensionAbility {
         }
         throw error instanceof Error ? error : new Error('Unable to refresh the systems widget.')
       }
-      await widgetRepository.saveSnapshot(result.systems, result.refreshedAt)
+      await widgetRepository.saveSnapshot(result.systems, result.refreshedAt, systemId, result.metrics?.stats ?? null)
       if (result.metricsError !== null) {
         hilog.warn(DOMAIN, TAG, 'Card list refreshed without realtime metrics: %{public}s',
           this.errorMessage(result.metricsError))

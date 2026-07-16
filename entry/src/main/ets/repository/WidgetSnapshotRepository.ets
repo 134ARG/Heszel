@@ -3,6 +3,7 @@ import { preferences } from '@kit.ArkData'
 import { formBindingData, formProvider } from '@kit.FormKit'
 import { resourceManager } from '@kit.LocalizationKit'
 import { SystemSummary } from '../model/BeszelModels'
+import { BeszelSystemStatsWire } from '../model/SystemDetailModels'
 
 const PREFERENCES_NAME = 'heszel_widget'
 const KEY_SNAPSHOT = 'systems_snapshot'
@@ -34,6 +35,10 @@ class WidgetSystemData {
   temperature: string = '--'
   uptime: string = 'Uptime --'
   load: string = '--  --  --'
+  networkDown: string = '--'
+  networkUp: string = '--'
+  diskRead: string = '--'
+  diskWrite: string = '--'
 
   static fromSystem(system: SystemSummary, resources: resourceManager.ResourceManager): WidgetSystemData {
     const data = new WidgetSystemData()
@@ -53,6 +58,30 @@ class WidgetSystemData {
     return data
   }
 
+  keepTraffic(previous: WidgetSystemData): void {
+    this.networkDown = previous.networkDown ?? '--'
+    this.networkUp = previous.networkUp ?? '--'
+    this.diskRead = previous.diskRead ?? '--'
+    this.diskWrite = previous.diskWrite ?? '--'
+  }
+
+  updateTraffic(stats: BeszelSystemStatsWire): void {
+    if (stats.b !== undefined && stats.b !== null) {
+      this.networkUp = WidgetSystemData.formatRate(stats.b[0])
+      this.networkDown = WidgetSystemData.formatRate(stats.b[1])
+    } else if (stats.ns !== undefined || stats.nr !== undefined) {
+      this.networkUp = WidgetSystemData.formatRate(stats.ns === undefined ? undefined : stats.ns * 1048576)
+      this.networkDown = WidgetSystemData.formatRate(stats.nr === undefined ? undefined : stats.nr * 1048576)
+    }
+    if (stats.dio !== undefined && stats.dio !== null) {
+      this.diskRead = WidgetSystemData.formatRate(stats.dio[0])
+      this.diskWrite = WidgetSystemData.formatRate(stats.dio[1])
+    } else if (stats.dr !== undefined || stats.dw !== undefined) {
+      this.diskRead = WidgetSystemData.formatRate(stats.dr === undefined ? undefined : stats.dr * 1048576)
+      this.diskWrite = WidgetSystemData.formatRate(stats.dw === undefined ? undefined : stats.dw * 1048576)
+    }
+  }
+
   private static formatUptime(seconds: number): string {
     if (seconds <= 0) {
       return '--'
@@ -66,6 +95,14 @@ class WidgetSystemData {
     const days = Math.floor(seconds / 86400)
     const hours = Math.floor((seconds % 86400) / 3600)
     return hours > 0 ? `${days}d ${hours}h` : `${days}d`
+  }
+
+  private static formatRate(bytes: number | undefined): string {
+    if (bytes === undefined || !Number.isFinite(bytes)) return '--'
+    if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB/s`
+    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB/s`
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB/s`
+    return `${Math.max(0, bytes).toFixed(0)} B/s`
   }
 }
 
@@ -94,6 +131,18 @@ class WidgetSnapshotData {
       data.systems.push(WidgetSystemData.fromSystem(system, resources)))
     return data
   }
+
+  keepTraffic(previous: WidgetSnapshotData): void {
+    this.systems.forEach((system: WidgetSystemData) => {
+      const old = previous.systems.find((candidate: WidgetSystemData) => candidate.id === system.id)
+      if (old !== undefined) system.keepTraffic(old)
+    })
+  }
+
+  updateTraffic(systemId: string, stats: BeszelSystemStatsWire | null): void {
+    if (stats === null) return
+    this.systems.find((system: WidgetSystemData) => system.id === systemId)?.updateTraffic(stats)
+  }
 }
 
 export class WidgetFormData {
@@ -111,6 +160,10 @@ export class WidgetFormData {
   t: string = '--'
   v: string = 'Uptime --'
   l: string = '--  --  --'
+  nd: string = '--'
+  nu: string = '--'
+  dr: string = '--'
+  dw: string = '--'
 
   static fromSnapshot(snapshot: WidgetSnapshotData, requestedPage: number): WidgetFormData {
     const data = new WidgetFormData()
@@ -134,6 +187,10 @@ export class WidgetFormData {
     data.t = system.temperature
     data.v = system.uptime
     data.l = system.load
+    data.nd = system.networkDown ?? '--'
+    data.nu = system.networkUp ?? '--'
+    data.dr = system.diskRead ?? '--'
+    data.dw = system.diskWrite ?? '--'
     return data
   }
 }
@@ -157,10 +214,13 @@ export class WidgetSnapshotRepository {
     }
   }
 
-  async saveSnapshot(systems: SystemSummary[], updated: string): Promise<void> {
+  async saveSnapshot(systems: SystemSummary[], updated: string, systemId: string = '',
+    stats: BeszelSystemStatsWire | null = null): Promise<void> {
     try {
-      const snapshot = WidgetSnapshotData.fromSystems(systems, updated, this.context.resourceManager)
       const store = await this.getStore()
+      const snapshot = WidgetSnapshotData.fromSystems(systems, updated, this.context.resourceManager)
+      snapshot.keepTraffic(await this.readSnapshot(store))
+      snapshot.updateTraffic(systemId, stats)
       await store.put(KEY_SNAPSHOT, JSON.stringify(snapshot))
       await store.flush()
       await this.updateForms(store, snapshot)

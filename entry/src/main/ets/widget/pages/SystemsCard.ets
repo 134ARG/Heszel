@@ -17,6 +17,10 @@ struct SystemsCard {
   @LocalStorageProp('t') private temperature: string = '--'
   @LocalStorageProp('v') private uptime: string = 'Uptime --'
   @LocalStorageProp('l') private load: string = '--  --  --'
+  @LocalStorageProp('nd') private networkDown: string = '--'
+  @LocalStorageProp('nu') private networkUp: string = '--'
+  @LocalStorageProp('dr') private diskRead: string = '--'
+  @LocalStorageProp('dw') private diskWrite: string = '--'
 
   build() {
     Column() {
@@ -91,102 +95,156 @@ struct SystemsCard {
         .color($r('app.color.divider'))
         .margin({ top: 6, bottom: 4 })
 
-      Column() {
-        Row({ space: 7 }) {
-          Text('CPU')
-            .fontSize(11)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.text_label'))
-            .width(34)
-          Stack({ alignContent: Alignment.Start }) {
-            Row()
-              .width('100%')
-              .height(8)
-              .borderRadius(4)
-              .backgroundColor($r('app.color.progress_track'))
-            Row()
-              .width(`${this.cpu}%`)
-              .height(8)
-              .borderRadius(4)
-              .backgroundColor($r('app.color.metric_cpu'))
+      Row({ space: 9 }) {
+        Column() {
+          Row({ space: 7 }) {
+            Text('CPU')
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_label'))
+              .width(34)
+            Stack({ alignContent: Alignment.Start }) {
+              Row()
+                .width('100%')
+                .height(8)
+                .borderRadius(4)
+                .backgroundColor($r('app.color.progress_track'))
+              Row()
+                .width(`${this.cpu}%`)
+                .height(8)
+                .borderRadius(4)
+                .backgroundColor($r('app.color.metric_cpu'))
+            }
+            .layoutWeight(1)
+            .height(8)
+            Text(`${this.cpu}%`)
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_primary'))
+              .textAlign(TextAlign.End)
+              .width(36)
           }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
           .layoutWeight(1)
-          .height(8)
-          Text(`${this.cpu}%`)
-            .fontSize(11)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.text_primary'))
-            .textAlign(TextAlign.End)
-            .width(36)
+
+          Row({ space: 7 }) {
+            Text('RAM')
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_label'))
+              .width(34)
+            Stack({ alignContent: Alignment.Start }) {
+              Row()
+                .width('100%')
+                .height(8)
+                .borderRadius(4)
+                .backgroundColor($r('app.color.progress_track'))
+              Row()
+                .width(`${this.memory}%`)
+                .height(8)
+                .borderRadius(4)
+                .backgroundColor($r('app.color.metric_memory'))
+            }
+            .layoutWeight(1)
+            .height(8)
+            Text(`${this.memory}%`)
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_primary'))
+              .textAlign(TextAlign.End)
+              .width(36)
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+          .layoutWeight(1)
+
+          Row({ space: 7 }) {
+            Text('DISK')
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_label'))
+              .width(34)
+            Stack({ alignContent: Alignment.Start }) {
+              Row()
+                .width('100%')
+                .height(8)
+                .borderRadius(4)
+                .backgroundColor($r('app.color.progress_track'))
+              Row()
+                .width(`${this.disk}%`)
+                .height(8)
+                .borderRadius(4)
+                .backgroundColor($r('app.color.metric_disk'))
+            }
+            .layoutWeight(1)
+            .height(8)
+            Text(`${this.disk}%`)
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_primary'))
+              .textAlign(TextAlign.End)
+              .width(36)
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+          .layoutWeight(1)
         }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-        .layoutWeight(1)
+        .layoutWeight(5)
+        .height('100%')
+
+        Row()
+          .width(1)
+          .height('72%')
+          .backgroundColor($r('app.color.divider'))
 
         Row({ space: 7 }) {
-          Text('RAM')
-            .fontSize(11)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.text_label'))
-            .width(34)
-          Stack({ alignContent: Alignment.Start }) {
-            Row()
-              .width('100%')
-              .height(8)
-              .borderRadius(4)
-              .backgroundColor($r('app.color.progress_track'))
-            Row()
-              .width(`${this.memory}%`)
-              .height(8)
-              .borderRadius(4)
-              .backgroundColor($r('app.color.metric_memory'))
+          Column({ space: 2 }) {
+            Text('NETWORK')
+              .fontSize(9)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_label'))
+            Text(`↓ ${this.networkDown}`)
+              .fontSize(10)
+              .fontColor($r('app.color.text_primary'))
+              .maxLines(1)
+            Text(`↑ ${this.networkUp}`)
+              .fontSize(10)
+              .fontColor($r('app.color.text_primary'))
+              .maxLines(1)
           }
           .layoutWeight(1)
-          .height(8)
-          Text(`${this.memory}%`)
-            .fontSize(11)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.text_primary'))
-            .textAlign(TextAlign.End)
-            .width(36)
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-        .layoutWeight(1)
+          .alignItems(HorizontalAlign.Start)
 
-        Row({ space: 7 }) {
-          Text('DISK')
-            .fontSize(11)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.text_label'))
-            .width(34)
-          Stack({ alignContent: Alignment.Start }) {
-            Row()
-              .width('100%')
-              .height(8)
-              .borderRadius(4)
-              .backgroundColor($r('app.color.progress_track'))
-            Row()
-              .width(`${this.disk}%`)
-              .height(8)
-              .borderRadius(4)
-              .backgroundColor($r('app.color.metric_disk'))
+          Row()
+            .width(1)
+            .height('72%')
+            .backgroundColor($r('app.color.divider'))
+
+          Column({ space: 2 }) {
+            Text('DISK I/O')
+              .fontSize(9)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_label'))
+            Text(`R ${this.diskRead}`)
+              .fontSize(10)
+              .fontColor($r('app.color.text_primary'))
+              .maxLines(1)
+            Text(`W ${this.diskWrite}`)
+              .fontSize(10)
+              .fontColor($r('app.color.text_primary'))
+              .maxLines(1)
           }
           .layoutWeight(1)
-          .height(8)
-          Text(`${this.disk}%`)
-            .fontSize(11)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.text_primary'))
-            .textAlign(TextAlign.End)
-            .width(36)
+          .alignItems(HorizontalAlign.Start)
         }
-        .width('100%')
+        .layoutWeight(4)
+        .height('100%')
         .alignItems(VerticalAlign.Center)
-        .layoutWeight(1)
       }
       .width('100%')
       .layoutWeight(1)
+      .alignItems(VerticalAlign.Center)
 
       Row() {
         Text('↻')

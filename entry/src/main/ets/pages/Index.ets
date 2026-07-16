@@ -10,6 +10,7 @@ import { BeszelSession, SystemSummary } from '../model/BeszelModels'
 import {
   BeszelContainerStatsRecordWire,
   BeszelSystemDetailsWire,
+  BeszelSystemStatsWire,
   BeszelSystemStatsRecordWire,
   SystemDetailState
 } from '../model/SystemDetailModels'
@@ -466,7 +467,7 @@ struct Index {
         }
       }
       this.lastRefresh = result.refreshedAt
-      await this.publishWidgetSnapshot()
+      await this.publishWidgetSnapshot(requestedSystemId, result.metrics?.stats ?? null)
       if (result.metricsError !== null) {
         this.dashboardError = this.localized(
           'error_refresh_metrics_partial',
@@ -975,12 +976,12 @@ struct Index {
     await this.clearWidgetSnapshot()
   }
 
-  private async publishWidgetSnapshot(): Promise<void> {
+  private async publishWidgetSnapshot(systemId: string = '', stats: BeszelSystemStatsWire | null = null): Promise<void> {
     if (this.widgetRepository === null) {
       return
     }
     try {
-      await this.widgetRepository.saveSnapshot(this.systems, this.lastRefresh)
+      await this.widgetRepository.saveSnapshot(this.systems, this.lastRefresh, systemId, stats)
     } catch (_) {
       // A launcher card is supplementary and must never interrupt dashboard telemetry.
     }
