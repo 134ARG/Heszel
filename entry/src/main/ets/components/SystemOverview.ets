@@ -64,7 +64,7 @@ export struct SystemOverview {
         .borderRadius(16)
       } else {
         Row({ space: 12 }) {
-          Row() { this.loadAverage() }.layoutWeight(1)
+          Row() { this.loadAverage() }.layoutWeight(2)
           Row() { this.temperature() }.layoutWeight(1)
           if (this.health.servicesVisible()) {
             Row() { this.services() }.layoutWeight(1)
@@ -84,12 +84,38 @@ export struct SystemOverview {
   private loadAverage() {
     Column({ space: 8 }) {
       Text($r('app.string.load_average')).fontSize(11).fontColor($r('app.color.text_tertiary'))
-      Text(`${this.metrics.loadOne.toFixed(2)}  ${this.metrics.loadFive.toFixed(2)}  ${this.metrics.loadFifteen.toFixed(2)}`)
+      if (this.compact) {
+        Text(`${this.metrics.loadOne.toFixed(2)}  ${this.metrics.loadFive.toFixed(2)}  ` +
+          `${this.metrics.loadFifteen.toFixed(2)}`)
+          .fontSize(20)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.text_primary'))
+        Text('1m       5m       15m').fontSize(11).fontColor($r('app.color.text_tertiary'))
+      } else {
+        Row({ space: 8 }) {
+          this.loadValue(this.metrics.loadOne, '1m')
+          this.loadValue(this.metrics.loadFive, '5m')
+          this.loadValue(this.metrics.loadFifteen, '15m')
+        }
+        .width('100%')
+      }
+    }.alignItems(HorizontalAlign.Start).width('100%')
+  }
+
+  @Builder
+  private loadValue(value: number, label: string) {
+    Column({ space: 3 }) {
+      Text(value.toFixed(2))
         .fontSize(20)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.text_primary'))
-      Text('1m       5m       15m').fontSize(11).fontColor($r('app.color.text_tertiary'))
-    }.alignItems(HorizontalAlign.Start).width('100%')
+        .maxLines(1)
+      Text(label)
+        .fontSize(11)
+        .fontColor($r('app.color.text_tertiary'))
+    }
+    .alignItems(HorizontalAlign.Start)
+    .layoutWeight(1)
   }
 
   @Builder
