@@ -61,7 +61,7 @@
     { "name": "verify_and_update", "value": "验证并更新" },
     { "name": "account", "value": "账户" },
     { "name": "connection", "value": "连接方式" },
-    { "name": "connection_http", "value": "直接 HTTP" },
+    { "name": "connection_http", "value": "HTTP" },
     { "name": "connection_iroh", "value": "Iroh" },
     { "name": "beszel_hub", "value": "Beszel Hub" },
     { "name": "signed_in_as", "value": "当前账户" },

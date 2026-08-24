@@ -61,7 +61,7 @@
     { "name": "verify_and_update", "value": "Verify and update" },
     { "name": "account", "value": "ACCOUNT" },
     { "name": "connection", "value": "Connection" },
-    { "name": "connection_http", "value": "Direct HTTP" },
+    { "name": "connection_http", "value": "HTTP" },
     { "name": "connection_iroh", "value": "Iroh" },
     { "name": "beszel_hub", "value": "Beszel hub" },
     { "name": "signed_in_as", "value": "Signed in as" },
