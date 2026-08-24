@@ -15,6 +15,7 @@ import {
   BeszelSystemStatsRecordWire,
   SystemDetailState
 } from '../model/SystemDetailModels'
+import { BeszelSmartDeviceWire } from '../model/SmartModels'
 import { SessionRepository, StoredSession } from '../repository/SessionRepository'
 import { WidgetSnapshotRepository } from '../repository/WidgetSnapshotRepository'
 import { ConnectionRuntimeService } from '../service/ConnectionRuntimeService'
@@ -29,6 +30,7 @@ interface LoadedSystemDetail {
   details: BeszelSystemDetailsWire | null
   stats: BeszelSystemStatsRecordWire | null
   containers: BeszelContainerStatsRecordWire | null
+  smartDevices: BeszelSmartDeviceWire[] | null
 }
 
 @Entry
@@ -493,6 +495,12 @@ struct Index {
           detail.applyRealtime(result.metrics.info, result.metrics.stats, result.metrics.container)
         }
       }
+      if (result.smartDevices !== null) {
+        const detail = this.detailStates.get(requestedSystemId)
+        if (detail !== undefined) {
+          detail.applySmartDevices(result.smartDevices)
+        }
+      }
       this.lastRefresh = result.refreshedAt
       await this.publishWidgetSnapshot(requestedSystemId, result.metrics?.stats ?? null)
       if (result.metricsError !== null) {
@@ -843,18 +851,22 @@ struct Index {
         const detailsRequest = client.getSystemDetails(activeSession.token, state.systemId)
         const statsRequest = client.getLatestSystemStats(activeSession.token, state.systemId)
         const containersRequest = this.getOptionalContainerStats(client, activeSession.token, state.systemId)
+        const smartRequest = this.getOptionalSmartDevices(client, activeSession.token, state.systemId)
         const responses = await Promise.all([
           detailsRequest,
           statsRequest,
-          containersRequest
+          containersRequest,
+          smartRequest
         ])
         const details = responses[0] as BeszelSystemDetailsWire | null
         const stats = responses[1] as BeszelSystemStatsRecordWire | null
         const containers = responses[2] as BeszelContainerStatsRecordWire | null
+        const smartDevices = responses[3] as BeszelSmartDeviceWire[] | null
         const result: LoadedSystemDetail = {
           details: details,
           stats: stats,
-          containers: containers
+          containers: containers,
+          smartDevices: smartDevices
         }
         return result
       }, generation)
@@ -862,7 +874,7 @@ struct Index {
         return
       }
       state.applyHardware(loaded.details)
-      state.initializeCapabilities(loaded.stats?.stats, loaded.containers?.stats)
+      state.initializeCapabilities(loaded.stats?.stats, loaded.containers?.stats, loaded.smartDevices)
       if (loaded.stats !== null && loaded.stats.stats !== undefined && loaded.stats.stats !== null) {
         state.applyMetrics(loaded.stats.stats, loaded.containers?.stats)
       } else if (loaded.containers?.stats !== undefined && loaded.containers.stats !== null) {
@@ -894,6 +906,18 @@ struct Index {
     } catch (error) {
       if (SessionRefreshService.isAccessRejected(error)) {
         throw error instanceof Error ? error : new Error('Container metrics access was rejected.')
+      }
+      return null
+    }
+  }
+
+  private async getOptionalSmartDevices(client: BeszelClient, token: string,
+    systemId: string): Promise<BeszelSmartDeviceWire[] | null> {
+    try {
+      return await client.getSmartDevices(token, systemId)
+    } catch (error) {
+      if (SessionRefreshService.isAccessRejected(error)) {
+        throw error instanceof Error ? error : new Error('Disk health access was rejected.')
       }
       return null
     }

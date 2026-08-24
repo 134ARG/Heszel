@@ -1,4 +1,5 @@
 import { BeszelSystemInfoWire, SystemSummary } from './BeszelModels'
+import { BeszelSmartDeviceWire, SmartHealthState } from './SmartModels'
 
 export interface BeszelSystemDetailsWire {
   id: string
@@ -803,6 +804,7 @@ export class SystemDetailState {
   networkMetrics: NetworkMetricsState = new NetworkMetricsState()
   gpuMetrics: GpuMetricsState = new GpuMetricsState()
   healthMetrics: HealthMetricsState = new HealthMetricsState()
+  smartHealth: SmartHealthState = new SmartHealthState()
   containerMetrics: ContainerMetricsState = new ContainerMetricsState()
   private capabilitiesInitialized: boolean = false
 
@@ -825,7 +827,8 @@ export class SystemDetailState {
   }
 
   initializeCapabilities(stats: BeszelSystemStatsWire | null | undefined,
-    containers: BeszelContainerStatsWire[] | null | undefined): void {
+    containers: BeszelContainerStatsWire[] | null | undefined,
+    smartDevices: BeszelSmartDeviceWire[] | null | undefined): void {
     if (this.capabilitiesInitialized) return
     if (stats !== undefined && stats !== null) {
       this.cpuMetrics.initialize(stats)
@@ -836,8 +839,15 @@ export class SystemDetailState {
       this.healthMetrics.initialize(stats)
     }
     this.containerMetrics.initialize(containers)
+    this.smartHealth.update(smartDevices)
     this.capabilitiesInitialized = true
     this.layoutVersion += 1
+  }
+
+  applySmartDevices(wire: BeszelSmartDeviceWire[] | null | undefined): void {
+    const wasVisible = this.smartHealth.isVisible()
+    this.smartHealth.update(wire)
+    if (wasVisible !== this.smartHealth.isVisible()) this.layoutVersion += 1
   }
 
   applyMetrics(stats: BeszelSystemStatsWire, containers?: BeszelContainerStatsWire[] | null): void {

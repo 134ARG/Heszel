@@ -1,6 +1,7 @@
 import { BeszelClient } from '../api/BeszelClient'
 import { BeszelRealtimeClient, BeszelRealtimeMetrics } from '../api/BeszelRealtimeClient'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
+import { BeszelSmartDeviceWire } from '../model/SmartModels'
 
 const METRICS_TIMEOUT_MS = 8000
 
@@ -18,6 +19,7 @@ export class SystemRefreshResult {
   systems: SystemSummary[] = []
   metrics: BeszelRealtimeMetrics | null = null
   systemMetrics: SystemRealtimeSample[] = []
+  smartDevices: BeszelSmartDeviceWire[] | null = null
   metricsError: Error | null = null
   refreshedAt: string = ''
 }
@@ -34,6 +36,13 @@ export class SystemRefreshService {
       throw new Error('Refresh cancelled.')
     }
     const selected = result.systems.find((system: SystemSummary) => system.id === selectedSystemId)
+    if (selected !== undefined) {
+      try {
+        result.smartDevices = await client.getSmartDevices(session.token, selected.id)
+      } catch (_) {
+        // SMART is optional and may be unavailable on older hubs or agents.
+      }
+    }
     if (requestRealtimeMetrics && selected !== undefined && selected.isUp()) {
       try {
         result.metrics = await this.requestMetrics(session, selected.id)

@@ -2,6 +2,7 @@ import { SystemSummary } from '../model/BeszelModels'
 import { ConnectionMode } from '../model/ConnectionModels'
 import { SystemDetailState } from '../model/SystemDetailModels'
 import { SettingsView } from './SettingsView'
+import { SmartDetailsView } from './SmartDetailsView'
 import { SystemCard } from './SystemCard'
 import { SystemDetail } from './SystemDetail'
 
@@ -111,6 +112,15 @@ export struct DashboardView {
     NavDestination() {
       if (name === 'detail') {
         this.detailDestination(param)
+      } else if (name === 'smart') {
+        SmartDetailsView({
+          state: this.detailState.smartHealth,
+          compact: !this.expanded,
+          onBack: () => {
+            this.pathStack.pop()
+          },
+          onScrollingChange: (scrolling: boolean) => this.onDetailScrollingChange(scrolling)
+        })
       } else if (name === 'settings') {
         SettingsView({
           connectionMode: this.connectionMode,
@@ -182,7 +192,8 @@ export struct DashboardView {
             status: system.status,
             agentVersion: system.agentVersion,
             compact: !this.expanded,
-            onScrollingChange: (scrolling: boolean) => this.onDetailScrollingChange(scrolling)
+            onScrollingChange: (scrolling: boolean) => this.onDetailScrollingChange(scrolling),
+            onOpenSmartDetails: () => this.openSmartDetails()
           })
         },
         (system: SystemSummary) => system.id
@@ -325,6 +336,12 @@ export struct DashboardView {
   private openSettings(): void {
     if (this.topDestinationName() !== 'settings') {
       this.pathStack.pushPath({ name: 'settings', param: new DashboardDestinationParam() })
+    }
+  }
+
+  private openSmartDetails(): void {
+    if (this.detailState.smartHealth.isVisible() && this.topDestinationName() !== 'smart') {
+      this.pathStack.pushPath({ name: 'smart', param: new DashboardDestinationParam(this.selectedId) })
     }
   }
 

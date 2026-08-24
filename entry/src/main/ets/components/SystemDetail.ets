@@ -8,6 +8,7 @@ import { MemoryCard } from './MemoryCard'
 import { NetworkCard } from './NetworkCard'
 import { StorageCard } from './StorageCard'
 import { SystemOverview } from './SystemOverview'
+import { SmartCard } from './SmartCard'
 
 @Component
 export struct SystemDetail {
@@ -18,6 +19,7 @@ export struct SystemDetail {
   @Prop agentVersion: string = ''
   @Prop compact: boolean = false
   onScrollingChange: (scrolling: boolean) => void = () => {}
+  onOpenSmartDetails: () => void = () => {}
 
   build() {
     Scroll() {
@@ -136,6 +138,12 @@ export struct SystemDetail {
     }
     if (this.detail.storageMetrics.isVisible()) {
       StorageCard({ state: this.detail.storageMetrics })
+    }
+    if (this.detail.smartHealth.isVisible()) {
+      SmartCard({
+        state: this.detail.smartHealth,
+        onViewDetails: () => this.onOpenSmartDetails()
+      })
     }
     if (this.detail.healthMetrics.cardVisible()) {
       HealthCard({ state: this.detail.healthMetrics })

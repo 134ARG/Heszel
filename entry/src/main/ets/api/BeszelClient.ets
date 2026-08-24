@@ -14,6 +14,7 @@ import {
   BeszelSystemStatsListWire,
   BeszelSystemStatsRecordWire
 } from '../model/SystemDetailModels'
+import { BeszelSmartDeviceListWire, BeszelSmartDeviceWire } from '../model/SmartModels'
 
 interface LoginBody {
   identity: string
@@ -266,6 +267,36 @@ export class BeszelClient {
       return wire.items.length > 0 ? wire.items[0] : null
     } catch (error) {
       throw this.asError(error, 'Unable to load container metrics.')
+    } finally {
+      this.finishRequest(request)
+    }
+  }
+
+  async getSmartDevices(token: string, systemId: string): Promise<BeszelSmartDeviceWire[]> {
+    const request = this.createRequest()
+    const filter = encodeURIComponent(`system="${systemId}"`)
+    const fields = 'id,system,name,model,state,capacity,temp,firmware,serial,type,hours,cycles,attributes,updated'
+    const path = `/api/collections/smart_devices/records?page=1&perPage=200&sort=name&filter=${filter}` +
+      `&fields=${fields}`
+    try {
+      const response = await request.request(`${this.baseUrl}${path}`, {
+        method: http.RequestMethod.GET,
+        header: {
+          'Accept': 'application/json',
+          'Authorization': token,
+          'X-Heszel-Key': this.gatewayKey
+        },
+        connectTimeout: 15000,
+        readTimeout: 15000
+      })
+      const responseText = response.result.toString()
+      if (response.responseCode < 200 || response.responseCode >= 300) {
+        throw new BeszelApiError(this.readError(responseText, 'Unable to load disk health.'), response.responseCode)
+      }
+      const wire = JSON.parse(responseText) as BeszelSmartDeviceListWire
+      return wire.items
+    } catch (error) {
+      throw this.asError(error, 'Unable to load disk health.')
     } finally {
       this.finishRequest(request)
     }

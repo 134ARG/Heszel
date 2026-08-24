@@ -21,3 +21,16 @@ export function formatRate(value: number): string {
 export function formatGigabytes(value: number): string {
   return value >= 10 ? `${value.toFixed(1)} GB` : `${value.toFixed(2)} GB`
 }
+
+export function formatCapacityBytes(value: number): string {
+  if (value <= 0) {
+    return '—'
+  }
+  if (value >= 1000000000000) {
+    return `${(value / 1000000000000).toFixed(1)} TB`
+  }
+  if (value >= 1000000000) {
+    return `${(value / 1000000000).toFixed(1)} GB`
+  }
+  return formatBytes(value)
+}
