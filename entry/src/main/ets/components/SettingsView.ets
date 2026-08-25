@@ -355,11 +355,20 @@ export struct SettingsView {
     if (language === this.languageCode) {
       return
     }
+    const previous = this.languageCode
     try {
+      if (language === 'default') {
+        // HarmonyOS applies `default` on cold start; load the current system language now first.
+        i18n.System.setAppPreferredLanguage(i18n.System.getSystemLanguage())
+      }
       i18n.System.setAppPreferredLanguage(language)
       this.languageCode = language
     } catch (_) {
-      // Keep the previous language if HarmonyOS rejects the preference.
+      try {
+        i18n.System.setAppPreferredLanguage(previous)
+      } catch (_) {
+        // Keep the current resources if HarmonyOS also rejects the rollback.
+      }
     }
   }
 
