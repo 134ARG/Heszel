@@ -249,8 +249,8 @@ export struct SettingsView {
                   Text(this.connectionDetail)
                     .fontSize(11)
                     .fontColor($r('app.color.text_tertiary'))
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .width('100%')
+                    .wordBreak(WordBreak.BREAK_ALL)
                 }
               }
               .alignItems(HorizontalAlign.Start)

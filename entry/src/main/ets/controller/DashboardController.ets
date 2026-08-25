@@ -1272,7 +1272,7 @@ export class DashboardController {
 
   connectionDetail(): string {
     return this.connectionProfile.mode === ConnectionMode.IROH ?
-      this.connectionProfile.iroh.shortEndpointId() : ''
+      this.connectionProfile.iroh.serverEndpointId : ''
   }
 
   private applyColorMode(mode: AppColorMode): boolean {
