@@ -212,6 +212,6 @@ export class SmartHealthState {
   }
 
   summaryDevices(): SmartDeviceMetric[] {
-    return this.devices.slice(0, 3)
+    return this.devices.slice(0, 6)
   }
 }

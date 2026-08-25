@@ -99,8 +99,8 @@ export struct SmartCard {
         .width('100%')
       }, (device: SmartDeviceMetric) => device.id)
 
-      if (this.state.devices.length > 3) {
-        Text($r('app.string.smart_more_drives', this.state.devices.length - 3))
+      if (this.state.devices.length > 6) {
+        Text($r('app.string.smart_more_drives', this.state.devices.length - 6))
           .fontSize(11)
           .fontColor($r('app.color.text_tertiary'))
           .width('100%')
