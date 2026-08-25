@@ -4,6 +4,7 @@ import { util } from '@kit.ArkTS'
 import { asset } from '@kit.AssetStoreKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { BeszelSession } from '../model/BeszelModels'
+import { AppColorMode, parseAppColorMode } from '../model/AppearanceModels'
 import { ConnectionMode, ConnectionProfile, IrohPairing } from '../model/ConnectionModels'
 import { IrohPairingCodec } from '../service/IrohPairingCodec'
 
@@ -14,6 +15,7 @@ const KEY_IROH_PAIRING = 'iroh_pairing'
 const KEY_EMAIL = 'email'
 const KEY_SELECTED_SYSTEM = 'selected_system'
 const KEY_UPDATE_WHILE_SCROLLING = 'update_while_scrolling'
+const KEY_COLOR_MODE = 'color_mode'
 const TOKEN_ALIAS = 'heszel.beszel.auth-token'
 const GATEWAY_KEY_ALIAS = 'heszel.gateway.header-key'
 const IROH_SECRET_ALIAS = 'heszel.iroh.phone-secret-key'
@@ -28,6 +30,7 @@ export class StoredSession {
   irohPairing: IrohPairing = new IrohPairing()
   selectedSystemId: string = ''
   updateWhileScrolling: boolean = false
+  colorMode: AppColorMode = AppColorMode.SYSTEM
 
   canRestore(): boolean {
     const connectionReady = this.connectionMode === ConnectionMode.IROH ?
@@ -73,6 +76,7 @@ export class SessionRepository {
       stored.email = await store.get(KEY_EMAIL, '') as string
       stored.selectedSystemId = await store.get(KEY_SELECTED_SYSTEM, '') as string
       stored.updateWhileScrolling = await store.get(KEY_UPDATE_WHILE_SCROLLING, false) as boolean
+      stored.colorMode = parseAppColorMode(await store.get(KEY_COLOR_MODE, AppColorMode.SYSTEM) as string)
       stored.token = await this.readToken()
       stored.gatewayKey = await this.readSecret(GATEWAY_KEY_ALIAS)
       return stored
@@ -120,6 +124,16 @@ export class SessionRepository {
       await store.flush()
     } catch (error) {
       throw this.storageError(error, 'Unable to save the scrolling update preference.')
+    }
+  }
+
+  async saveColorMode(mode: AppColorMode): Promise<void> {
+    try {
+      const store = await this.getStore()
+      await store.put(KEY_COLOR_MODE, mode)
+      await store.flush()
+    } catch (error) {
+      throw this.storageError(error, 'Unable to save the color mode preference.')
     }
   }
 

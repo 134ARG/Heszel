@@ -1,4 +1,5 @@
 import { SystemSummary } from '../model/BeszelModels'
+import { AppColorMode } from '../model/AppearanceModels'
 import { ConnectionMode } from '../model/ConnectionModels'
 import { SystemDetailState } from '../model/SystemDetailModels'
 import { SettingsView } from './SettingsView'
@@ -25,6 +26,7 @@ export struct DashboardView {
   @Prop @Watch('onExpandedChanged') expanded: boolean = false
   @Prop liveMetrics: boolean = false
   @Prop updateWhileScrolling: boolean = false
+  @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop realtimeConnected: boolean = false
   @Prop connectionMode: ConnectionMode = ConnectionMode.HTTP
   @Prop connectionLabel: string = ''
@@ -35,6 +37,7 @@ export struct DashboardView {
   onRefresh: () => void = () => {}
   onLiveMetricsChange: (enabled: boolean) => void = () => {}
   onUpdateWhileScrollingChange: (enabled: boolean) => void = () => {}
+  onColorModeChange: (mode: AppColorMode) => void = () => {}
   onDetailVisibilityChange: (visible: boolean) => void = () => {}
   onDetailScrollingChange: (scrolling: boolean) => void = () => {}
   onGatewayKeyChange: (gatewayKey: string) => void = () => {}
@@ -131,6 +134,7 @@ export struct DashboardView {
           expanded: this.expanded,
           errorMessage: this.errorMessage,
           updateWhileScrolling: this.updateWhileScrolling,
+          colorMode: this.colorMode,
           onBack: () => {
             this.pathStack.pop()
           },
@@ -142,6 +146,9 @@ export struct DashboardView {
           },
           onUpdateWhileScrollingChange: (enabled: boolean) => {
             this.onUpdateWhileScrollingChange(enabled)
+          },
+          onColorModeChange: (mode: AppColorMode) => {
+            this.onColorModeChange(mode)
           }
         })
       }

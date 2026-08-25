@@ -1,6 +1,7 @@
 import { DashboardView } from '../components/DashboardView'
 import { LoginView } from '../components/LoginView'
 import { DashboardController } from '../controller/DashboardController'
+import { AppColorMode } from '../model/AppearanceModels'
 import { LoginRequest } from '../model/ConnectionModels'
 
 @Entry
@@ -68,6 +69,7 @@ struct Index {
           expanded: this.curScreenSizeString === 'lg',
           liveMetrics: this.dashboard.liveMetrics,
           updateWhileScrolling: this.dashboard.updateWhileScrolling,
+          colorMode: this.dashboard.colorMode,
           realtimeConnected: this.dashboard.realtimeConnected,
           connectionMode: this.dashboard.savedConnectionMode,
           connectionLabel: this.dashboard.connectionLabel(),
@@ -78,6 +80,7 @@ struct Index {
           onLiveMetricsChange: (enabled: boolean) => this.dashboard.setLiveMetrics(enabled),
           onUpdateWhileScrollingChange: (enabled: boolean) =>
             this.dashboard.updateScrollingPreference(enabled),
+          onColorModeChange: (mode: AppColorMode) => this.dashboard.updateColorMode(mode),
           onDetailVisibilityChange: (visible: boolean) => this.dashboard.setDetailVisible(visible),
           onDetailScrollingChange: (scrolling: boolean) => this.dashboard.setDetailScrolling(scrolling),
           onGatewayKeyChange: (gatewayKey: string) => this.dashboard.updateGatewayKey(gatewayKey),

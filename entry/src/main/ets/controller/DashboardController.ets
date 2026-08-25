@@ -4,7 +4,8 @@ import {
   BeszelRealtimeMetrics,
   BeszelSystemRealtimeEvent
 } from '../api/BeszelRealtimeClient'
-import { common } from '@kit.AbilityKit'
+import { common, ConfigurationConstant } from '@kit.AbilityKit'
+import { AppColorMode } from '../model/AppearanceModels'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
 import { ConnectionMode, ConnectionPhase, ConnectionProfile, LoginRequest } from '../model/ConnectionModels'
 import {
@@ -36,6 +37,7 @@ export class DashboardController {
   detailState: SystemDetailState = new SystemDetailState()
   liveMetrics: boolean = false
   updateWhileScrolling: boolean = false
+  colorMode: AppColorMode = AppColorMode.SYSTEM
   realtimeConnected: boolean = false
   connectionPhase: ConnectionPhase = ConnectionPhase.STOPPED
   restoringSession: boolean = true
@@ -685,6 +687,8 @@ export class DashboardController {
       this.savedIrohPairingJson = IrohPairingCodec.stringify(stored.irohPairing)
       this.connectionProfile = stored.connectionProfile()
       this.updateWhileScrolling = stored.updateWhileScrolling
+      this.colorMode = stored.colorMode
+      this.applyColorMode(stored.colorMode)
       this.pendingSelectedId = stored.selectedSystemId
       this.lastPersistedSelectedId = stored.selectedSystemId
       this.selectSystem(stored.selectedSystemId)
@@ -747,6 +751,26 @@ export class DashboardController {
       }
       this.dashboardError = this.localized(
         'error_save_settings', 'Unable to save the scrolling update preference.')
+    }
+  }
+
+  async updateColorMode(mode: AppColorMode): Promise<void> {
+    if (mode === this.colorMode || this.sessionRepository === null) {
+      return
+    }
+    const previous = this.colorMode
+    this.colorMode = mode
+    if (!this.applyColorMode(mode)) {
+      this.colorMode = previous
+      this.dashboardError = this.localized('error_save_color_mode', 'Unable to save the color mode.')
+      return
+    }
+    try {
+      await this.sessionRepository.saveColorMode(mode)
+    } catch (_) {
+      this.colorMode = previous
+      this.applyColorMode(previous)
+      this.dashboardError = this.localized('error_save_color_mode', 'Unable to save the color mode.')
     }
   }
 
@@ -1249,6 +1273,25 @@ export class DashboardController {
   connectionDetail(): string {
     return this.connectionProfile.mode === ConnectionMode.IROH ?
       this.connectionProfile.iroh.shortEndpointId() : ''
+  }
+
+  private applyColorMode(mode: AppColorMode): boolean {
+    const application = this.context?.getApplicationContext()
+    if (application === undefined) {
+      return false
+    }
+    let target = ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET
+    if (mode === AppColorMode.DARK) {
+      target = ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+    } else if (mode === AppColorMode.LIGHT) {
+      target = ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT
+    }
+    try {
+      application.setColorMode(target)
+      return true
+    } catch (_) {
+      return false
+    }
   }
 
   private describeError(error: Object, fallback: string): string {

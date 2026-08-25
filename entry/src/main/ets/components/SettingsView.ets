@@ -1,4 +1,5 @@
 import { i18n } from '@kit.LocalizationKit'
+import { AppColorMode } from '../model/AppearanceModels'
 import { ConnectionMode } from '../model/ConnectionModels'
 import { PageHeader } from './PageHeader'
 
@@ -11,12 +12,14 @@ export struct SettingsView {
   @Prop expanded: boolean = false
   @Prop errorMessage: string = ''
   @Prop updateWhileScrolling: boolean = false
+  @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @State private gatewayKeyInput: string = ''
   @State private languageCode: string = 'default'
   onBack: () => void = () => {}
   onSignOut: () => void = () => {}
   onGatewayKeyChange: (gatewayKey: string) => void = () => {}
   onUpdateWhileScrollingChange: (enabled: boolean) => void = () => {}
+  onColorModeChange: (mode: AppColorMode) => void = () => {}
 
   aboutToAppear(): void {
     try {
@@ -75,10 +78,44 @@ export struct SettingsView {
               }
               .width('100%')
 
-              Text($r('app.string.language_restart_hint'))
-                .fontSize(11)
-                .fontColor($r('app.color.text_tertiary'))
-                .width('100%')
+              // Text($r('app.string.language_restart_hint'))
+              //   .fontSize(11)
+              //   .fontColor($r('app.color.text_tertiary'))
+              //   .width('100%')
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor($r('app.color.surface'))
+            .border({ width: 1, color: $r('app.color.card_border') })
+            .borderRadius(16)
+          }
+          .width('100%')
+
+          Column({ space: 12 }) {
+            Text($r('app.string.appearance_section'))
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_tertiary'))
+              .width('100%')
+
+            Row({ space: 12 }) {
+              Text($r('app.string.color_mode'))
+                .fontSize(14)
+                .fontColor($r('app.color.text_primary'))
+                .layoutWeight(1)
+
+              Select([
+                { value: $r('app.string.color_mode_system') },
+                { value: $r('app.string.color_mode_dark') },
+                { value: $r('app.string.color_mode_light') }
+              ])
+                .selected(this.colorModeIndex())
+                .value(this.colorModeValue())
+                .height(42)
+                .font({ size: 13 })
+                .fontColor($r('app.color.text_primary'))
+                .backgroundColor($r('app.color.surface_input'))
+                .onSelect((index: number) => this.changeColorMode(index))
             }
             .width('100%')
             .padding(16)
@@ -323,6 +360,33 @@ export struct SettingsView {
       this.languageCode = language
     } catch (_) {
       // Keep the previous language if HarmonyOS rejects the preference.
+    }
+  }
+
+  private colorModeIndex(): number {
+    if (this.colorMode === AppColorMode.DARK) {
+      return 1
+    }
+    if (this.colorMode === AppColorMode.LIGHT) {
+      return 2
+    }
+    return 0
+  }
+
+  private colorModeValue(): ResourceStr {
+    if (this.colorMode === AppColorMode.DARK) {
+      return $r('app.string.color_mode_dark')
+    }
+    if (this.colorMode === AppColorMode.LIGHT) {
+      return $r('app.string.color_mode_light')
+    }
+    return $r('app.string.color_mode_system')
+  }
+
+  private changeColorMode(index: number): void {
+    const mode = index === 1 ? AppColorMode.DARK : index === 2 ? AppColorMode.LIGHT : AppColorMode.SYSTEM
+    if (mode !== this.colorMode) {
+      this.onColorModeChange(mode)
     }
   }
 }
