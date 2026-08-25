@@ -1,6 +1,7 @@
 import { SmartAttributeMetric, SmartDeviceMetric, SmartHealthState } from '../model/SmartModels'
 import { formatCapacityBytes } from './DetailFormatting'
 import { DetailValueRow } from './DetailValueRow'
+import { PageHeader } from './PageHeader'
 
 @Component
 struct SmartIndicatorRow {
@@ -240,32 +241,14 @@ export struct SmartDetailsView {
 
   build() {
     Column() {
-      Row({ space: 12 }) {
-        Button($r('app.string.back_system_detail'))
-          .height(38)
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.action'))
-          .backgroundColor($r('app.color.action_surface'))
-          .borderRadius(10)
-          .onClick(() => this.onBack())
-        Column({ space: 2 }) {
-          Text($r('app.string.drive_health'))
-            .fontSize(24)
-            .fontWeight(FontWeight.Bold)
-            .fontColor($r('app.color.text_primary'))
-            .width('100%')
-          Text(this.summaryLabel())
-            .fontSize(11)
-            .fontColor($r('app.color.text_secondary'))
-            .width('100%')
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-      }
-      .width('100%')
-      .padding({ left: 18, right: 18, top: 18, bottom: 14 })
-      .backgroundColor($r('app.color.surface_header'))
+      PageHeader({
+        title: $r('app.string.drive_health'),
+        subtitle: this.summaryLabel(),
+        showSubtitle: true,
+        showBack: true,
+        backLabel: $r('app.string.back_system_detail'),
+        onBack: () => this.onBack()
+      })
 
       Scroll() {
         Column({ space: 14 }) {

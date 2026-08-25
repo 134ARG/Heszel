@@ -165,23 +165,6 @@ export struct DashboardView {
   @Builder
   private detailDestination(param: Object) {
     Column() {
-      if (!this.expanded) {
-        Row() {
-          Button($r('app.string.back_systems'))
-            .height(38)
-            .fontSize(14)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.action'))
-            .backgroundColor($r('app.color.action_surface'))
-            .borderRadius(10)
-            .onClick(() => {
-              this.pathStack.pop()
-            })
-        }
-        .width('100%')
-        .padding({ left: 16, right: 16, top: 12, bottom: 2 })
-      }
-
       ForEach(
         this.detailSystems(param),
         (system: SystemSummary) => {
@@ -192,6 +175,7 @@ export struct DashboardView {
             status: system.status,
             agentVersion: system.agentVersion,
             compact: !this.expanded,
+            onBack: () => this.pathStack.pop(),
             onScrollingChange: (scrolling: boolean) => this.onDetailScrollingChange(scrolling),
             onOpenSmartDetails: () => this.openSmartDetails()
           })

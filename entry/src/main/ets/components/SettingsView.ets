@@ -1,5 +1,6 @@
 import { i18n } from '@kit.LocalizationKit'
 import { ConnectionMode } from '../model/ConnectionModels'
+import { PageHeader } from './PageHeader'
 
 @Component
 export struct SettingsView {
@@ -27,25 +28,12 @@ export struct SettingsView {
 
   build() {
     Column() {
-      Row({ space: 12 }) {
-        Button($r('app.string.back_dashboard'))
-          .height(38)
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.action'))
-          .backgroundColor($r('app.color.action_surface'))
-          .borderRadius(10)
-          .onClick(() => this.onBack())
-
-        Text($r('app.string.settings'))
-          .fontSize(24)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.text_primary'))
-          .layoutWeight(1)
-      }
-      .width('100%')
-      .padding({ left: 18, right: 18, top: 18, bottom: 14 })
-      .backgroundColor($r('app.color.surface_header'))
+      PageHeader({
+        title: $r('app.string.settings'),
+        showBack: true,
+        backLabel: $r('app.string.back_dashboard'),
+        onBack: () => this.onBack()
+      })
 
       if (this.errorMessage.length > 0) {
         Text(this.errorMessage)
@@ -95,6 +83,7 @@ export struct SettingsView {
             .width('100%')
             .padding(16)
             .backgroundColor($r('app.color.surface'))
+            .border({ width: 1, color: $r('app.color.card_border') })
             .borderRadius(16)
           }
           .width('100%')
@@ -125,6 +114,7 @@ export struct SettingsView {
             .width('100%')
             .padding(16)
             .backgroundColor($r('app.color.surface'))
+            .border({ width: 1, color: $r('app.color.card_border') })
             .borderRadius(16)
           }
           .width('100%')
@@ -175,6 +165,7 @@ export struct SettingsView {
               .width('100%')
               .padding(16)
               .backgroundColor($r('app.color.surface'))
+              .border({ width: 1, color: $r('app.color.card_border') })
               .borderRadius(16)
             }
             .width('100%')
@@ -262,6 +253,7 @@ export struct SettingsView {
             }
             .width('100%')
             .backgroundColor($r('app.color.surface'))
+            .border({ width: 1, color: $r('app.color.card_border') })
             .borderRadius(16)
           }
           .width('100%')
@@ -273,7 +265,12 @@ export struct SettingsView {
             .width('100%')
         }
         .width(this.expanded ? 620 : '100%')
-        .padding({ left: 18, right: 18, top: 18, bottom: 30 })
+        .padding({
+          left: this.expanded ? 22 : 16,
+          right: this.expanded ? 22 : 16,
+          top: 14,
+          bottom: 30
+        })
       }
       .layoutWeight(1)
       .width('100%')
