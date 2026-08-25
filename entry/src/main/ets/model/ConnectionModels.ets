@@ -3,6 +3,15 @@ export enum ConnectionMode {
   IROH = 'iroh'
 }
 
+export enum ConnectionPhase {
+  STOPPED = 'stopped',
+  CONNECTING = 'connecting',
+  READY = 'ready',
+  DEGRADED = 'degraded',
+  RECOVERING = 'recovering',
+  OFFLINE = 'offline'
+}
+
 export interface IrohPairingWire {
   type: string
   version: number

@@ -16,8 +16,8 @@ class DashboardDestinationParam {
 
 @Component
 export struct DashboardView {
-  @Link @Watch('onSystemsChanged') systems: SystemSummary[]
-  @Link @Watch('onSelectedIdChanged') selectedId: string
+  @Prop @Watch('onSystemsChanged') systems: SystemSummary[] = []
+  @Prop @Watch('onSelectedIdChanged') selectedId: string = ''
   @ObjectLink detailState: SystemDetailState
   @Prop loading: boolean = false
   @Prop errorMessage: string = ''
@@ -31,6 +31,7 @@ export struct DashboardView {
   @Prop connectionDetail: string = ''
   @Prop email: string = ''
   @State private detailVisible: boolean = false
+  onSelectedIdChange: (id: string) => void = () => {}
   onRefresh: () => void = () => {}
   onLiveMetricsChange: (enabled: boolean) => void = () => {}
   onUpdateWhileScrollingChange: (enabled: boolean) => void = () => {}
@@ -305,7 +306,7 @@ export struct DashboardView {
     if (id === this.selectedId && this.topDestinationName() === 'detail') {
       return
     }
-    this.selectedId = id
+    this.onSelectedIdChange(id)
     if (this.expanded) {
       if (this.topDestinationName() === 'detail') {
         this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
