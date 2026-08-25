@@ -90,6 +90,8 @@ export interface BeszelContainerStatsListWire {
   items: BeszelContainerStatsRecordWire[]
 }
 
+const CPU_TREND_CAPACITY = 60
+
 function safeNumber(value: number | undefined): number {
   return value !== undefined && Number.isFinite(value) ? Math.max(0, value) : 0
 }
@@ -355,6 +357,35 @@ export class OverviewMetricsState {
     if (this.loadFifteen !== loadFifteen) this.loadFifteen = loadFifteen
     if (this.temperatureCelsius !== temperature) this.temperatureCelsius = temperature
     if (this.uptimeSeconds !== uptime) this.uptimeSeconds = uptime
+  }
+}
+
+@Observed
+export class MetricTrendState {
+  samples: number[] = []
+  revision: number = 0
+
+  seed(values: number[]): void {
+    const start = Math.max(0, values.length - CPU_TREND_CAPACITY)
+    const next: number[] = []
+    for (let index = start; index < values.length; index += 1) {
+      if (Number.isFinite(values[index])) next.push(Math.min(100, safeNumber(values[index])))
+    }
+    this.samples = next
+    this.revision += 1
+  }
+
+  append(value: number): void {
+    if (!Number.isFinite(value)) return
+    const next = this.samples.slice()
+    next.push(Math.min(100, safeNumber(value)))
+    if (next.length > CPU_TREND_CAPACITY) next.shift()
+    this.samples = next
+    this.revision += 1
+  }
+
+  capacity(): number {
+    return CPU_TREND_CAPACITY
   }
 }
 
@@ -798,6 +829,7 @@ export class SystemDetailState {
   hardware: SystemHardwareDetails = new SystemHardwareDetails()
   layoutVersion: number = 0
   overview: OverviewMetricsState = new OverviewMetricsState()
+  cpuTrend: MetricTrendState = new MetricTrendState()
   cpuMetrics: CpuMetricsState = new CpuMetricsState()
   memoryMetrics: MemoryMetricsState = new MemoryMetricsState()
   storageMetrics: StorageMetricsState = new StorageMetricsState()
@@ -853,6 +885,26 @@ export class SystemDetailState {
   applyMetrics(stats: BeszelSystemStatsWire, containers?: BeszelContainerStatsWire[] | null): void {
     this.overview.updateStats(stats)
     this.updateMetricGroups(stats, containers)
+  }
+
+  seedCpuTrend(records: BeszelSystemStatsRecordWire[]): void {
+    const values: number[] = []
+    records.forEach((record: BeszelSystemStatsRecordWire) => {
+      if (record.stats?.cpu !== undefined) values.push(record.stats.cpu)
+    })
+    this.cpuTrend.seed(values)
+  }
+
+  appendCpuSample(value: number): void {
+    this.cpuTrend.append(value)
+  }
+
+  appendRealtimeCpu(info: BeszelSystemInfoWire | undefined, stats: BeszelSystemStatsWire | undefined): void {
+    if (stats?.cpu !== undefined) {
+      this.cpuTrend.append(stats.cpu)
+    } else if (info?.cpu !== undefined) {
+      this.cpuTrend.append(info.cpu)
+    }
   }
 
   applyRealtime(info: BeszelSystemInfoWire | undefined, stats: BeszelSystemStatsWire | undefined,

@@ -28,7 +28,7 @@ const SELECTION_PERSIST_DELAY_MS = 750
 
 interface LoadedSystemDetail {
   details: BeszelSystemDetailsWire | null
-  stats: BeszelSystemStatsRecordWire | null
+  statsHistory: BeszelSystemStatsRecordWire[]
   containers: BeszelContainerStatsRecordWire | null
   smartDevices: BeszelSmartDeviceWire[] | null
 }
@@ -399,6 +399,9 @@ struct Index {
         existing.updateFrom(fresh)
         this.systems = this.systems.slice()
       }
+      if (!(this.liveMetrics && this.realtimeConnected) && event.record.info?.cpu !== undefined) {
+        this.detailStates.get(event.record.id)?.appendCpuSample(event.record.info.cpu)
+      }
     } else {
       return
     }
@@ -436,6 +439,7 @@ struct Index {
     const detail = this.detailStates.get(systemId)
     if (detail !== undefined) {
       detail.applyRealtime(metrics.info, metrics.stats, metrics.container)
+      detail.appendRealtimeCpu(metrics.info, metrics.stats)
     }
 
   }
@@ -492,8 +496,13 @@ struct Index {
       if (result.metrics !== null) {
         const detail = this.detailStates.get(requestedSystemId)
         if (detail !== undefined) {
+          if (result.statsHistory !== null && result.statsHistory.length > 0) {
+            detail.seedCpuTrend(result.statsHistory)
+          }
           detail.applyRealtime(result.metrics.info, result.metrics.stats, result.metrics.container)
         }
+      } else if (result.statsHistory !== null && result.statsHistory.length > 0) {
+        this.detailStates.get(requestedSystemId)?.seedCpuTrend(result.statsHistory)
       }
       if (result.smartDevices !== null) {
         const detail = this.detailStates.get(requestedSystemId)
@@ -849,7 +858,7 @@ struct Index {
     try {
       const loaded = await this.executeAuthenticated(async (activeSession: BeszelSession) => {
         const detailsRequest = client.getSystemDetails(activeSession.token, state.systemId)
-        const statsRequest = client.getLatestSystemStats(activeSession.token, state.systemId)
+        const statsRequest = client.getSystemStatsHistory(activeSession.token, state.systemId)
         const containersRequest = this.getOptionalContainerStats(client, activeSession.token, state.systemId)
         const smartRequest = this.getOptionalSmartDevices(client, activeSession.token, state.systemId)
         const responses = await Promise.all([
@@ -859,12 +868,12 @@ struct Index {
           smartRequest
         ])
         const details = responses[0] as BeszelSystemDetailsWire | null
-        const stats = responses[1] as BeszelSystemStatsRecordWire | null
+        const statsHistory = responses[1] as BeszelSystemStatsRecordWire[]
         const containers = responses[2] as BeszelContainerStatsRecordWire | null
         const smartDevices = responses[3] as BeszelSmartDeviceWire[] | null
         const result: LoadedSystemDetail = {
           details: details,
-          stats: stats,
+          statsHistory: statsHistory,
           containers: containers,
           smartDevices: smartDevices
         }
@@ -874,9 +883,12 @@ struct Index {
         return
       }
       state.applyHardware(loaded.details)
-      state.initializeCapabilities(loaded.stats?.stats, loaded.containers?.stats, loaded.smartDevices)
-      if (loaded.stats !== null && loaded.stats.stats !== undefined && loaded.stats.stats !== null) {
-        state.applyMetrics(loaded.stats.stats, loaded.containers?.stats)
+      state.seedCpuTrend(loaded.statsHistory)
+      const latestStats = loaded.statsHistory.length > 0 ?
+        loaded.statsHistory[loaded.statsHistory.length - 1] : null
+      state.initializeCapabilities(latestStats?.stats, loaded.containers?.stats, loaded.smartDevices)
+      if (latestStats !== null && latestStats.stats !== undefined && latestStats.stats !== null) {
+        state.applyMetrics(latestStats.stats, loaded.containers?.stats)
       } else if (loaded.containers?.stats !== undefined && loaded.containers.stats !== null) {
         state.applyContainers(loaded.containers.stats)
       }

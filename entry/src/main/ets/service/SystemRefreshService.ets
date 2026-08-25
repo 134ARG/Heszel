@@ -1,6 +1,7 @@
 import { BeszelClient } from '../api/BeszelClient'
 import { BeszelRealtimeClient, BeszelRealtimeMetrics } from '../api/BeszelRealtimeClient'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
+import { BeszelSystemStatsRecordWire } from '../model/SystemDetailModels'
 import { BeszelSmartDeviceWire } from '../model/SmartModels'
 
 const METRICS_TIMEOUT_MS = 8000
@@ -20,6 +21,7 @@ export class SystemRefreshResult {
   metrics: BeszelRealtimeMetrics | null = null
   systemMetrics: SystemRealtimeSample[] = []
   smartDevices: BeszelSmartDeviceWire[] | null = null
+  statsHistory: BeszelSystemStatsRecordWire[] | null = null
   metricsError: Error | null = null
   refreshedAt: string = ''
 }
@@ -41,6 +43,11 @@ export class SystemRefreshService {
         result.smartDevices = await client.getSmartDevices(session.token, selected.id)
       } catch (_) {
         // SMART is optional and may be unavailable on older hubs or agents.
+      }
+      try {
+        result.statsHistory = await client.getSystemStatsHistory(session.token, selected.id)
+      } catch (_) {
+        // Keep refresh useful if persisted history is temporarily unavailable.
       }
     }
     if (requestRealtimeMetrics && selected !== undefined && selected.isUp()) {

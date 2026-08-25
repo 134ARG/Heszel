@@ -19,6 +19,7 @@ export struct SystemDetail {
   @Prop status: string = 'unknown'
   @Prop agentVersion: string = ''
   @Prop compact: boolean = false
+  @Prop liveSampling: boolean = false
   onBack: () => void = () => {}
   onScrollingChange: (scrolling: boolean) => void = () => {}
   onOpenSmartDetails: () => void = () => {}
@@ -42,7 +43,9 @@ export struct SystemDetail {
           SystemOverview({
             metrics: this.detail.overview,
             health: this.detail.healthMetrics,
-            compact: this.compact
+            cpuTrend: this.detail.cpuTrend,
+            compact: this.compact,
+            liveSampling: this.liveSampling
           })
 
           if (this.detail.loading && !this.detail.loaded) {

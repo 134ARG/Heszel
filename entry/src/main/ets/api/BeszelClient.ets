@@ -216,10 +216,12 @@ export class BeszelClient {
     }
   }
 
-  async getLatestSystemStats(token: string, systemId: string): Promise<BeszelSystemStatsRecordWire | null> {
+  async getSystemStatsHistory(token: string, systemId: string,
+    limit: number = 60): Promise<BeszelSystemStatsRecordWire[]> {
     const request = this.createRequest()
-    const filter = encodeURIComponent(`system="${systemId}"`)
-    const path = `/api/collections/system_stats/records?page=1&perPage=1&sort=-created&filter=${filter}&fields=created,stats`
+    const filter = encodeURIComponent(`system='${systemId}' && type='1m'`)
+    const path = `/api/collections/system_stats/records?page=1&perPage=${limit}&sort=-created&filter=${filter}` +
+      '&fields=created,stats&skipTotal=true'
     try {
       const response = await request.request(`${this.baseUrl}${path}`, {
         method: http.RequestMethod.GET,
@@ -236,7 +238,7 @@ export class BeszelClient {
         throw new BeszelApiError(this.readError(responseText, 'Unable to load detailed metrics.'), response.responseCode)
       }
       const wire = JSON.parse(responseText) as BeszelSystemStatsListWire
-      return wire.items.length > 0 ? wire.items[0] : null
+      return wire.items.slice().reverse()
     } catch (error) {
       throw this.asError(error, 'Unable to load detailed metrics.')
     } finally {

@@ -1,4 +1,5 @@
-import { HealthMetricsState, OverviewMetricsState } from '../model/SystemDetailModels'
+import { HealthMetricsState, MetricTrendState, OverviewMetricsState } from '../model/SystemDetailModels'
+import { CpuTrendChart } from './CpuTrendChart'
 import { MetricTile } from './MetricTile'
 import { PressureBar } from './PressureBar'
 
@@ -6,7 +7,9 @@ import { PressureBar } from './PressureBar'
 export struct SystemOverview {
   @ObjectLink metrics: OverviewMetricsState
   @ObjectLink health: HealthMetricsState
+  @ObjectLink cpuTrend: MetricTrendState
   @Prop compact: boolean = false
+  @Prop liveSampling: boolean = false
 
   build() {
     Column({ space: 18 }) {
@@ -36,7 +39,32 @@ export struct SystemOverview {
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.text_primary'))
           .width('100%')
-        PressureBar({ value: this.metrics.cpuPercent, label: 'CPU', color: $r('app.color.metric_cpu') })
+        Column({ space: 7 }) {
+          Row() {
+            Text('CPU')
+              .fontSize(13)
+              .fontColor($r('app.color.text_secondary'))
+              .layoutWeight(1)
+            Text(`${this.metrics.cpuPercent.toFixed(0)}%`)
+              .fontSize(13)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_primary'))
+          }
+          .width('100%')
+          CpuTrendChart({ trend: this.cpuTrend, revision: this.cpuTrend.revision })
+          Row() {
+            Text($r('app.string.latest_cpu_samples'))
+              .fontSize(10)
+              .fontColor($r('app.color.text_tertiary'))
+              .layoutWeight(1)
+            Text(this.liveSampling ? $r('app.string.sample_every_second') :
+              $r('app.string.sample_every_minute'))
+              .fontSize(10)
+              .fontColor($r('app.color.text_tertiary'))
+          }
+          .width('100%')
+        }
+        .width('100%')
         PressureBar({ value: this.metrics.memoryPercent, label: $r('app.string.memory'), color: $r('app.color.metric_memory') })
         PressureBar({ value: this.metrics.diskPercent, label: $r('app.string.disk'), color: $r('app.color.metric_disk') })
       }

@@ -86,6 +86,9 @@
     { "name": "containers", "value": "Containers" },
 
     { "name": "resource_pressure", "value": "Resource pressure" },
+    { "name": "latest_cpu_samples", "value": "Latest 60 samples" },
+    { "name": "sample_every_second", "value": "Every 1 s" },
+    { "name": "sample_every_minute", "value": "Every 1 min" },
     { "name": "memory", "value": "Memory" },
     { "name": "disk", "value": "Disk" },
     { "name": "usage", "value": "Usage" },

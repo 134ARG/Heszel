@@ -86,6 +86,9 @@
     { "name": "containers", "value": "容器" },
 
     { "name": "resource_pressure", "value": "资源压力" },
+    { "name": "latest_cpu_samples", "value": "最近 60 个采样" },
+    { "name": "sample_every_second", "value": "每 1 秒" },
+    { "name": "sample_every_minute", "value": "每 1 分钟" },
     { "name": "memory", "value": "内存" },
     { "name": "disk", "value": "磁盘" },
     { "name": "usage", "value": "使用率" },

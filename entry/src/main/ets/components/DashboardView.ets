@@ -175,6 +175,7 @@ export struct DashboardView {
             status: system.status,
             agentVersion: system.agentVersion,
             compact: !this.expanded,
+            liveSampling: this.liveMetrics && this.realtimeConnected,
             onBack: () => this.pathStack.pop(),
             onScrollingChange: (scrolling: boolean) => this.onDetailScrollingChange(scrolling),
             onOpenSmartDetails: () => this.openSmartDetails()
