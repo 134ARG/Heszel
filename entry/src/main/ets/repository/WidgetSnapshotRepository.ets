@@ -164,13 +164,11 @@ export class WidgetFormData {
   dr: string = '--'
   dw: string = '--'
   q: string = '0'
-  e: string = '0'
 
   static fromSnapshot(snapshot: WidgetSnapshotData, requestedPage: number,
-    refreshing: boolean = false, refreshReplay: number = 0): WidgetFormData {
+    refreshing: boolean = false): WidgetFormData {
     const data = new WidgetFormData()
     data.q = refreshing ? '1' : '0'
-    data.e = refreshReplay.toString()
     const count = snapshot.systems.length
     const page = count > 0 ? Math.min(Math.max(0, Math.floor(requestedPage)), count - 1) : 0
     data.s = snapshot.summary
@@ -252,10 +250,10 @@ export class WidgetSnapshotRepository {
     }
   }
 
-  async setRefreshing(refreshing: boolean, refreshReplay: number = 0): Promise<void> {
+  async setRefreshing(refreshing: boolean): Promise<void> {
     try {
       const store = await this.getStore()
-      await this.updateForms(store, await this.readSnapshot(store), refreshing, refreshReplay, false)
+      await this.updateForms(store, await this.readSnapshot(store), refreshing, false)
     } catch (error) {
       throw this.storageError(error, 'Unable to update the widget refresh state.')
     }
@@ -314,11 +312,11 @@ export class WidgetSnapshotRepository {
   }
 
   private async updateForms(store: preferences.Preferences, snapshot: WidgetSnapshotData,
-    refreshing: boolean = false, refreshReplay: number = 0, persistPages: boolean = true): Promise<void> {
+    refreshing: boolean = false, persistPages: boolean = true): Promise<void> {
     const forms = await this.readForms(store)
     for (const form of forms) {
       try {
-        const data = WidgetFormData.fromSnapshot(snapshot, form.page, refreshing, refreshReplay)
+        const data = WidgetFormData.fromSnapshot(snapshot, form.page, refreshing)
         form.page = Number(data.p)
         await this.publish(form.id, data)
       } catch (_) {

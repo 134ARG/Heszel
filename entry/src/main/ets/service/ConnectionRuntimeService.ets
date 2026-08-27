@@ -1,4 +1,5 @@
 import iroh, { TunnelConfig, TunnelInfo } from 'libiroh_hos.so'
+import { connection } from '@kit.NetworkKit'
 import { ConnectionMode, ConnectionProfile } from '../model/ConnectionModels'
 import { SessionRepository } from '../repository/SessionRepository'
 
@@ -9,12 +10,13 @@ export class ConnectionRuntimeService {
   private irohRunning: boolean = false
   private openTask: Promise<string> | null = null
   private closeTask: Promise<void> | null = null
+  private networkMonitor: connection.NetConnection | null = null
 
   constructor(repository: SessionRepository) {
     this.repository = repository
   }
 
-  async open(profile: ConnectionProfile): Promise<string> {
+  async open(profile: ConnectionProfile, connectTimeoutMs?: number): Promise<string> {
     if (profile.mode === ConnectionMode.HTTP) {
       if (profile.httpBaseUrl.trim().length === 0) {
         throw new Error('Enter the Beszel hub address.')
@@ -27,7 +29,7 @@ export class ConnectionRuntimeService {
     if (this.openTask !== null) {
       return this.openTask
     }
-    const task = this.openIroh(profile)
+    const task = this.openIroh(profile, connectTimeoutMs)
     this.openTask = task
     try {
       return await task
@@ -38,20 +40,14 @@ export class ConnectionRuntimeService {
     }
   }
 
+  // Tunnels are always torn down with abort: a monitoring client never carries
+  // state worth a QUIC drain, and graceful stops hang on broken networks.
   async close(): Promise<void> {
-    await this.closeWithMode(false)
-  }
-
-  async closeImmediately(): Promise<void> {
-    await this.closeWithMode(true)
-  }
-
-  private async closeWithMode(immediate: boolean): Promise<void> {
     if (this.closeTask !== null) {
       await this.closeTask
       return
     }
-    const task = this.closeIroh(immediate)
+    const task = this.closeIroh()
     this.closeTask = task
     try {
       await task
@@ -62,14 +58,13 @@ export class ConnectionRuntimeService {
     }
   }
 
-  private async openIroh(profile: ConnectionProfile): Promise<string> {
+  private async openIroh(profile: ConnectionProfile, connectTimeoutMs?: number): Promise<string> {
     if (!profile.iroh.isUsable()) {
       throw new Error('Scan a valid Heszel Iroh pairing QR code first.')
     }
 
-    const currentInfo: TunnelInfo = iroh.getTunnelInfo()
-    if (currentInfo.state !== 'stopped') {
-      await iroh.stopTunnel()
+    if (iroh.getTunnelInfo().state !== 'stopped') {
+      await iroh.abortTunnel()
       this.irohRunning = false
     }
     const secretKey = await this.loadOrCreateSecretKey()
@@ -83,11 +78,20 @@ export class ConnectionRuntimeService {
       if (profile.iroh.serverRelayUrl.length > 0) {
         config.serverRelayUrl = profile.iroh.serverRelayUrl
       }
+      if (connectTimeoutMs !== undefined) {
+        config.connectTimeoutMs = connectTimeoutMs
+      }
       const info: TunnelInfo = await iroh.startTunnel(config)
       if (info.localPort <= 0) {
+        try {
+          await iroh.abortTunnel()
+        } catch (_) {
+          // A start without a local port leaves nothing worth preserving.
+        }
         throw new Error('Iroh did not provide a local tunnel port.')
       }
       this.irohRunning = true
+      this.startNetworkMonitor()
       return `http://127.0.0.1:${info.localPort}`
     } catch (error) {
       const nativeError: string = iroh.getLastError()
@@ -98,7 +102,7 @@ export class ConnectionRuntimeService {
     }
   }
 
-  private async closeIroh(immediate: boolean): Promise<void> {
+  private async closeIroh(): Promise<void> {
     if (this.openTask !== null) {
       try {
         await this.openTask
@@ -106,17 +110,11 @@ export class ConnectionRuntimeService {
         // A failed open has no live tunnel to preserve.
       }
     }
-    const currentInfo: TunnelInfo = iroh.getTunnelInfo()
-    if (!this.irohRunning && currentInfo.state === 'stopped') {
+    if (!this.irohRunning && iroh.getTunnelInfo().state === 'stopped') {
       return
     }
     try {
-      if (immediate) {
-        await iroh.abortTunnel()
-      } else {
-        iroh.suspendTunnel()
-        await iroh.stopTunnel()
-      }
+      await iroh.abortTunnel()
     } finally {
       this.irohRunning = false
     }
@@ -134,5 +132,35 @@ export class ConnectionRuntimeService {
     }
     await this.repository.saveIrohSecret(generated)
     return generated
+  }
+
+  // Tell the native tunnel to repath when the device network changes. The
+  // command is a no-op without a live tunnel, but it synchronously takes the
+  // native tunnel lock, so it must be skipped while a start is still pending.
+  private startNetworkMonitor(): void {
+    if (this.networkMonitor !== null) {
+      return
+    }
+    try {
+      const monitor = connection.createNetConnection()
+      monitor.on('netAvailable', () => this.notifyNetworkChange())
+      monitor.on('netLost', () => this.notifyNetworkChange())
+      monitor.on('netCapabilitiesChange', () => this.notifyNetworkChange())
+      monitor.register(() => {})
+      this.networkMonitor = monitor
+    } catch (_) {
+      // Without monitor callbacks the tunnel still recovers via its own reconnect timers.
+    }
+  }
+
+  private notifyNetworkChange(): void {
+    if (this.openTask !== null) {
+      return
+    }
+    try {
+      iroh.networkChange()
+    } catch (_) {
+      // A failed command on an already-dead tunnel needs no handling.
+    }
   }
 }

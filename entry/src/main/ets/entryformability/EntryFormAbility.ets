@@ -3,17 +3,20 @@ import { formBindingData, FormExtensionAbility, formInfo } from '@kit.FormKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { BeszelClient } from '../api/BeszelClient'
 import { BeszelSession } from '../model/BeszelModels'
-import { ConnectionMode } from '../model/ConnectionModels'
+import { ConnectionMode, ConnectionProfile } from '../model/ConnectionModels'
 import { BeszelSystemStatsWire } from '../model/SystemDetailModels'
-import { SessionRepository } from '../repository/SessionRepository'
+import { SessionRepository, StoredSession } from '../repository/SessionRepository'
 import { WidgetSnapshotRepository } from '../repository/WidgetSnapshotRepository'
+import { settleWithin } from '../service/AsyncDeadline'
 import { ConnectionRuntimeService } from '../service/ConnectionRuntimeService'
 import { SessionRefreshService } from '../service/SessionRefreshService'
 import { SystemRealtimeSample, SystemRefreshResult, SystemRefreshService } from '../service/SystemRefreshService'
 
 const DOMAIN = 0x0000
 const TAG = 'HeszelWidget'
-const REFRESH_REPLAY_INTERVAL_MS = 1500
+const REFRESH_ATTEMPTS = 2
+const REFRESH_ATTEMPT_TIMEOUT_MS = 30000
+const IROH_CONNECT_TIMEOUT_MS = 10000
 
 interface WidgetEvent {
   event?: string
@@ -22,9 +25,6 @@ interface WidgetEvent {
 
 export default class EntryFormAbility extends FormExtensionAbility {
   private refreshInFlight: boolean = false
-  private refreshReplayTimer: number = -1
-  private refreshReplayTask: Promise<void> | null = null
-  private refreshReplayPhase: number = 0
 
   onAddForm(want: Want): formBindingData.FormBindingData {
     const formId = this.readFormId(want)
@@ -84,73 +84,36 @@ export default class EntryFormAbility extends FormExtensionAbility {
       return
     }
     this.refreshInFlight = true
-    let connectionRuntime: ConnectionRuntimeService | null = null
     let widgetRepository: WidgetSnapshotRepository | null = null
-    let irohOpened: boolean = false
     try {
       const sessionRepository = new SessionRepository(this.context)
-      connectionRuntime = new ConnectionRuntimeService(sessionRepository)
       widgetRepository = new WidgetSnapshotRepository(this.context)
       try {
-        await widgetRepository.setRefreshing(true, this.refreshReplayPhase)
+        await widgetRepository.setRefreshing(true)
       } catch (error) {
         hilog.warn(DOMAIN, TAG, 'Unable to publish card refresh state: %{public}s', this.errorMessage(error))
       }
-      this.startRefreshReplay(widgetRepository)
       const session = await sessionRepository.load()
       if (!session.canRestore()) {
         hilog.warn(DOMAIN, TAG, 'Manual card refresh has no restorable session.')
         return
       }
-      hilog.info(DOMAIN, TAG, 'Manual card refresh is requesting systems.')
       const connection = session.connectionProfile()
-      const activeBaseUrl = await connectionRuntime.open(connection)
-      irohOpened = connection.mode === ConnectionMode.IROH
-      const client = new BeszelClient(activeBaseUrl, connection.gatewayKey)
-      const refreshSession = new BeszelSession()
-      refreshSession.baseUrl = activeBaseUrl
-      refreshSession.email = session.email
-      refreshSession.token = session.token
-      refreshSession.gatewayKey = connection.gatewayKey
-      let result: SystemRefreshResult
-      try {
-        result = await new SessionRefreshService().execute(
-          client,
-          refreshSession,
-          (activeSession: BeszelSession) => new SystemRefreshService().refreshAll(client, activeSession),
-          async (refreshed: BeszelSession) => {
-            await sessionRepository.saveSession(refreshed, session.selectedSystemId, connection)
-          }
-        )
-      } catch (error) {
-        if (SessionRefreshService.isSessionRejected(error)) {
-          await sessionRepository.clearToken()
-          await widgetRepository.clearSnapshot()
-        }
-        throw error instanceof Error ? error : new Error('Unable to refresh the systems widget.')
-      }
-      const statsBySystem = new Map<string, BeszelSystemStatsWire>()
-      result.systemMetrics.forEach((sample: SystemRealtimeSample) => {
-        if (sample.metrics.stats !== undefined) {
-          statsBySystem.set(sample.systemId, sample.metrics.stats)
-        }
-      })
-      // The final q=0 update publishes this stored snapshot after teardown.
-      await widgetRepository.saveSnapshot(result.systems, result.refreshedAt, '', null, statsBySystem, false)
-      if (result.metricsError !== null) {
-        hilog.warn(DOMAIN, TAG, 'Card list refreshed without realtime metrics: %{public}s',
-          this.errorMessage(result.metricsError))
-      }
-      hilog.info(DOMAIN, TAG, 'Manual card refresh stored %{public}d systems.', result.systems.length)
-    } finally {
-      await this.stopRefreshReplay()
-      if (irohOpened && connectionRuntime !== null) {
+      for (let attempt = 1; attempt <= REFRESH_ATTEMPTS; attempt += 1) {
         try {
-          await connectionRuntime.closeImmediately()
+          await this.refreshOnce(sessionRepository, widgetRepository, session, connection)
+          hilog.info(DOMAIN, TAG, 'Manual card refresh completed on attempt %{public}d.', attempt)
+          return
         } catch (error) {
-          hilog.warn(DOMAIN, TAG, 'Unable to stop the temporary Iroh tunnel: %{public}s', this.errorMessage(error))
+          // A rejected session was already cleared; retrying cannot succeed.
+          if (SessionRefreshService.isSessionRejected(error)) {
+            return
+          }
+          hilog.warn(DOMAIN, TAG, 'Manual card refresh attempt %{public}d failed: %{public}s',
+            attempt, this.errorMessage(error))
         }
       }
+    } finally {
       if (widgetRepository !== null) {
         try {
           await widgetRepository.setRefreshing(false)
@@ -162,46 +125,72 @@ export default class EntryFormAbility extends FormExtensionAbility {
     }
   }
 
-  private startRefreshReplay(repository: WidgetSnapshotRepository): void {
-    if (this.refreshReplayTimer >= 0) {
-      clearInterval(this.refreshReplayTimer)
-    }
-    this.refreshReplayPhase = 0
-    this.refreshReplayTimer = setInterval(() => {
-      if (this.refreshReplayTask !== null) {
-        return
-      }
-      this.refreshReplayPhase = this.refreshReplayPhase === 0 ? 1 : 0
-      const task = repository.setRefreshing(true, this.refreshReplayPhase)
-      this.refreshReplayTask = task
-      task.then(
-        (): void => this.finishRefreshReplay(task),
-        (): void => this.finishRefreshReplay(task)
+  private async refreshOnce(sessionRepository: SessionRepository, widgetRepository: WidgetSnapshotRepository,
+    session: StoredSession, connection: ConnectionProfile): Promise<void> {
+    const connectionRuntime = new ConnectionRuntimeService(sessionRepository)
+    const connectTimeoutMs = connection.mode === ConnectionMode.IROH ? IROH_CONNECT_TIMEOUT_MS : undefined
+    let client: BeszelClient | null = null
+    let refreshService: SystemRefreshService | null = null
+    try {
+      const activeBaseUrl = await connectionRuntime.open(connection, connectTimeoutMs)
+      const refreshClient = new BeszelClient(activeBaseUrl, connection.gatewayKey)
+      client = refreshClient
+      const service = new SystemRefreshService()
+      refreshService = service
+      const refreshSession = new BeszelSession()
+      refreshSession.baseUrl = activeBaseUrl
+      refreshSession.email = session.email
+      refreshSession.token = session.token
+      refreshSession.gatewayKey = connection.gatewayKey
+      const work = new SessionRefreshService().execute(
+        refreshClient,
+        refreshSession,
+        (activeSession: BeszelSession) => service.refreshAll(refreshClient, activeSession),
+        async (refreshed: BeszelSession) => {
+          await sessionRepository.saveSession(refreshed, session.selectedSystemId, connection)
+        }
       )
-    }, REFRESH_REPLAY_INTERVAL_MS)
-  }
-
-  private finishRefreshReplay(task: Promise<void>): void {
-    if (this.refreshReplayTask === task) {
-      this.refreshReplayTask = null
-    }
-  }
-
-  private async stopRefreshReplay(): Promise<void> {
-    if (this.refreshReplayTimer >= 0) {
-      clearInterval(this.refreshReplayTimer)
-      this.refreshReplayTimer = -1
-    }
-    const task = this.refreshReplayTask
-    if (task !== null) {
-      try {
-        await task
-      } catch (_) {
-        // The final q=0 publication below remains authoritative.
+      const settled = await settleWithin(work, REFRESH_ATTEMPT_TIMEOUT_MS)
+      if (!settled) {
+        // Cancel what is cancellable and bail; settleWithin already handles
+        // the leftover promise so a late rejection stays unobserved.
+        service.cancel()
+        refreshClient.cancelPendingRequests()
+        throw new Error('Card refresh timed out.')
       }
+      let result: SystemRefreshResult
+      try {
+        result = await work
+      } catch (error) {
+        if (SessionRefreshService.isSessionRejected(error)) {
+          await sessionRepository.clearToken()
+          await widgetRepository.clearSnapshot()
+        }
+        throw error instanceof Error ? error : new Error('Unable to refresh the systems widget.')
+      }
+      await this.storeSnapshot(widgetRepository, result)
+    } finally {
+      refreshService?.cancel()
+      client?.cancelPendingRequests()
+      await connectionRuntime.close()
     }
-    this.refreshReplayTask = null
-    this.refreshReplayPhase = 0
+  }
+
+  private async storeSnapshot(widgetRepository: WidgetSnapshotRepository,
+    result: SystemRefreshResult): Promise<void> {
+    const statsBySystem = new Map<string, BeszelSystemStatsWire>()
+    result.systemMetrics.forEach((sample: SystemRealtimeSample) => {
+      if (sample.metrics.stats !== undefined) {
+        statsBySystem.set(sample.systemId, sample.metrics.stats)
+      }
+    })
+    // The final q=0 update publishes this stored snapshot after teardown.
+    await widgetRepository.saveSnapshot(result.systems, result.refreshedAt, '', null, statsBySystem, false)
+    if (result.metricsError !== null) {
+      hilog.warn(DOMAIN, TAG, 'Card list refreshed without realtime metrics: %{public}s',
+        this.errorMessage(result.metricsError))
+    }
+    hilog.info(DOMAIN, TAG, 'Manual card refresh stored %{public}d systems.', result.systems.length)
   }
 
   private errorMessage(error: Object): string {

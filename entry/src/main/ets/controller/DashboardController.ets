@@ -14,6 +14,7 @@ import {
 } from '../model/SystemDetailModels'
 import { SessionRepository, StoredSession } from '../repository/SessionRepository'
 import { WidgetSnapshotRepository } from '../repository/WidgetSnapshotRepository'
+import { settleWithin } from '../service/AsyncDeadline'
 import { ConnectionRuntimeService } from '../service/ConnectionRuntimeService'
 import { IrohPairingCodec } from '../service/IrohPairingCodec'
 import { SessionRefreshService } from '../service/SessionRefreshService'
@@ -22,6 +23,10 @@ import { SystemRefreshService } from '../service/SystemRefreshService'
 
 const DETAIL_CACHE_LIMIT = 10
 const SELECTION_PERSIST_DELAY_MS = 750
+// Every resume step is individually bounded by request timeouts; this watchdog
+// only exists to abandon a resume wedged in native or storage calls so later
+// resumes are not queued behind it forever.
+const RESUME_DEADLINE_MS = 120000
 
 @Observed
 export class DashboardController {
@@ -468,13 +473,13 @@ export class DashboardController {
     this.client = null
 
     try {
-      await this.closeConnection(this.connectionProfile.mode, true)
+      await this.closeConnection(this.connectionProfile.mode)
       if (!this.pageVisible || !this.isDataWorkCurrent(generation)) {
         return
       }
       const activeBaseUrl = await this.openConnection(this.connectionProfile)
       if (!this.pageVisible || !this.isDataWorkCurrent(generation)) {
-        await this.closeConnection(this.connectionProfile.mode, true)
+        await this.closeConnection(this.connectionProfile.mode)
         return
       }
 
@@ -491,7 +496,7 @@ export class DashboardController {
         if (this.session.token.length > 0 && this.isDataWorkCurrent(generation)) {
           this.connectionPhase = ConnectionPhase.OFFLINE
           this.client = null
-          await this.closeConnection(this.connectionProfile.mode, true)
+          await this.closeConnection(this.connectionProfile.mode)
         }
         return
       }
@@ -511,7 +516,7 @@ export class DashboardController {
       if (this.pageVisible && this.isDataWorkCurrent(generation)) {
         this.markRestFailure(error)
         this.client = null
-        await this.closeConnection(this.connectionProfile.mode, true)
+        await this.closeConnection(this.connectionProfile.mode)
         this.dashboardError = this.describeError(error,
           this.localized('error_refresh_systems', 'Unable to reconnect to Beszel.'))
       }
@@ -542,12 +547,14 @@ export class DashboardController {
         }
       }
       const alreadyReceivingMetrics = this.liveMetrics && this.realtimeConnected && this.detailIsVisible()
+      const detailLoaded = this.detailStates.get(requestedSystemId)?.loaded === true
       const result = await this.executeAuthenticated(
         (activeSession: BeszelSession) => refreshService.refresh(
           client,
           activeSession,
           requestedSystemId,
-          !alreadyReceivingMetrics
+          !alreadyReceivingMetrics,
+          detailLoaded
         ),
         generation
       )
@@ -1185,16 +1192,12 @@ export class DashboardController {
     return this.connectionRuntime.open(profile)
   }
 
-  private async closeConnection(mode: ConnectionMode, immediate: boolean = false): Promise<void> {
+  private async closeConnection(mode: ConnectionMode): Promise<void> {
     if (mode !== ConnectionMode.IROH || this.connectionRuntime === null) {
       return
     }
     try {
-      if (immediate) {
-        await this.connectionRuntime.closeImmediately()
-      } else {
-        await this.connectionRuntime.close()
-      }
+      await this.connectionRuntime.close()
     } catch (_) {
       // Lifecycle cleanup is best effort; a later open starts from native state.
     }
@@ -1206,13 +1209,15 @@ export class DashboardController {
       return
     }
     this.client = null
-    this.closeConnection(ConnectionMode.IROH, true)
+    this.closeConnection(ConnectionMode.IROH)
   }
 
   private async resumeConnection(): Promise<void> {
     if (this.connectionResumeTask !== null) {
-      await this.connectionResumeTask
-      if (!this.pageVisible || this.session.token.length === 0 ||
+      const settled = await settleWithin(this.connectionResumeTask, RESUME_DEADLINE_MS)
+      if (!settled) {
+        this.abandonStuckResume()
+      } else if (!this.pageVisible || this.session.token.length === 0 ||
         this.connectionProfile.mode === ConnectionMode.HTTP || this.client !== null) {
         return
       }
@@ -1226,6 +1231,16 @@ export class DashboardController {
         this.connectionResumeTask = null
       }
     }
+  }
+
+  // Neutralizes a resume that never settled: its generation checks fail from
+  // here on, so the zombie only ever closes the tunnel it may have opened.
+  private abandonStuckResume(): void {
+    this.invalidateDataWork()
+    this.stopRealtime()
+    this.client = null
+    this.connectionResumeTask = null
+    this.closeConnection(this.connectionProfile.mode)
   }
 
   private async performResumeConnection(): Promise<void> {

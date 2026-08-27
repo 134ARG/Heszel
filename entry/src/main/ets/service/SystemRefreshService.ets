@@ -31,24 +31,20 @@ export class SystemRefreshService {
   private cancelMetricsRequest: (() => void) | null = null
 
   async refresh(client: BeszelClient, session: BeszelSession, selectedSystemId: string,
-    requestRealtimeMetrics: boolean = true): Promise<SystemRefreshResult> {
+    requestRealtimeMetrics: boolean = true, requestDetailData: boolean = true): Promise<SystemRefreshResult> {
     const result = new SystemRefreshResult()
     result.systems = await client.listSystems(session.token)
     if (this.cancelled) {
       throw new Error('Refresh cancelled.')
     }
     const selected = result.systems.find((system: SystemSummary) => system.id === selectedSystemId)
-    if (selected !== undefined) {
-      try {
-        result.smartDevices = await client.getSmartDevices(session.token, selected.id)
-      } catch (_) {
-        // SMART is optional and may be unavailable on older hubs or agents.
-      }
-      try {
-        result.statsHistory = await client.getSystemStatsHistory(session.token, selected.id)
-      } catch (_) {
-        // Keep refresh useful if persisted history is temporarily unavailable.
-      }
+    if (selected !== undefined && requestDetailData) {
+      // SMART and persisted history only feed an already-loaded detail pane; run both
+      // in parallel so optional data never stacks latency onto the refresh.
+      const smartRequest = this.fetchOptionalSmartDevices(client, session.token, selected.id)
+      const historyRequest = this.fetchOptionalStatsHistory(client, session.token, selected.id)
+      result.smartDevices = await smartRequest
+      result.statsHistory = await historyRequest
     }
     if (requestRealtimeMetrics && selected !== undefined && selected.isUp()) {
       try {
@@ -95,6 +91,26 @@ export class SystemRefreshService {
     this.cancelMetricsRequest = null
     if (cancel !== null) {
       cancel()
+    }
+  }
+
+  private async fetchOptionalSmartDevices(client: BeszelClient, token: string,
+    systemId: string): Promise<BeszelSmartDeviceWire[] | null> {
+    try {
+      return await client.getSmartDevices(token, systemId)
+    } catch (_) {
+      // SMART is optional and may be unavailable on older hubs or agents.
+      return null
+    }
+  }
+
+  private async fetchOptionalStatsHistory(client: BeszelClient, token: string,
+    systemId: string): Promise<BeszelSystemStatsRecordWire[] | null> {
+    try {
+      return await client.getSystemStatsHistory(token, systemId)
+    } catch (_) {
+      // Keep refresh useful if persisted history is temporarily unavailable.
+      return null
     }
   }
 
