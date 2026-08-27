@@ -107,28 +107,32 @@ export class SystemSummary {
     return summary
   }
 
-  updateFrom(other: SystemSummary): void {
-    this.name = other.name
-    this.host = other.host
-    this.status = other.status
-    this.updated = other.updated
-    this.cpuPercent = other.cpuPercent
-    this.memoryPercent = other.memoryPercent
-    this.diskPercent = other.diskPercent
-    this.temperatureCelsius = other.temperatureCelsius
-    this.gpuPercent = other.gpuPercent
-    this.loadOne = other.loadOne
-    this.loadFive = other.loadFive
-    this.loadFifteen = other.loadFifteen
-    this.uptimeSeconds = other.uptimeSeconds
-    this.agentVersion = other.agentVersion
-    this.batteryPercent = other.batteryPercent
-    this.batteryState = other.batteryState
+  // Returns true when status changed, so callers can refresh array-level bindings
+  // (e.g. the header's online count) that reassigning the systems array drives.
+  updateFrom(other: SystemSummary): boolean {
+    if (this.name !== other.name) this.name = other.name
+    if (this.host !== other.host) this.host = other.host
+    const statusChanged = this.status !== other.status
+    if (statusChanged) this.status = other.status
+    if (this.updated !== other.updated) this.updated = other.updated
+    if (this.cpuPercent !== other.cpuPercent) this.cpuPercent = other.cpuPercent
+    if (this.memoryPercent !== other.memoryPercent) this.memoryPercent = other.memoryPercent
+    if (this.diskPercent !== other.diskPercent) this.diskPercent = other.diskPercent
+    if (this.temperatureCelsius !== other.temperatureCelsius) this.temperatureCelsius = other.temperatureCelsius
+    if (this.gpuPercent !== other.gpuPercent) this.gpuPercent = other.gpuPercent
+    if (this.loadOne !== other.loadOne) this.loadOne = other.loadOne
+    if (this.loadFive !== other.loadFive) this.loadFive = other.loadFive
+    if (this.loadFifteen !== other.loadFifteen) this.loadFifteen = other.loadFifteen
+    if (this.uptimeSeconds !== other.uptimeSeconds) this.uptimeSeconds = other.uptimeSeconds
+    if (this.agentVersion !== other.agentVersion) this.agentVersion = other.agentVersion
+    if (this.batteryPercent !== other.batteryPercent) this.batteryPercent = other.batteryPercent
+    if (this.batteryState !== other.batteryState) this.batteryState = other.batteryState
     if (other.servicesReported) {
-      this.servicesTotal = other.servicesTotal
-      this.servicesFailed = other.servicesFailed
+      if (this.servicesTotal !== other.servicesTotal) this.servicesTotal = other.servicesTotal
+      if (this.servicesFailed !== other.servicesFailed) this.servicesFailed = other.servicesFailed
       this.servicesReported = true
     }
+    return statusChanged
   }
 
   updateCardMetrics(info: BeszelSystemInfoWire): void {
@@ -140,19 +144,19 @@ export class SystemSummary {
     }
     if (info.g !== undefined && this.gpuPercent !== metric(info.g)) this.gpuPercent = metric(info.g)
     if (info.la !== undefined) {
-      this.loadOne = metric(info.la[0])
-      this.loadFive = metric(info.la[1])
-      this.loadFifteen = metric(info.la[2])
+      if (this.loadOne !== metric(info.la[0])) this.loadOne = metric(info.la[0])
+      if (this.loadFive !== metric(info.la[1])) this.loadFive = metric(info.la[1])
+      if (this.loadFifteen !== metric(info.la[2])) this.loadFifteen = metric(info.la[2])
     }
     if (info.u !== undefined && this.uptimeSeconds !== metric(info.u)) this.uptimeSeconds = metric(info.u)
     if (info.bat !== undefined) {
-      this.batteryPercent = metric(info.bat[0])
-      this.batteryState = metric(info.bat[1])
+      if (this.batteryPercent !== metric(info.bat[0])) this.batteryPercent = metric(info.bat[0])
+      if (this.batteryState !== metric(info.bat[1])) this.batteryState = metric(info.bat[1])
     }
     if (info.sv !== undefined) {
-      this.servicesReported = true
-      this.servicesTotal = metric(info.sv[0])
-      this.servicesFailed = metric(info.sv[1])
+      if (!this.servicesReported) this.servicesReported = true
+      if (this.servicesTotal !== metric(info.sv[0])) this.servicesTotal = metric(info.sv[0])
+      if (this.servicesFailed !== metric(info.sv[1])) this.servicesFailed = metric(info.sv[1])
     }
   }
 

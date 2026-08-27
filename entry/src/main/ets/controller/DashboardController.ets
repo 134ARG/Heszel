@@ -366,8 +366,11 @@ export class DashboardController {
         next.push(fresh)
         this.systems = this.sortSystems(next)
       } else {
-        existing.updateFrom(fresh)
-        this.systems = this.systems.slice()
+        // Cards observe the mutated system directly; the header count and DashboardView's
+        // @Prop sync only need a fresh array reference when status changes.
+        if (existing.updateFrom(fresh)) {
+          this.systems = this.systems.slice()
+        }
       }
       if (!(this.liveMetrics && this.realtimeConnected) && event.record.info?.cpu !== undefined) {
         this.detailStates.get(event.record.id)?.appendCpuSample(event.record.info.cpu)
