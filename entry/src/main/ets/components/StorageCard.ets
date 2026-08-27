@@ -9,7 +9,7 @@ struct FilesystemSection {
   @ObjectLink filesystem: FilesystemMetric
 
   build() {
-    Column() {
+    Column({ space: 12 }) {
       Divider().color($r('app.color.divider'))
       Column({ space: 9 }) {
         PressureBar({
