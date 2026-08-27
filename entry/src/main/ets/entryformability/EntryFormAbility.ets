@@ -11,6 +11,7 @@ import { settleWithin } from '../service/AsyncDeadline'
 import { ConnectionRuntimeService } from '../service/ConnectionRuntimeService'
 import { SessionRefreshService } from '../service/SessionRefreshService'
 import { SystemRealtimeSample, SystemRefreshResult, SystemRefreshService } from '../service/SystemRefreshService'
+import { createDemoDashboardData, DEMO_MODE, DemoDashboardData } from '../demo/DemoData'
 
 const DOMAIN = 0x0000
 const TAG = 'HeszelWidget'
@@ -29,6 +30,15 @@ export default class EntryFormAbility extends FormExtensionAbility {
   onAddForm(want: Want): formBindingData.FormBindingData {
     const formId = this.readFormId(want)
     const repository = new WidgetSnapshotRepository(this.context)
+    if (DEMO_MODE) {
+      const demo: DemoDashboardData = createDemoDashboardData()
+      const updated = new Date().toLocaleTimeString()
+      const data = repository.formDataForSystems(demo.systems, updated, 0, demo.statsBySystem)
+      repository.addForm(formId)
+        .then(() => this.publishDemoSnapshot(repository))
+        .catch(() => {})
+      return formBindingData.createFormBindingData(data)
+    }
     const data = repository.loadSync()
     repository.addForm(formId)
       .catch(() => {})
@@ -36,6 +46,10 @@ export default class EntryFormAbility extends FormExtensionAbility {
   }
 
   onUpdateForm(formId: string): void {
+    if (DEMO_MODE) {
+      this.publishDemoSnapshot(new WidgetSnapshotRepository(this.context)).catch(() => {})
+      return
+    }
     new WidgetSnapshotRepository(this.context).updateForm(formId).catch(() => {})
   }
 
@@ -47,6 +61,10 @@ export default class EntryFormAbility extends FormExtensionAbility {
     if (event.event === 'page') {
       const page = Number(event.page ?? '0')
       new WidgetSnapshotRepository(this.context).updatePage(formId, Number.isFinite(page) ? page : 0).catch(() => {})
+      return
+    }
+    if (DEMO_MODE) {
+      this.publishDemoSnapshot(new WidgetSnapshotRepository(this.context)).catch(() => {})
       return
     }
     hilog.info(DOMAIN, TAG, 'Manual card refresh requested.')
@@ -69,6 +87,13 @@ export default class EntryFormAbility extends FormExtensionAbility {
     }
     const value = want.parameters[formInfo.FormParam.IDENTITY_KEY]
     return value === undefined ? '' : value.toString()
+  }
+
+  private async publishDemoSnapshot(repository: WidgetSnapshotRepository): Promise<void> {
+    const demo: DemoDashboardData = createDemoDashboardData()
+    await repository.saveSnapshot(
+      demo.systems, new Date().toLocaleTimeString(), '', null, demo.statsBySystem
+    )
   }
 
   private readEvent(message: string): WidgetEvent {

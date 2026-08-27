@@ -37,6 +37,7 @@ import { IrohPairingCodec } from '../service/IrohPairingCodec'
 import { SessionRefreshService } from '../service/SessionRefreshService'
 import { LoadedSystemDetail, SystemDetailLoader } from '../service/SystemDetailLoader'
 import { SystemRefreshService } from '../service/SystemRefreshService'
+import { createDemoDashboardData, DEMO_MODE, DemoDashboardData } from '../demo/DemoData'
 
 const DETAIL_CACHE_LIMIT = 10
 const SELECTION_PERSIST_DELAY_MS = 750
@@ -158,14 +159,24 @@ export class DashboardController {
   private detailLoader: SystemDetailLoader = new SystemDetailLoader()
   private settingsVisible: boolean = false
   private irohRouteRefreshTimer: number = -1
+  private demoStatsBySystem: Map<string, BeszelSystemStatsWire> = new Map<string, BeszelSystemStatsWire>()
 
   aboutToAppear(context: common.Context): void {
     this.context = context
+    if (DEMO_MODE) {
+      this.initializeDemo()
+      return
+    }
     this.restoreSession()
   }
 
   onPageShow(): void {
     this.pageVisible = true
+    if (DEMO_MODE) {
+      this.connectionPhase = ConnectionPhase.READY
+      this.realtimeConnected = true
+      return
+    }
     if (this.session.token.length > 0) {
       this.resumeConnection()
     }
@@ -175,6 +186,10 @@ export class DashboardController {
   onPageHide(): void {
     this.pageVisible = false
     this.stopIrohRouteRefresh()
+    if (DEMO_MODE) {
+      this.realtimeConnected = false
+      return
+    }
     this.flushSelectedId()
     this.invalidateDataWork()
     this.stopRealtime()
@@ -184,6 +199,10 @@ export class DashboardController {
   aboutToDisappear(): void {
     this.pageVisible = false
     this.stopIrohRouteRefresh()
+    if (DEMO_MODE) {
+      this.realtimeConnected = false
+      return
+    }
     this.invalidateDataWork()
     this.stopRealtime()
     this.stopBackgroundConnection()
@@ -635,6 +654,11 @@ export class DashboardController {
   }
 
   refresh(): void {
+    if (DEMO_MODE) {
+      this.lastRefresh = new Date().toLocaleTimeString()
+      this.publishDemoWidget()
+      return
+    }
     if (this.session.token.length === 0) {
       return
     }
@@ -935,6 +959,10 @@ export class DashboardController {
   }
 
   async signOut(): Promise<void> {
+    if (DEMO_MODE) {
+      this.initializeDemo()
+      return
+    }
     await this.flushSelectedId()
     this.invalidateDataWork()
     this.stopRealtime()
@@ -1048,8 +1076,7 @@ export class DashboardController {
   }
 
   async updateColorMode(mode: AppColorMode): Promise<void> {
-    const repository = this.sessionRepository
-    if (mode === this.colorMode || repository === null) {
+    if (mode === this.colorMode) {
       return
     }
     const previous = this.colorMode
@@ -1059,6 +1086,8 @@ export class DashboardController {
       this.dashboardError = this.localized('error_save_color_mode', 'Unable to save the color mode.')
       return
     }
+    const repository = this.sessionRepository
+    if (repository === null) return
     await this.savePreference(
       () => repository.saveColorMode(mode),
       () => {
@@ -1157,6 +1186,9 @@ export class DashboardController {
   }
 
   async updateGatewayKey(value: string): Promise<void> {
+    if (DEMO_MODE) {
+      return
+    }
     const gatewayKey = value.trim()
     if (this.connectionProfile.mode !== ConnectionMode.HTTP || gatewayKey === this.session.gatewayKey ||
       this.sessionRepository === null || this.session.token.length === 0) {
@@ -1216,6 +1248,47 @@ export class DashboardController {
     this.selectDetailState()
     this.scheduleSelectedIdPersistence()
     this.syncMetricSubscription()
+  }
+
+  private initializeDemo(): void {
+    const data: DemoDashboardData = createDemoDashboardData()
+    const session = new BeszelSession()
+    session.baseUrl = 'https://demo.example.com'
+    session.token = 'demo-session'
+    session.email = 'demo@heszel.app'
+
+    const profile = new ConnectionProfile()
+    profile.mode = ConnectionMode.HTTP
+    profile.httpBaseUrl = session.baseUrl
+
+    this.session = session
+    this.connectionProfile = profile
+    this.savedConnectionMode = ConnectionMode.HTTP
+    this.savedServerUrl = session.baseUrl
+    this.savedEmail = session.email
+    this.systems = data.systems
+    this.detailStates = data.details
+    this.demoStatsBySystem = data.statsBySystem
+    this.selectedId = data.selectedId
+    this.detailState = data.details.get(data.selectedId) ?? new SystemDetailState(data.selectedId)
+    this.pendingSelectedId = data.selectedId
+    this.lastPersistedSelectedId = data.selectedId
+    this.dashboardError = ''
+    this.lastRefresh = new Date().toLocaleTimeString()
+    this.connectionPhase = ConnectionPhase.READY
+    this.realtimeConnected = true
+    this.restoringSession = false
+    const context = this.context
+    if (context !== null) {
+      this.widgetRepository = new WidgetSnapshotRepository(context)
+      this.publishDemoWidget()
+    }
+  }
+
+  private publishDemoWidget(): void {
+    this.widgetRepository?.saveSnapshot(
+      this.systems, this.lastRefresh, '', null, this.demoStatsBySystem
+    ).catch(() => {})
   }
 
   private scheduleSelectedIdPersistence(): void {

@@ -204,6 +204,13 @@ export class WidgetSnapshotRepository {
     this.context = context
   }
 
+  formDataForSystems(systems: SystemSummary[], updated: string, requestedPage: number = 0,
+    statsBySystem: Map<string, BeszelSystemStatsWire> | null = null): WidgetFormData {
+    const snapshot = WidgetSnapshotData.fromSystems(systems, updated, this.context.resourceManager)
+    statsBySystem?.forEach((stats: BeszelSystemStatsWire, id: string) => snapshot.updateTraffic(id, stats))
+    return WidgetFormData.fromSnapshot(snapshot, requestedPage)
+  }
+
   loadSync(): WidgetFormData {
     try {
       const store = preferences.getPreferencesSync(this.context, { name: PREFERENCES_NAME })
