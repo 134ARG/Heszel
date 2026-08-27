@@ -1,6 +1,6 @@
 {
   "string": [
-    { "name": "module_desc", "value": "适配折叠屏的 Beszel 仪表盘" },
+    { "name": "module_desc", "value": "适配HarmonyOS的 Beszel 仪表盘" },
     { "name": "EntryAbility_desc", "value": "Heszel 监控仪表盘" },
     { "name": "EntryAbility_label", "value": "Heszel" },
     { "name": "EntryFormAbility_label", "value": "Heszel 系统" },
@@ -9,7 +9,7 @@
     { "name": "systems_widget_description", "value": "显示缓存的 Beszel 系统状态与资源用量" },
 
     { "name": "restoring_heszel", "value": "正在恢复 Heszel…" },
-    { "name": "login_tagline", "value": "专为折叠屏打造的 Beszel 仪表盘。" },
+    { "name": "login_tagline", "value": "专为HarmonyOS打造的 Beszel 仪表盘。" },
     { "name": "login_mode_http", "value": "Web 地址" },
     { "name": "login_mode_iroh", "value": "Iroh 二维码" },
     { "name": "hub_address", "value": "HUB 地址" },
