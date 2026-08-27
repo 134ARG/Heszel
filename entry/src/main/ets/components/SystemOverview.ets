@@ -22,13 +22,13 @@ export struct SystemOverview {
         Column({ space: 7 }) {
           Row() {
             Text('CPU')
-              .fontSize(13)
-              .fontColor($r('app.color.text_secondary'))
+              // .fontSize(13)
+              // .fontColor($r('app.color.text_secondary'))
               .layoutWeight(1)
             Text(`${this.metrics.cpuPercent.toFixed(0)}%`)
-              .fontSize(13)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.text_primary'))
+              // .fontSize(13)
+              // .fontWeight(FontWeight.Medium)
+              // .fontColor($r('app.color.text_primary'))
           }
           .width('100%')
           CpuTrendChart({ trend: this.cpuTrend, revision: this.cpuTrend.revision })
