@@ -30,6 +30,7 @@
     { "name": "metric_cpu", "value": "#55C990" },
     { "name": "metric_memory", "value": "#7AA7DC" },
     { "name": "metric_disk", "value": "#D6A35D" },
+    { "name": "metric_gpu", "value": "#A487D6" },
     { "name": "metric_danger", "value": "#FF746A" }
   ]
 }

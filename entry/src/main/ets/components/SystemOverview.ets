@@ -1,38 +1,18 @@
-import { HealthMetricsState, MetricTrendState, OverviewMetricsState } from '../model/SystemDetailModels'
+import { GpuMetricsState, HealthMetricsState, MetricTrendState, OverviewMetricsState } from '../model/SystemDetailModels'
 import { CpuTrendChart } from './CpuTrendChart'
-import { MetricTile } from './MetricTile'
 import { PressureBar } from './PressureBar'
 
 @Component
 export struct SystemOverview {
   @ObjectLink metrics: OverviewMetricsState
   @ObjectLink health: HealthMetricsState
+  @ObjectLink gpu: GpuMetricsState
   @ObjectLink cpuTrend: MetricTrendState
   @Prop compact: boolean = false
   @Prop liveSampling: boolean = false
 
   build() {
     Column({ space: 18 }) {
-      if (this.compact) {
-        Column({ space: 12 }) {
-          Row({ space: 12 }) {
-            MetricTile({ value: this.metrics.cpuPercent, label: 'CPU', suffix: '%' })
-            MetricTile({ value: this.metrics.memoryPercent, label: 'RAM', suffix: '%' })
-          }.width('100%')
-          Row({ space: 12 }) {
-            MetricTile({ value: this.metrics.diskPercent, label: 'Disk', suffix: '%' })
-            MetricTile({ value: this.metrics.gpuPercent, label: 'GPU', suffix: '%' })
-          }.width('100%')
-        }.width('100%')
-      } else {
-        Row({ space: 12 }) {
-          MetricTile({ value: this.metrics.cpuPercent, label: 'CPU', suffix: '%' })
-          MetricTile({ value: this.metrics.memoryPercent, label: 'RAM', suffix: '%' })
-          MetricTile({ value: this.metrics.diskPercent, label: 'Disk', suffix: '%' })
-          MetricTile({ value: this.metrics.gpuPercent, label: 'GPU', suffix: '%' })
-        }.width('100%')
-      }
-
       Column({ space: 14 }) {
         Text($r('app.string.resource_pressure'))
           .fontSize(17)
@@ -67,6 +47,10 @@ export struct SystemOverview {
         .width('100%')
         PressureBar({ value: this.metrics.memoryPercent, label: $r('app.string.memory'), color: $r('app.color.metric_memory') })
         PressureBar({ value: this.metrics.diskPercent, label: $r('app.string.disk'), color: $r('app.color.metric_disk') })
+        // info.g is the hub's "highest GPU" percent, matching the per-GPU bars below.
+        if (this.gpu.isVisible()) {
+          PressureBar({ value: this.metrics.gpuPercent, label: 'GPU', color: $r('app.color.metric_gpu') })
+        }
       }
       .width('100%')
       .padding(18)

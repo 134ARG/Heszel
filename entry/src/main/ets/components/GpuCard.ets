@@ -14,7 +14,7 @@ struct GpuSection {
         Divider().color($r('app.color.divider'))
       }
       Column({ space: 9 }) {
-        PressureBar({ value: this.gpu.usagePercent, label: this.gpu.name, color: $r('app.color.metric_cpu') })
+        PressureBar({ value: this.gpu.usagePercent, label: this.gpu.name, color: $r('app.color.metric_gpu') })
         if (this.gpu.hasMemory) {
           DetailValueRow({
             label: $r('app.string.gpu_memory'),

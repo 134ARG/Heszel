@@ -43,6 +43,7 @@ export struct SystemDetail {
           SystemOverview({
             metrics: this.detail.overview,
             health: this.detail.healthMetrics,
+            gpu: this.detail.gpuMetrics,
             cpuTrend: this.detail.cpuTrend,
             compact: this.compact,
             liveSampling: this.liveSampling
