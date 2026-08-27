@@ -371,10 +371,10 @@ export class DashboardController {
         next.push(fresh)
         this.systems = this.sortSystems(next)
       } else {
-        // Cards observe the mutated system directly; the header count and DashboardView's
-        // @Prop sync only need a fresh array reference when status changes.
+        // Cards observe field mutations directly. Status also affects array-level
+        // bindings and sort order, so publish a sorted copy only when it changes.
         if (existing.updateFrom(fresh)) {
-          this.systems = this.systems.slice()
+          this.systems = this.sortSystems(this.systems.slice())
         }
       }
       if (!(this.liveMetrics && this.realtimeConnected) && event.record.info?.cpu !== undefined) {

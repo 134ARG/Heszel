@@ -14,7 +14,8 @@ export struct SystemCard {
           .width(9)
           .height(9)
           .borderRadius(5)
-          .backgroundColor(this.system.isUp() ? $r('app.color.status_up') : $r('app.color.status_down'))
+          .backgroundColor(this.system.status === 'up' ?
+            $r('app.color.status_up') : $r('app.color.status_down'))
 
         Column({ space: 2 }) {
           Text(this.system.name)

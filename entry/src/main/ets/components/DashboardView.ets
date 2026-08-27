@@ -189,7 +189,7 @@ export struct DashboardView {
             onOpenSmartDetails: () => this.openSmartDetails()
           })
         },
-        (system: SystemSummary) => system.id
+        (system: SystemSummary) => `${system.id}:${system.status}`
       )
     }
     .width('100%')
@@ -298,7 +298,7 @@ export struct DashboardView {
               onSelect: () => this.selectSystem(system.id)
             })
           }
-        }, (system: SystemSummary) => system.id)
+        }, (system: SystemSummary) => `${system.id}:${system.status}`)
       }
       .layoutWeight(1)
       .width('100%')
