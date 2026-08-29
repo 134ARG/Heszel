@@ -1,3 +1,4 @@
+import { CpuChartHeight } from '../model/AppearanceModels'
 import { SystemDetailState } from '../model/SystemDetailModels'
 import { ContainersCard } from './ContainersCard'
 import { CpuCard } from './CpuCard'
@@ -20,6 +21,7 @@ export struct SystemDetail {
   @Prop agentVersion: string = ''
   @Prop compact: boolean = false
   @Prop liveSampling: boolean = false
+  @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   onBack: () => void = () => {}
   onScrollingChange: (scrolling: boolean) => void = () => {}
   onOpenSmartDetails: () => void = () => {}
@@ -46,7 +48,8 @@ export struct SystemDetail {
             gpu: this.detail.gpuMetrics,
             cpuTrend: this.detail.cpuTrend,
             compact: this.compact,
-            liveSampling: this.liveSampling
+            liveSampling: this.liveSampling,
+            cpuChartHeight: this.cpuChartHeight
           })
 
           if (this.detail.loading && !this.detail.loaded) {

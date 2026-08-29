@@ -5,7 +5,7 @@ import {
   BeszelSystemRealtimeEvent
 } from '../api/BeszelRealtimeClient'
 import { common, ConfigurationConstant } from '@kit.AbilityKit'
-import { AppColorMode } from '../model/AppearanceModels'
+import { AppColorMode, CpuChartHeight } from '../model/AppearanceModels'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
 import { ConnectionMode, ConnectionPhase, ConnectionProfile, LoginRequest } from '../model/ConnectionModels'
 import {
@@ -43,6 +43,7 @@ export class DashboardController {
   liveMetrics: boolean = false
   updateWhileScrolling: boolean = false
   colorMode: AppColorMode = AppColorMode.SYSTEM
+  cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   realtimeConnected: boolean = false
   connectionPhase: ConnectionPhase = ConnectionPhase.STOPPED
   restoringSession: boolean = true
@@ -698,6 +699,7 @@ export class DashboardController {
       this.connectionProfile = stored.connectionProfile()
       this.updateWhileScrolling = stored.updateWhileScrolling
       this.colorMode = stored.colorMode
+      this.cpuChartHeight = stored.cpuChartHeight
       this.applyColorMode(stored.colorMode)
       this.pendingSelectedId = stored.selectedSystemId
       this.lastPersistedSelectedId = stored.selectedSystemId
@@ -781,6 +783,23 @@ export class DashboardController {
       this.colorMode = previous
       this.applyColorMode(previous)
       this.dashboardError = this.localized('error_save_color_mode', 'Unable to save the color mode.')
+    }
+  }
+
+  async updateCpuChartHeight(height: CpuChartHeight): Promise<void> {
+    if (height === this.cpuChartHeight || this.sessionRepository === null) {
+      return
+    }
+    const previous = this.cpuChartHeight
+    this.cpuChartHeight = height
+    try {
+      await this.sessionRepository.saveCpuChartHeight(height)
+    } catch (_) {
+      if (this.cpuChartHeight === height) {
+        this.cpuChartHeight = previous
+      }
+      this.dashboardError = this.localized(
+        'error_save_cpu_chart_height', 'Unable to save the CPU chart height preference.')
     }
   }
 

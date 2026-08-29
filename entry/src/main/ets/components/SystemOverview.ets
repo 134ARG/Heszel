@@ -1,3 +1,4 @@
+import { CpuChartHeight, cpuChartHeightVp } from '../model/AppearanceModels'
 import { GpuMetricsState, HealthMetricsState, MetricTrendState, OverviewMetricsState } from '../model/SystemDetailModels'
 import { CpuTrendChart } from './CpuTrendChart'
 import { PressureBar } from './PressureBar'
@@ -10,6 +11,7 @@ export struct SystemOverview {
   @ObjectLink cpuTrend: MetricTrendState
   @Prop compact: boolean = false
   @Prop liveSampling: boolean = false
+  @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
 
   build() {
     Column({ space: 18 }) {
@@ -31,7 +33,11 @@ export struct SystemOverview {
               // .fontColor($r('app.color.text_primary'))
           }
           .width('100%')
-          CpuTrendChart({ trend: this.cpuTrend, revision: this.cpuTrend.revision })
+          CpuTrendChart({
+            trend: this.cpuTrend,
+            revision: this.cpuTrend.revision,
+            chartHeight: cpuChartHeightVp(this.cpuChartHeight)
+          })
           Row() {
             Text($r('app.string.latest_cpu_samples'))
               .fontSize(10)

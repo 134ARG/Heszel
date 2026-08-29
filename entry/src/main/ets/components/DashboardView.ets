@@ -1,5 +1,5 @@
 import { SystemSummary } from '../model/BeszelModels'
-import { AppColorMode } from '../model/AppearanceModels'
+import { AppColorMode, CpuChartHeight } from '../model/AppearanceModels'
 import { ConnectionMode } from '../model/ConnectionModels'
 import { SystemDetailState } from '../model/SystemDetailModels'
 import { SettingsView } from './SettingsView'
@@ -27,6 +27,7 @@ export struct DashboardView {
   @Prop liveMetrics: boolean = false
   @Prop updateWhileScrolling: boolean = false
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
+  @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   @Prop realtimeConnected: boolean = false
   @Prop connectionMode: ConnectionMode = ConnectionMode.HTTP
   @Prop connectionLabel: string = ''
@@ -38,6 +39,7 @@ export struct DashboardView {
   onLiveMetricsChange: (enabled: boolean) => void = () => {}
   onUpdateWhileScrollingChange: (enabled: boolean) => void = () => {}
   onColorModeChange: (mode: AppColorMode) => void = () => {}
+  onCpuChartHeightChange: (height: CpuChartHeight) => void = () => {}
   onDetailVisibilityChange: (visible: boolean) => void = () => {}
   onDetailScrollingChange: (scrolling: boolean) => void = () => {}
   onGatewayKeyChange: (gatewayKey: string) => void = () => {}
@@ -135,6 +137,7 @@ export struct DashboardView {
           errorMessage: this.errorMessage,
           updateWhileScrolling: this.updateWhileScrolling,
           colorMode: this.colorMode,
+          cpuChartHeight: this.cpuChartHeight,
           onBack: () => {
             this.pathStack.pop()
           },
@@ -149,6 +152,9 @@ export struct DashboardView {
           },
           onColorModeChange: (mode: AppColorMode) => {
             this.onColorModeChange(mode)
+          },
+          onCpuChartHeightChange: (height: CpuChartHeight) => {
+            this.onCpuChartHeightChange(height)
           }
         })
       }
@@ -184,6 +190,7 @@ export struct DashboardView {
             agentVersion: system.agentVersion,
             compact: !this.expanded,
             liveSampling: this.liveMetrics && this.realtimeConnected,
+            cpuChartHeight: this.cpuChartHeight,
             onBack: () => this.pathStack.pop(),
             onScrollingChange: (scrolling: boolean) => this.onDetailScrollingChange(scrolling),
             onOpenSmartDetails: () => this.openSmartDetails()

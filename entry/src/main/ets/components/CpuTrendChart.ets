@@ -1,6 +1,5 @@
 import { MetricTrendState } from '../model/SystemDetailModels'
 
-const CHART_HEIGHT = 62
 const PLOT_TOP = 5
 const PLOT_BOTTOM_INSET = 5
 const LABEL_COLUMN_WIDTH = 24
@@ -9,6 +8,7 @@ const LABEL_COLUMN_WIDTH = 24
 export struct CpuTrendChart {
   @ObjectLink trend: MetricTrendState
   @Prop @Watch('onRevisionChanged') revision: number = 0
+  @Prop chartHeight: number = 96
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
   private ready: boolean = false
@@ -27,21 +27,21 @@ export struct CpuTrendChart {
         Text('50%')
           .fontSize(9)
           .fontColor($r('app.color.text_tertiary'))
-          .position({ x: 0, y: PLOT_TOP + (CHART_HEIGHT - PLOT_TOP - PLOT_BOTTOM_INSET) / 2 })
+          .position({ x: 0, y: PLOT_TOP + (this.chartHeight - PLOT_TOP - PLOT_BOTTOM_INSET) / 2 })
           .markAnchor({ x: 0, y: '50%' })
         Text('0%')
           .fontSize(9)
           .fontColor($r('app.color.text_tertiary'))
-          .position({ x: 0, y: PLOT_TOP + (CHART_HEIGHT - PLOT_TOP - PLOT_BOTTOM_INSET) })
+          .position({ x: 0, y: PLOT_TOP + (this.chartHeight - PLOT_TOP - PLOT_BOTTOM_INSET) })
           .markAnchor({ x: 0, y: '50%' })
       }
       .width(LABEL_COLUMN_WIDTH)
-      .height(CHART_HEIGHT)
+      .height(this.chartHeight)
 
       Column({ space: 2 }) {
         Canvas(this.context)
           .width('100%')
-          .height(CHART_HEIGHT)
+          .height(this.chartHeight)
           .backgroundColor($r('app.color.surface_input'))
           .borderRadius(8)
           .onReady(() => {
