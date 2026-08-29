@@ -14,7 +14,7 @@
 
 Heszel 是一款专为 HarmonyOS 设备打造的 [Beszel](https://beszel.dev/) 监控客户端。连接自己的 Beszel Hub 后，可以在手机、平板或折叠屏上集中查看所有服务器的运行状态和资源用量。
 
-Heszel 专注于移动端监控体验，本身不包含 Beszel Hub 或 Agent。使用前需要先部署 Beszel，并将需要监控的系统添加到 Hub。
+Heszel 专注于移动端监控体验，本身不包含 Beszel Hub、Agent 或 Iroh 网关。使用前需要先部署 Beszel，并将需要监控的系统添加到 Hub；如需通过 Iroh 连接，还需单独部署 [iroh-heszel](https://github.com/134ARG/iroh-heszel) 提供的 Linux 网关。
 
 ## 主要功能
 
@@ -36,7 +36,7 @@ Heszel 专注于移动端监控体验，本身不包含 Beszel Hub 或 Agent。�
 | 方式 | 说明 |
 | --- | --- |
 | HTTP 直连 | 使用 Beszel Hub 地址登录；也支持可选的 Heszel 网关访问密钥。 |
-| Iroh | 扫描 Heszel Iroh 网关提供的配对二维码，通过直连地址或中继连接 Hub。Beszel 账户凭据与 Iroh 配对信息分开保存。 |
+| Iroh | 扫描 [iroh-heszel](https://github.com/134ARG/iroh-heszel) Linux 网关提供的配对二维码，通过直连地址或中继连接 Hub。Beszel 账户凭据与 Iroh 配对信息分开保存。 |
 
 ## 界面预览
 
@@ -68,7 +68,7 @@ Heszel 专注于移动端监控体验，本身不包含 Beszel Hub 或 Agent。�
 
 1. 部署并配置 [Beszel Hub 与 Agent](https://beszel.dev/guide/getting-started)。
 2. 准备一个可以访问目标系统的 Beszel 账户。
-3. 确保 HarmonyOS 设备可以访问 Hub，或准备 Heszel Iroh 网关的配对二维码。
+3. 确保 HarmonyOS 设备可以访问 Hub；如需通过 Iroh 连接，请部署 [iroh-heszel](https://github.com/134ARG/iroh-heszel) Linux 网关并准备配对二维码。
 
 ## 许可证
 

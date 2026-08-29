@@ -14,7 +14,7 @@
 
 Heszel is a [Beszel](https://beszel.dev/) monitoring client designed for HarmonyOS. Connect it to your own Beszel Hub to keep an eye on all your servers from a phone, tablet, or foldable device.
 
-Heszel focuses on the mobile monitoring experience and does not include a Beszel Hub or Agent. Beszel must be deployed first, with the systems you want to monitor added to your Hub.
+Heszel focuses on the mobile monitoring experience and does not include a Beszel Hub, Agent, or Iroh gateway. Beszel must be deployed first, with the systems you want to monitor added to your Hub. To connect through Iroh, deploy the Linux gateway provided by the separate [iroh-heszel](https://github.com/134ARG/iroh-heszel) project.
 
 ## Features
 
@@ -36,7 +36,7 @@ Heszel focuses on the mobile monitoring experience and does not include a Beszel
 | Mode | Description |
 | --- | --- |
 | Direct HTTP | Sign in with your Beszel Hub address. An optional Heszel gateway access key is also supported. |
-| Iroh | Scan a pairing QR code from a Heszel Iroh gateway, then reach the Hub through direct addresses or a relay. Beszel credentials and Iroh pairing data are stored separately. |
+| Iroh | Scan a pairing QR code from the [iroh-heszel](https://github.com/134ARG/iroh-heszel) Linux gateway, then reach the Hub through direct addresses or a relay. Beszel credentials and Iroh pairing data are stored separately. |
 
 ## Screenshots
 
@@ -68,7 +68,7 @@ Heszel focuses on the mobile monitoring experience and does not include a Beszel
 
 1. Deploy and configure a [Beszel Hub and Agent](https://beszel.dev/guide/getting-started).
 2. Prepare a Beszel account that can access the systems you want to monitor.
-3. Make sure your HarmonyOS device can reach the Hub, or prepare a pairing QR code from a Heszel Iroh gateway.
+3. Make sure your HarmonyOS device can reach the Hub. To connect through Iroh, deploy the [iroh-heszel](https://github.com/134ARG/iroh-heszel) Linux gateway and prepare its pairing QR code.
 
 ## License
 
