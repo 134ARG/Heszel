@@ -56,8 +56,8 @@ export struct SystemCard {
     .borderRadius(16)
     .backgroundColor(this.selected ? $r('app.color.surface_selected') : $r('app.color.surface'))
     .border({
-      width: this.selected ? 1 : 0,
-      color: $r('app.color.selected_border')
+      width: 1,
+      color: this.selected ? $r('app.color.selected_border') : Color.Transparent
     })
     .onClick(() => {
       this.onSelect()
