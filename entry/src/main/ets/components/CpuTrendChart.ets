@@ -43,7 +43,7 @@ export struct CpuTrendChart {
           .width('100%')
           .height(this.chartHeight)
           .backgroundColor($r('app.color.surface_input'))
-          .borderRadius(8)
+          .borderRadius(4)
           .onReady(() => {
             this.ready = true
             this.draw()
@@ -125,6 +125,16 @@ export struct CpuTrendChart {
 
   private drawLine(height: number, count: number, capacity: number, offset: number,
     plotWidth: number, plotHeight: number, color: number): void {
+    if (count === 1) {
+      const x = 4 + offset * plotWidth / (capacity - 1)
+      const y = height - 5 - this.trend.samples[0] * plotHeight / 100
+      this.context.beginPath()
+      this.context.arc(x, y, 1, 0, Math.PI * 2)
+      this.context.fillStyle = color
+      this.context.fill()
+      return
+    }
+
     this.context.beginPath()
     for (let index = 0; index < count; index += 1) {
       const x = 4 + (offset + index) * plotWidth / (capacity - 1)
@@ -132,14 +142,12 @@ export struct CpuTrendChart {
       if (index === 0) this.context.moveTo(x, y)
       else this.context.lineTo(x, y)
     }
-    if (count === 1) this.context.lineTo(4.1 + offset * plotWidth / (capacity - 1),
-      height - 5 - this.trend.samples[0] * plotHeight / 100)
-    // Round joins keep steep sample-to-sample turns from growing miter needles,
-    // and round caps keep a lone sample visible as a dot.
+    // Round joins keep steep sample-to-sample turns from growing miter needles;
+    // butt caps keep the line endpoints aligned with the filled area.
     this.context.strokeStyle = color
     this.context.lineWidth = 2
     this.context.lineJoin = 'round'
-    this.context.lineCap = 'round'
+    this.context.lineCap = 'butt'
     this.context.stroke()
   }
 
