@@ -191,6 +191,7 @@ export struct DashboardView {
             compact: !this.expanded,
             liveSampling: this.liveMetrics && this.realtimeConnected,
             cpuChartHeight: this.cpuChartHeight,
+            colorMode: this.colorMode,
             onBack: () => this.pathStack.pop(),
             onScrollingChange: (scrolling: boolean) => this.onDetailScrollingChange(scrolling),
             onOpenSmartDetails: () => this.openSmartDetails()

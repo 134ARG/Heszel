@@ -1,3 +1,4 @@
+import { AppColorMode } from '../model/AppearanceModels'
 import { MetricTrendState } from '../model/SystemDetailModels'
 
 const PLOT_TOP = 5
@@ -7,7 +8,8 @@ const LABEL_COLUMN_WIDTH = 24
 @Component
 export struct CpuTrendChart {
   @ObjectLink trend: MetricTrendState
-  @Prop @Watch('onRevisionChanged') revision: number = 0
+  @Prop @Watch('onRedrawTriggerChanged') revision: number = 0
+  @Prop @Watch('onRedrawTriggerChanged') colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop chartHeight: number = 96
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
@@ -80,7 +82,7 @@ export struct CpuTrendChart {
       .layoutWeight(1)
   }
 
-  private onRevisionChanged(): void {
+  private onRedrawTriggerChanged(): void {
     if (this.ready) this.draw()
   }
 
