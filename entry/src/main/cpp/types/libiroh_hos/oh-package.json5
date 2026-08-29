@@ -4,3 +4,4 @@
   "description": "HarmonyOS N-API bindings for the iroh loopback tunnel",
   "types": "./index.d.ts"
 }
+
