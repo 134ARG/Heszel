@@ -8,7 +8,7 @@ struct NetworkInterfaceSection {
   @ObjectLink networkInterface: NetworkInterfaceMetric
 
   build() {
-    Column() {
+    Column({ space: 12 }) {
       Divider().color($r('app.color.divider'))
       Column({ space: 8 }) {
         Text(this.networkInterface.name)

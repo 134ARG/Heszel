@@ -9,7 +9,7 @@ struct ContainerSection {
   @Prop showDivider: boolean = false
 
   build() {
-    Column() {
+    Column({ space: 12 }) {
       if (this.showDivider) {
         Divider().color($r('app.color.divider'))
       }
