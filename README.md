@@ -69,3 +69,7 @@ Heszel 专注于移动端监控体验，本身不包含 Beszel Hub 或 Agent。�
 1. 部署并配置 [Beszel Hub 与 Agent](https://beszel.dev/guide/getting-started)。
 2. 准备一个可以访问目标系统的 Beszel 账户。
 3. 确保 HarmonyOS 设备可以访问 Hub，或准备 Heszel Iroh 网关的配对二维码。
+
+## 许可证
+
+本项目采用 [GNU 通用公共许可证第 3 版](LICENSE)（GPL-3.0-only）。

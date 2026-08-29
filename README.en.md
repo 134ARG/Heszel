@@ -69,3 +69,7 @@ Heszel focuses on the mobile monitoring experience and does not include a Beszel
 1. Deploy and configure a [Beszel Hub and Agent](https://beszel.dev/guide/getting-started).
 2. Prepare a Beszel account that can access the systems you want to monitor.
 3. Make sure your HarmonyOS device can reach the Hub, or prepare a pairing QR code from a Heszel Iroh gateway.
+
+## License
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE) (GPL-3.0-only).
