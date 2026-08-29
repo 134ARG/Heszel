@@ -37,7 +37,7 @@ export struct GpuCard {
 
   build() {
     Column({ space: 12 }) {
-      DetailCardHeader({ title: 'GPU' })
+      DetailCardHeader({ title: $r('app.string.metric_gpu') })
 
       ForEach(this.state.gpus, (gpu: GpuMetric, index: number) => {
         GpuSection({ gpu: gpu, showDivider: index > 0 })

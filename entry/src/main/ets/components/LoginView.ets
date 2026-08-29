@@ -50,7 +50,7 @@ export struct LoginView {
     Scroll() {
       Column({ space: 18 }) {
         Column({ space: 6 }) {
-          Text('Heszel')
+          Text($r('app.string.app_name'))
             .fontSize(38)
             .fontWeight(FontWeight.Bold)
             .fontColor($r('app.color.text_primary'))
@@ -146,7 +146,7 @@ export struct LoginView {
           .fontColor($r('app.color.text_label'))
           .width('100%')
 
-        TextInput({ placeholder: 'https://beszel.example.com', text: this.serverUrl })
+        TextInput({ placeholder: $r('app.string.hub_address_placeholder'), text: this.serverUrl })
           .attributeModifier(new HeszelTextInputStyle(this.focusedInput === LoginInputField.SERVER_URL))
           .onFocus(() => {
             this.focusedInput = LoginInputField.SERVER_URL
@@ -252,7 +252,7 @@ export struct LoginView {
           .fontColor($r('app.color.text_label'))
           .width('100%')
 
-        TextInput({ placeholder: 'you@example.com', text: this.email })
+        TextInput({ placeholder: $r('app.string.email_placeholder'), text: this.email })
           .type(InputType.Email)
           .attributeModifier(new HeszelTextInputStyle(this.focusedInput === LoginInputField.EMAIL))
           .onFocus(() => {

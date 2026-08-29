@@ -21,7 +21,7 @@ export struct SystemOverview {
           .width('100%')
         Column({ space: 7 }) {
           Row() {
-            Text('CPU')
+            Text($r('app.string.metric_cpu'))
               // .fontSize(13)
               // .fontColor($r('app.color.text_secondary'))
               .layoutWeight(1)
@@ -49,7 +49,11 @@ export struct SystemOverview {
         PressureBar({ value: this.metrics.diskPercent, label: $r('app.string.disk'), color: $r('app.color.metric_disk') })
         // info.g is the hub's "highest GPU" percent, matching the per-GPU bars below.
         if (this.gpu.isVisible()) {
-          PressureBar({ value: this.metrics.gpuPercent, label: 'GPU', color: $r('app.color.metric_gpu') })
+          PressureBar({
+            value: this.metrics.gpuPercent,
+            label: $r('app.string.metric_gpu'),
+            color: $r('app.color.metric_gpu')
+          })
         }
       }
       .width('100%')
@@ -102,12 +106,12 @@ export struct SystemOverview {
           .fontSize(20)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.text_primary'))
-        Text('1m       5m       15m').fontSize(11).fontColor($r('app.color.text_tertiary'))
+        Text($r('app.string.load_intervals_compact')).fontSize(11).fontColor($r('app.color.text_tertiary'))
       } else {
         Row({ space: 8 }) {
-          this.loadValue(this.metrics.loadOne, '1m')
-          this.loadValue(this.metrics.loadFive, '5m')
-          this.loadValue(this.metrics.loadFifteen, '15m')
+          this.loadValue(this.metrics.loadOne, $r('app.string.load_interval_1m'))
+          this.loadValue(this.metrics.loadFive, $r('app.string.load_interval_5m'))
+          this.loadValue(this.metrics.loadFifteen, $r('app.string.load_interval_15m'))
         }
         .width('100%')
       }
@@ -115,7 +119,7 @@ export struct SystemOverview {
   }
 
   @Builder
-  private loadValue(value: number, label: string) {
+  private loadValue(value: number, label: ResourceStr) {
     Column({ space: 3 }) {
       Text(value.toFixed(2))
         .fontSize(20)

@@ -212,7 +212,7 @@ export struct DashboardView {
   @Builder
   private titleBlock() {
     Column({ space: 2 }) {
-      Text('Heszel')
+      Text($r('app.string.app_name'))
         .fontSize(24)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))

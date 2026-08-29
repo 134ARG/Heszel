@@ -38,7 +38,7 @@ struct SystemsCard {
   @Builder
   private emptyPage() {
     Column({ space: 8 }) {
-      Text('Heszel')
+      Text($r('app.string.app_name'))
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
@@ -98,7 +98,7 @@ struct SystemsCard {
       Row({ space: 9 }) {
         Column() {
           Row({ space: 7 }) {
-            Text('CPU')
+            Text($r('app.string.metric_cpu'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_label'))
@@ -129,7 +129,7 @@ struct SystemsCard {
           .layoutWeight(1)
 
           Row({ space: 7 }) {
-            Text('RAM')
+            Text($r('app.string.metric_ram'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_label'))
@@ -160,7 +160,7 @@ struct SystemsCard {
           .layoutWeight(1)
 
           Row({ space: 7 }) {
-            Text('DISK')
+            Text($r('app.string.metric_disk'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_label'))
@@ -200,7 +200,7 @@ struct SystemsCard {
 
         Row({ space: 7 }) {
           Column({ space: 2 }) {
-            Text('NETWORK')
+            Text($r('app.string.widget_network'))
               .fontSize(9)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_label'))
@@ -222,7 +222,7 @@ struct SystemsCard {
             .backgroundColor($r('app.color.divider'))
 
           Column({ space: 2 }) {
-            Text('DISK I/O')
+            Text($r('app.string.widget_disk_io'))
               .fontSize(9)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_label'))

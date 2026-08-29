@@ -24,7 +24,10 @@ export struct MemoryCard {
         DetailValueRow({ label: $r('app.string.buffer_cache'), value: formatGigabytes(this.state.cacheGb) })
       }
       if (this.state.zfsArcGb > 0) {
-        DetailValueRow({ label: 'ZFS ARC', value: formatGigabytes(this.state.zfsArcGb) })
+        DetailValueRow({
+          label: $r('app.string.metric_zfs_arc'),
+          value: formatGigabytes(this.state.zfsArcGb)
+        })
       }
       if (this.state.swapTotalGb > 0) {
         DetailValueRow({

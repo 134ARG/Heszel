@@ -4,7 +4,7 @@ import { SystemMetric, SystemSummary } from '../model/BeszelModels'
 export struct MetricChip {
   @ObjectLink system: SystemSummary
   @Prop metric: SystemMetric = SystemMetric.CPU
-  @Prop label: string = ''
+  @Prop label: ResourceStr = ''
   @Prop selected: boolean = false
 
   build() {

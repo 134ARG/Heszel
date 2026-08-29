@@ -25,7 +25,7 @@ export struct SystemCard {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-          Text(this.system.host.length > 0 ? this.system.host : this.system.status.toUpperCase())
+          Text(this.system.host.length > 0 ? this.system.host : this.statusLabel())
             .fontSize(12)
             .fontColor($r('app.color.text_secondary'))
             .maxLines(1)
@@ -45,9 +45,24 @@ export struct SystemCard {
       .width('100%')
 
       Row({ space: 8 }) {
-        MetricChip({ system: this.system, metric: SystemMetric.CPU, label: 'CPU', selected: this.selected })
-        MetricChip({ system: this.system, metric: SystemMetric.Memory, label: 'RAM', selected: this.selected })
-        MetricChip({ system: this.system, metric: SystemMetric.Disk, label: 'DISK', selected: this.selected })
+        MetricChip({
+          system: this.system,
+          metric: SystemMetric.CPU,
+          label: $r('app.string.metric_cpu'),
+          selected: this.selected
+        })
+        MetricChip({
+          system: this.system,
+          metric: SystemMetric.Memory,
+          label: $r('app.string.metric_ram'),
+          selected: this.selected
+        })
+        MetricChip({
+          system: this.system,
+          metric: SystemMetric.Disk,
+          label: $r('app.string.metric_disk'),
+          selected: this.selected
+        })
       }
       .width('100%')
     }
@@ -62,6 +77,16 @@ export struct SystemCard {
     .onClick(() => {
       this.onSelect()
     })
+  }
+
+  private statusLabel(): ResourceStr {
+    if (this.system.status === 'up') {
+      return $r('app.string.status_up')
+    }
+    if (this.system.status === 'down') {
+      return $r('app.string.status_down')
+    }
+    return $r('app.string.status_unknown')
   }
 
 }

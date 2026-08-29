@@ -21,7 +21,10 @@ struct ContainerSection {
           .width('100%')
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        DetailValueRow({ label: 'CPU', value: `${this.container.cpuPercent.toFixed(1)}%` })
+        DetailValueRow({
+          label: $r('app.string.metric_cpu'),
+          value: `${this.container.cpuPercent.toFixed(1)}%`
+        })
         DetailValueRow({ label: $r('app.string.memory'), value: formatGigabytes(this.container.memoryGb) })
         if (this.container.hasNetwork) {
           DetailValueRow({
