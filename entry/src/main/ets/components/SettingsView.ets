@@ -1,6 +1,7 @@
 import { i18n } from '@kit.LocalizationKit'
 import { AppColorMode } from '../model/AppearanceModels'
 import { ConnectionMode } from '../model/ConnectionModels'
+import { HeszelTextInputStyle } from '../styles/HeszelTextInputStyle'
 import { PageHeader } from './PageHeader'
 
 @Component
@@ -14,6 +15,7 @@ export struct SettingsView {
   @Prop updateWhileScrolling: boolean = false
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @State private gatewayKeyInput: string = ''
+  @State private gatewayKeyInputFocused: boolean = false
   @State private languageCode: string = 'default'
   onBack: () => void = () => {}
   onSignOut: () => void = () => {}
@@ -173,13 +175,13 @@ export struct SettingsView {
                 TextInput({ placeholder: $r('app.string.enter_replacement_key'), text: this.gatewayKeyInput })
                   .type(InputType.Password)
                   .showPasswordIcon(false)
-                  .height(48)
-                  .width('100%')
-                  .fontColor($r('app.color.text_primary'))
-                  .placeholderColor($r('app.color.text_tertiary'))
-                  .caretColor($r('app.color.action'))
-                  .backgroundColor($r('app.color.surface_input'))
-                  .borderRadius(12)
+                  .attributeModifier(new HeszelTextInputStyle(this.gatewayKeyInputFocused, 48, 12))
+                  .onFocus(() => {
+                    this.gatewayKeyInputFocused = true
+                  })
+                  .onBlur(() => {
+                    this.gatewayKeyInputFocused = false
+                  })
                   .onChange((value: string) => {
                     this.gatewayKeyInput = value
                   })

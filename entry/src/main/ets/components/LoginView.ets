@@ -2,6 +2,15 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { ConnectionMode, IrohPairing, LoginRequest } from '../model/ConnectionModels'
 import { IrohPairingCodec } from '../service/IrohPairingCodec'
 import { IrohPairingService } from '../service/IrohPairingService'
+import { HeszelTextInputStyle } from '../styles/HeszelTextInputStyle'
+
+enum LoginInputField {
+  NONE,
+  SERVER_URL,
+  GATEWAY_KEY,
+  EMAIL,
+  PASSWORD
+}
 
 @Component
 export struct LoginView {
@@ -20,6 +29,7 @@ export struct LoginView {
   @State private pairing: IrohPairing = new IrohPairing()
   @State private scanning: boolean = false
   @State private scanError: string = ''
+  @State private focusedInput: LoginInputField = LoginInputField.NONE
   onLogin: (request: LoginRequest) => void = () => {}
 
   aboutToAppear(): void {
@@ -137,13 +147,13 @@ export struct LoginView {
           .width('100%')
 
         TextInput({ placeholder: 'https://beszel.example.com', text: this.serverUrl })
-          .height(52)
-          .width('100%')
-          .fontColor($r('app.color.text_primary'))
-          .placeholderColor($r('app.color.text_tertiary'))
-          .caretColor($r('app.color.action'))
-          .backgroundColor($r('app.color.surface_input'))
-          .borderRadius(14)
+          .attributeModifier(new HeszelTextInputStyle(this.focusedInput === LoginInputField.SERVER_URL))
+          .onFocus(() => {
+            this.focusedInput = LoginInputField.SERVER_URL
+          })
+          .onBlur(() => {
+            this.clearFocusedInput(LoginInputField.SERVER_URL)
+          })
           .onChange((value: string) => {
             this.serverUrl = value
           })
@@ -158,13 +168,13 @@ export struct LoginView {
 
         TextInput({ placeholder: $r('app.string.gateway_key_placeholder'), text: this.gatewayKey })
           .type(InputType.Password)
-          .height(52)
-          .width('100%')
-          .fontColor($r('app.color.text_primary'))
-          .placeholderColor($r('app.color.text_tertiary'))
-          .caretColor($r('app.color.action'))
-          .backgroundColor($r('app.color.surface_input'))
-          .borderRadius(14)
+          .attributeModifier(new HeszelTextInputStyle(this.focusedInput === LoginInputField.GATEWAY_KEY))
+          .onFocus(() => {
+            this.focusedInput = LoginInputField.GATEWAY_KEY
+          })
+          .onBlur(() => {
+            this.clearFocusedInput(LoginInputField.GATEWAY_KEY)
+          })
           .onChange((value: string) => {
             this.gatewayKey = value
           })
@@ -244,13 +254,13 @@ export struct LoginView {
 
         TextInput({ placeholder: 'you@example.com', text: this.email })
           .type(InputType.Email)
-          .height(52)
-          .width('100%')
-          .fontColor($r('app.color.text_primary'))
-          .placeholderColor($r('app.color.text_tertiary'))
-          .caretColor($r('app.color.action'))
-          .backgroundColor($r('app.color.surface_input'))
-          .borderRadius(14)
+          .attributeModifier(new HeszelTextInputStyle(this.focusedInput === LoginInputField.EMAIL))
+          .onFocus(() => {
+            this.focusedInput = LoginInputField.EMAIL
+          })
+          .onBlur(() => {
+            this.clearFocusedInput(LoginInputField.EMAIL)
+          })
           .onChange((value: string) => {
             this.email = value
           })
@@ -265,13 +275,13 @@ export struct LoginView {
 
         TextInput({ placeholder: $r('app.string.password_placeholder'), text: this.password })
           .type(InputType.Password)
-          .height(52)
-          .width('100%')
-          .fontColor($r('app.color.text_primary'))
-          .placeholderColor($r('app.color.text_tertiary'))
-          .caretColor($r('app.color.action'))
-          .backgroundColor($r('app.color.surface_input'))
-          .borderRadius(14)
+          .attributeModifier(new HeszelTextInputStyle(this.focusedInput === LoginInputField.PASSWORD))
+          .onFocus(() => {
+            this.focusedInput = LoginInputField.PASSWORD
+          })
+          .onBlur(() => {
+            this.clearFocusedInput(LoginInputField.PASSWORD)
+          })
           .onChange((value: string) => {
             this.password = value
           })
@@ -310,6 +320,12 @@ export struct LoginView {
     request.email = this.email
     request.password = this.password
     this.onLogin(request)
+  }
+
+  private clearFocusedInput(field: LoginInputField): void {
+    if (this.focusedInput === field) {
+      this.focusedInput = LoginInputField.NONE
+    }
   }
 
   private routeDescription(): ResourceStr {
