@@ -218,8 +218,13 @@ export class BeszelClient {
 
   async getSystemStatsHistory(token: string, systemId: string,
     limit: number = 60): Promise<BeszelSystemStatsRecordWire[]> {
+    return this.getSystemStatsHistoryByType(token, systemId, '1m', limit)
+  }
+
+  async getSystemStatsHistoryByType(token: string, systemId: string,
+    recordType: string, limit: number = 100): Promise<BeszelSystemStatsRecordWire[]> {
     const request = this.createRequest()
-    const filter = encodeURIComponent(`system='${systemId}' && type='1m'`)
+    const filter = encodeURIComponent(`system='${systemId}' && type='${recordType}'`)
     const path = `/api/collections/system_stats/records?page=1&perPage=${limit}&sort=-created&filter=${filter}` +
       '&fields=created,stats&skipTotal=true'
     try {

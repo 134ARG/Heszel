@@ -30,10 +30,16 @@ struct CpuCoreChip {
 @Component
 export struct CpuCard {
   @ObjectLink state: CpuMetricsState
+  onOpenHistory: () => void = () => {}
 
   build() {
     Column({ space: 12 }) {
-      DetailCardHeader({ title: $r('app.string.cpu_detail') })
+      DetailCardHeader({
+        title: $r('app.string.cpu_detail'),
+        showAction: true,
+        actionLabel: $r('app.string.history_chart'),
+        onAction: () => this.onOpenHistory()
+      })
 
       if (this.state.breakdown.length >= 5) {
         DetailValueRow({ label: $r('app.string.cpu_user'), value: `${this.state.breakdown[0].toFixed(0)}%` })

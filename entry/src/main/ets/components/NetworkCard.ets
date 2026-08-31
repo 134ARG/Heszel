@@ -36,10 +36,16 @@ struct NetworkInterfaceSection {
 @Component
 export struct NetworkCard {
   @ObjectLink state: NetworkMetricsState
+  onOpenHistory: () => void = () => {}
 
   build() {
     Column({ space: 11 }) {
-      DetailCardHeader({ title: $r('app.string.network') })
+      DetailCardHeader({
+        title: $r('app.string.network'),
+        showAction: true,
+        actionLabel: $r('app.string.history_chart'),
+        onAction: () => this.onOpenHistory()
+      })
       DetailValueRow({ label: $r('app.string.upload'), value: formatRate(this.state.uploadBytesPerSecond) })
       DetailValueRow({ label: $r('app.string.download'), value: formatRate(this.state.downloadBytesPerSecond) })
 

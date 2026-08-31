@@ -18,10 +18,16 @@ struct SensorRow {
 @Component
 export struct HealthCard {
   @ObjectLink state: HealthMetricsState
+  onOpenHistory: () => void = () => {}
 
   build() {
     Column({ space: 11 }) {
-      DetailCardHeader({ title: $r('app.string.health') })
+      DetailCardHeader({
+        title: $r('app.string.health'),
+        showAction: this.state.sensorsAvailable,
+        actionLabel: $r('app.string.history_chart'),
+        onAction: () => this.onOpenHistory()
+      })
 
       if (this.state.batteryVisible()) {
         DetailValueRow({

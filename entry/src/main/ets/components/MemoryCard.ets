@@ -7,10 +7,16 @@ import { PressureBar } from './PressureBar'
 @Component
 export struct MemoryCard {
   @ObjectLink state: MemoryMetricsState
+  onOpenHistory: () => void = () => {}
 
   build() {
     Column({ space: 11 }) {
-      DetailCardHeader({ title: $r('app.string.memory') })
+      DetailCardHeader({
+        title: $r('app.string.memory'),
+        showAction: true,
+        actionLabel: $r('app.string.history_chart'),
+        onAction: () => this.onOpenHistory()
+      })
       PressureBar({
         value: this.state.percent,
         label: $r('app.string.usage'),

@@ -1,10 +1,13 @@
 import { DashboardController } from '../controller/DashboardController'
 import { SystemSummary } from '../model/BeszelModels'
 import { AppColorMode, CpuChartHeight } from '../model/AppearanceModels'
+import { MetricChartRange } from '../model/MetricChartModels'
+import { MetricChartKind, MetricChartPanelKind } from '../model/MetricChartSource'
 import { SettingsView } from './SettingsView'
 import { SmartDetailsView } from './SmartDetailsView'
 import { SystemCard } from './SystemCard'
 import { SystemDetail } from './SystemDetail'
+import { MetricChartsView } from './MetricChartsView'
 
 const DETAIL_SWITCH_OFFSET_VP = 32
 const DETAIL_SWITCH_EXIT_MS = 80
@@ -112,6 +115,18 @@ export struct DashboardView {
           },
           onScrollingChange: (scrolling: boolean) => this.controller.setDetailScrolling(scrolling)
         })
+      } else if (name === 'metricCharts') {
+        MetricChartsView({
+          state: this.controller.metricChartsState,
+          compact: !this.expanded,
+          colorMode: this.controller.colorMode,
+          onBack: () => {
+            this.controller.closeMetricCharts()
+            this.pathStack.pop()
+          },
+          onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
+            this.controller.setMetricChartRange(kind, range)
+        })
       } else if (name === 'settings') {
         SettingsView({
           connectionMode: this.controller.savedConnectionMode,
@@ -148,8 +163,15 @@ export struct DashboardView {
       .backgroundColor($r('app.color.background'))
       .onShown(() => {
         this.syncDetailVisibility()
+        if (name === 'metricCharts') this.controller.setMetricChartsVisible(true)
       })
       .onHidden(() => {
+        if (name === 'metricCharts') {
+          this.controller.setMetricChartsVisible(false)
+          if (!this.pathStack.getAllPathName().includes('metricCharts')) {
+            this.controller.closeMetricCharts()
+          }
+        }
         this.syncDetailVisibility()
         if (name === 'settings') {
           this.ensureDetailForSplit()
@@ -174,7 +196,12 @@ export struct DashboardView {
             colorMode: this.controller.colorMode,
             onBack: () => this.pathStack.pop(),
             onScrollingChange: (scrolling: boolean) => this.controller.setDetailScrolling(scrolling),
-            onOpenSmartDetails: () => this.openSmartDetails()
+            onOpenSmartDetails: () => this.openSmartDetails(),
+            onOpenHealthCharts: () => this.openMetricCharts(MetricChartKind.HEALTH),
+            onOpenCpuCharts: () => this.openMetricCharts(MetricChartKind.CPU),
+            onOpenMemoryCharts: () => this.openMetricCharts(MetricChartKind.MEMORY),
+            onOpenNetworkCharts: () => this.openMetricCharts(MetricChartKind.NETWORK),
+            onOpenGpuCharts: () => this.openMetricCharts(MetricChartKind.GPU)
           })
         }
       }
@@ -224,7 +251,7 @@ export struct DashboardView {
         .width(7)
         .height(7)
         .borderRadius(4)
-        .backgroundColor(this.controller.liveMetrics && this.controller.realtimeConnected && this.detailVisible ?
+        .backgroundColor(this.controller.liveSamplingActive() ?
           $r('app.color.status_up') : $r('app.color.text_tertiary'))
       Text($r('app.string.live'))
         .fontSize(13)
@@ -313,6 +340,7 @@ export struct DashboardView {
         return
       }
       this.cancelDetailSwitchAnimation()
+      this.controller.closeMetricCharts()
       this.controller.selectSystem(id)
       this.pathStack.clear(false)
       this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
@@ -378,6 +406,15 @@ export struct DashboardView {
     if (this.controller.detailState.smartHealth.isVisible() && this.topDestinationName() !== 'smart') {
       this.pathStack.pushPath({ name: 'smart', param: new DashboardDestinationParam(this.controller.selectedId) })
     }
+  }
+
+  private openMetricCharts(kind: MetricChartKind): void {
+    if (this.topDestinationName() === 'metricCharts') return
+    this.controller.openMetricCharts(kind)
+    this.pathStack.pushPath({
+      name: 'metricCharts',
+      param: new DashboardDestinationParam(this.controller.selectedId)
+    })
   }
 
   private detailSystem(param: Object): SystemSummary | null {

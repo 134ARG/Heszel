@@ -9,6 +9,16 @@ import { AppColorMode, CpuChartHeight } from '../model/AppearanceModels'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
 import { ConnectionMode, ConnectionPhase, ConnectionProfile, LoginRequest } from '../model/ConnectionModels'
 import {
+  chartRangeRecordType,
+  MetricChartRange
+} from '../model/MetricChartModels'
+import { MetricChartPanelState, MetricChartsState } from '../model/MetricChartsModels'
+import {
+  MetricChartKind,
+  MetricChartLabels,
+  MetricChartPanelKind
+} from '../model/MetricChartSource'
+import {
   BeszelSystemStatsWire,
   SystemDetailState
 } from '../model/SystemDetailModels'
@@ -23,10 +33,27 @@ import { SystemRefreshService } from '../service/SystemRefreshService'
 
 const DETAIL_CACHE_LIMIT = 10
 const SELECTION_PERSIST_DELAY_MS = 750
+const METRIC_HISTORY_RANGES: MetricChartRange[] = [
+  MetricChartRange.HOUR_1,
+  MetricChartRange.HOUR_12,
+  MetricChartRange.DAY_1,
+  MetricChartRange.DAY_7,
+  MetricChartRange.DAY_30
+]
 // Every resume step is individually bounded by request timeouts; this watchdog
 // only exists to abandon a resume wedged in native or storage calls so later
 // resumes are not queued behind it forever.
 const RESUME_DEADLINE_MS = 120000
+
+class MetricChartHistoryTarget {
+  kind: MetricChartPanelKind
+  sequence: number
+
+  constructor(kind: MetricChartPanelKind, sequence: number) {
+    this.kind = kind
+    this.sequence = sequence
+  }
+}
 
 @Observed
 export class DashboardController {
@@ -44,6 +71,8 @@ export class DashboardController {
   updateWhileScrolling: boolean = false
   colorMode: AppColorMode = AppColorMode.SYSTEM
   cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
+  metricChartsState: MetricChartsState = new MetricChartsState()
+  chartLiveActive: boolean = false
   realtimeConnected: boolean = false
   connectionPhase: ConnectionPhase = ConnectionPhase.STOPPED
   restoringSession: boolean = true
@@ -115,8 +144,62 @@ export class DashboardController {
   }
 
   setLiveMetrics(enabled: boolean): void {
+    if (this.metricChartsState.active) {
+      // A header toggle is a deliberate preference change, unlike the
+      // temporary enable performed by selecting the Live chart range.
+      this.metricChartsState.entryLiveEnabled = enabled
+      if (!enabled && this.metricChartsState.hasLivePanel()) {
+        this.liveMetrics = false
+        this.metricChartsState.panels.forEach((panel: MetricChartPanelState) => {
+          if (panel.chart.range === MetricChartRange.LIVE) {
+            panel.setRange(panel.lastHistoricalRange, Date.now())
+          }
+        })
+        this.updateMetricChartLiveState()
+        this.loadMetricChartHistories()
+        return
+      }
+    }
     this.liveMetrics = enabled
     this.onLiveMetricsChanged()
+  }
+
+  openMetricCharts(kind: MetricChartKind): void {
+    if (this.selectedId.length === 0) return
+    const system = this.systems.find((candidate: SystemSummary) => candidate.id === this.selectedId)
+    this.metricChartsState.begin(kind, this.selectedId, system?.name ?? '', this.liveMetrics,
+      this.detailState, this.metricChartLabels())
+    this.loadMetricChartHistories()
+  }
+
+  setMetricChartsVisible(visible: boolean): void {
+    if (!this.metricChartsState.active) return
+    this.metricChartsState.visible = visible
+    this.updateMetricChartLiveState()
+  }
+
+  setMetricChartRange(kind: MetricChartPanelKind, range: MetricChartRange): void {
+    if (!this.metricChartsState.active) return
+    const sequence = this.metricChartsState.setPanelRange(kind, range)
+    if (sequence < 0) return
+    this.updateMetricChartLiveState()
+    if (range === MetricChartRange.LIVE) {
+      return
+    }
+    this.loadMetricChartHistory(range, [new MetricChartHistoryTarget(kind, sequence)])
+  }
+
+  closeMetricCharts(): void {
+    if (!this.metricChartsState.active) return
+    const restoreLive = this.metricChartsState.entryLiveEnabled
+    this.chartLiveActive = false
+    this.liveMetrics = restoreLive
+    this.metricChartsState.close()
+    this.syncMetricSubscription()
+  }
+
+  liveSamplingActive(): boolean {
+    return this.liveMetrics && this.realtimeConnected && (this.detailIsVisible() || this.chartLiveActive)
   }
 
   setDetailVisible(visible: boolean): void {
@@ -303,6 +386,9 @@ export class DashboardController {
     if (this.pageVisible && this.session.token.length > 0) {
       this.startRealtime()
     }
+    if (this.pageVisible && this.metricChartsState.active && this.metricChartsState.visible) {
+      this.reloadMetricChartHistories()
+    }
   }
 
   private startRealtime(): void {
@@ -419,6 +505,9 @@ export class DashboardController {
     if (detail !== undefined) {
       detail.applyRealtime(metrics.info, metrics.stats, metrics.container)
       detail.appendRealtimeCpu(metrics.info, metrics.stats)
+    }
+    if (this.metricChartsState.active && this.metricChartsState.systemId === systemId) {
+      this.metricChartsState.appendRealtime(metrics.stats)
     }
 
   }
@@ -547,7 +636,7 @@ export class DashboardController {
           return
         }
       }
-      const alreadyReceivingMetrics = this.liveMetrics && this.realtimeConnected && this.detailIsVisible()
+      const alreadyReceivingMetrics = this.liveSamplingActive()
       const detailLoaded = this.detailStates.get(requestedSystemId)?.loaded === true
       const result = await this.executeAuthenticated(
         (activeSession: BeszelSession) => refreshService.refresh(
@@ -595,6 +684,7 @@ export class DashboardController {
       if (this.realtimeClient !== null && !this.realtimeConnected) {
         this.realtimeClient.retryNow()
       }
+      this.refreshVisibleCharts(requestedSystemId, result.metrics?.stats)
     } catch (error) {
       if (!this.isDataWorkCurrent(generation)) {
         return
@@ -626,12 +716,55 @@ export class DashboardController {
     return this.detailVisible && this.selectedId.length > 0
   }
 
+  private refreshVisibleCharts(systemId: string, stats?: BeszelSystemStatsWire): void {
+    if (this.metricChartsState.active && this.metricChartsState.visible) {
+      if (this.metricChartsState.hasLivePanel() && this.metricChartsState.systemId === systemId) {
+        this.metricChartsState.appendRealtime(stats)
+      }
+      this.reloadMetricChartHistories()
+    }
+  }
+
   private syncMetricSubscription(): void {
-    if (this.liveMetrics && this.detailIsVisible()) {
+    if (this.liveMetrics && this.chartLiveActive) {
+      const chartSystemId = this.metricChartsState.active ? this.metricChartsState.systemId : ''
+      this.realtimeClient?.setMetricsSystem(chartSystemId)
+    } else if (this.liveMetrics && this.detailIsVisible()) {
       this.realtimeClient?.setMetricsSystem(this.selectedId)
     } else {
       this.realtimeClient?.setMetricsSystem('')
     }
+  }
+
+  private updateMetricChartLiveState(): void {
+    const liveVisible = this.metricChartsState.active && this.metricChartsState.visible &&
+      this.metricChartsState.hasLivePanel()
+    this.chartLiveActive = liveVisible
+    this.liveMetrics = liveVisible ? true : this.metricChartsState.entryLiveEnabled
+    this.syncMetricSubscription()
+  }
+
+  private reloadMetricChartHistories(): void {
+    if (!this.metricChartsState.active) return
+    const nowMs = Date.now()
+    this.metricChartsState.panels.forEach((panel: MetricChartPanelState) => {
+      if (panel.chart.range !== MetricChartRange.LIVE) {
+        panel.setRange(panel.chart.range, nowMs)
+      }
+    })
+    this.loadMetricChartHistories()
+  }
+
+  private loadMetricChartHistories(): void {
+    METRIC_HISTORY_RANGES.forEach((range: MetricChartRange) => {
+      const targets: MetricChartHistoryTarget[] = []
+      this.metricChartsState.panels.forEach((panel: MetricChartPanelState) => {
+        if (panel.chart.range === range) {
+          targets.push(new MetricChartHistoryTarget(panel.kind, panel.loadSequence))
+        }
+      })
+      if (targets.length > 0) this.loadMetricChartHistory(range, targets)
+    })
   }
 
   private onLiveMetricsChanged(): void {
@@ -643,6 +776,40 @@ export class DashboardController {
       this.loadSelectedDetail()
     }
     this.syncMetricSubscription()
+  }
+
+  private async loadMetricChartHistory(range: MetricChartRange,
+    targets: MetricChartHistoryTarget[]): Promise<void> {
+    const client = this.client
+    const systemId = this.metricChartsState.systemId
+    if (client === null || this.session.token.length === 0 || systemId.length === 0) {
+      const message = this.localized('error_load_chart_history', 'Unable to load metric history.')
+      targets.forEach((target: MetricChartHistoryTarget) =>
+        this.metricChartsState.failHistory(target.kind, message, range, target.sequence))
+      return
+    }
+    const generation = this.dataGeneration
+    try {
+      const records = await this.executeAuthenticated(
+        (activeSession: BeszelSession) => client.getSystemStatsHistoryByType(
+          activeSession.token, systemId, chartRangeRecordType(range), 100),
+        generation
+      )
+      if (!this.isDataWorkCurrent(generation)) return
+      const nowMs = Date.now()
+      targets.forEach((target: MetricChartHistoryTarget) =>
+        this.metricChartsState.applyHistory(target.kind, records, range, target.sequence, nowMs))
+    } catch (error) {
+      if (!this.isDataWorkCurrent(generation)) return
+      if (this.isSessionRejected(error)) {
+        await this.expireSavedSession()
+        return
+      }
+      const message = this.describeError(error,
+        this.localized('error_load_chart_history', 'Unable to load metric history.'))
+      targets.forEach((target: MetricChartHistoryTarget) =>
+        this.metricChartsState.failHistory(target.kind, message, range, target.sequence))
+    }
   }
 
   async signOut(): Promise<void> {
@@ -954,6 +1121,8 @@ export class DashboardController {
     this.detailLoadTokens.clear()
     this.detailStates.clear()
     this.detailState = new SystemDetailState()
+    this.chartLiveActive = false
+    this.metricChartsState.close()
   }
 
   private trimDetailCache(): void {
@@ -1336,6 +1505,21 @@ export class DashboardController {
       return error.message
     }
     return fallback
+  }
+
+  private metricChartLabels(): MetricChartLabels {
+    const labels = new MetricChartLabels()
+    labels.total = this.localized('chart_total', 'Total')
+    labels.cpuUser = this.localized('cpu_user', 'User')
+    labels.cpuSystem = this.localized('cpu_system', 'System')
+    labels.cpuIoWait = this.localized('io_wait', 'I/O wait')
+    labels.cpuSteal = this.localized('cpu_steal', 'Steal')
+    labels.cpuCore = this.localized('chart_cpu_core', 'Core')
+    labels.memoryUsed = this.localized('used', 'Used')
+    labels.memoryCache = this.localized('buffer_cache', 'Buffer + cache')
+    labels.memoryZfs = this.localized('metric_zfs_arc', 'ZFS ARC')
+    labels.memorySwap = this.localized('swap', 'Swap')
+    return labels
   }
 
   private localized(name: string, fallback: string, ...args: Array<string | number>): string {

@@ -1,0 +1,105 @@
+import { AppColorMode } from '../model/AppearanceModels'
+import { AdaptiveMetricChartState, MetricChartRange } from '../model/MetricChartModels'
+import { MetricChartPanelState, MetricChartsState } from '../model/MetricChartsModels'
+import {
+  MetricChartKind,
+  MetricChartPanelKind
+} from '../model/MetricChartSource'
+import { MetricChartPanel } from './MetricChartPanel'
+import { PageHeader } from './PageHeader'
+
+@Component
+struct MetricChartPanelView {
+  @ObjectLink panel: MetricChartPanelState
+  @ObjectLink chart: AdaptiveMetricChartState
+  @Prop compact: boolean = false
+  @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
+  onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
+
+  build() {
+    MetricChartPanel({
+      chart: this.chart,
+      title: this.panelTitle(),
+      loading: this.panel.loading,
+      errorMessage: this.panel.errorMessage,
+      compact: this.compact,
+      colorMode: this.colorMode,
+      metricHint: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
+        $r('app.string.chart_metric_hint') : $r('app.string.chart_metric_generic_hint'),
+      searchPlaceholder: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
+        $r('app.string.chart_search_metrics') : $r('app.string.chart_search_metrics_generic'),
+      onRangeChange: (range: MetricChartRange) => this.onRangeChange(this.panel.kind, range)
+    })
+  }
+
+  private panelTitle(): ResourceStr {
+    if (this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE) {
+      return $r('app.string.temperature_history')
+    }
+    if (this.panel.kind === MetricChartPanelKind.CPU_USAGE) return $r('app.string.chart_cpu_usage')
+    if (this.panel.kind === MetricChartPanelKind.MEMORY_USAGE) return $r('app.string.chart_memory_usage')
+    if (this.panel.kind === MetricChartPanelKind.NETWORK_UPLOAD) return $r('app.string.upload')
+    if (this.panel.kind === MetricChartPanelKind.NETWORK_DOWNLOAD) return $r('app.string.download')
+    if (this.panel.kind === MetricChartPanelKind.GPU_USAGE) return $r('app.string.chart_gpu_usage')
+    if (this.panel.kind === MetricChartPanelKind.GPU_MEMORY) return $r('app.string.gpu_memory')
+    return $r('app.string.power')
+  }
+}
+
+@Component
+export struct MetricChartsView {
+  @ObjectLink state: MetricChartsState
+  @Prop compact: boolean = false
+  @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
+  onBack: () => void = () => {}
+  onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
+
+  build() {
+    Column() {
+      PageHeader({
+        title: this.pageTitle(),
+        subtitle: this.state.systemName,
+        showSubtitle: true,
+        showBack: true,
+        backLabel: $r('app.string.back_system_detail'),
+        onBack: () => this.onBack()
+      })
+
+      Scroll() {
+        Column({ space: 14 }) {
+          ForEach(this.state.panels, (panel: MetricChartPanelState) => {
+            MetricChartPanelView({
+              panel: panel,
+              chart: panel.chart,
+              compact: this.compact,
+              colorMode: this.colorMode,
+              onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
+                this.onRangeChange(kind, range)
+            })
+          }, (panel: MetricChartPanelState) => panel.kind.toString())
+        }
+        .width('100%')
+        .padding({
+          left: this.compact ? 16 : 22,
+          right: this.compact ? 16 : 22,
+          top: 14,
+          bottom: 30
+        })
+      }
+      .layoutWeight(1)
+      .width('100%')
+      .scrollBar(BarState.Off)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('app.color.background'))
+  }
+
+  private pageTitle(): ResourceStr {
+    if (this.state.kind === MetricChartKind.HEALTH) return $r('app.string.health')
+    if (this.state.kind === MetricChartKind.CPU) return $r('app.string.cpu_detail')
+    if (this.state.kind === MetricChartKind.MEMORY) return $r('app.string.memory')
+    if (this.state.kind === MetricChartKind.NETWORK) return $r('app.string.network')
+    return $r('app.string.metric_gpu')
+  }
+}

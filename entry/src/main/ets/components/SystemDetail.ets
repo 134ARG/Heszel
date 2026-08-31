@@ -26,6 +26,11 @@ export struct SystemDetail {
   onBack: () => void = () => {}
   onScrollingChange: (scrolling: boolean) => void = () => {}
   onOpenSmartDetails: () => void = () => {}
+  onOpenHealthCharts: () => void = () => {}
+  onOpenCpuCharts: () => void = () => {}
+  onOpenMemoryCharts: () => void = () => {}
+  onOpenNetworkCharts: () => void = () => {}
+  onOpenGpuCharts: () => void = () => {}
 
   build() {
     Column() {
@@ -129,7 +134,10 @@ export struct SystemDetail {
   @Builder
   private primaryDetailCards() {
     if (this.detail.memoryMetrics.isVisible()) {
-      MemoryCard({ state: this.detail.memoryMetrics })
+      MemoryCard({
+        state: this.detail.memoryMetrics,
+        onOpenHistory: () => this.onOpenMemoryCharts()
+      })
     }
     if (this.detail.storageMetrics.isVisible()) {
       StorageCard({ state: this.detail.storageMetrics })
@@ -141,20 +149,32 @@ export struct SystemDetail {
       })
     }
     if (this.detail.healthMetrics.cardVisible()) {
-      HealthCard({ state: this.detail.healthMetrics })
+      HealthCard({
+        state: this.detail.healthMetrics,
+        onOpenHistory: () => this.onOpenHealthCharts()
+      })
     }
   }
 
   @Builder
   private secondaryDetailCards() {
     if (this.detail.cpuMetrics.isVisible()) {
-      CpuCard({ state: this.detail.cpuMetrics })
+      CpuCard({
+        state: this.detail.cpuMetrics,
+        onOpenHistory: () => this.onOpenCpuCharts()
+      })
     }
     if (this.detail.networkMetrics.isVisible()) {
-      NetworkCard({ state: this.detail.networkMetrics })
+      NetworkCard({
+        state: this.detail.networkMetrics,
+        onOpenHistory: () => this.onOpenNetworkCharts()
+      })
     }
     if (this.detail.gpuMetrics.isVisible()) {
-      GpuCard({ state: this.detail.gpuMetrics })
+      GpuCard({
+        state: this.detail.gpuMetrics,
+        onOpenHistory: () => this.onOpenGpuCharts()
+      })
     }
     if (this.detail.containerMetrics.isVisible()) {
       ContainersCard({ state: this.detail.containerMetrics })

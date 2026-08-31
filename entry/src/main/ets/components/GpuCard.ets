@@ -34,10 +34,16 @@ struct GpuSection {
 @Component
 export struct GpuCard {
   @ObjectLink state: GpuMetricsState
+  onOpenHistory: () => void = () => {}
 
   build() {
     Column({ space: 12 }) {
-      DetailCardHeader({ title: $r('app.string.metric_gpu') })
+      DetailCardHeader({
+        title: $r('app.string.metric_gpu'),
+        showAction: true,
+        actionLabel: $r('app.string.history_chart'),
+        onAction: () => this.onOpenHistory()
+      })
 
       ForEach(this.state.gpus, (gpu: GpuMetric, index: number) => {
         GpuSection({ gpu: gpu, showDivider: index > 0 })
