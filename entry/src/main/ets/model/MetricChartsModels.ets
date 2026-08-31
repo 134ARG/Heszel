@@ -11,6 +11,7 @@ import {
   MetricChartValueFormat
 } from './MetricChartModels'
 import { NetworkMetricChartSource } from './NetworkMetricChartSource'
+import { StorageMetricChartSource } from './StorageMetricChartSource'
 import {
   MetricChartDefinition,
   MetricChartPanelDefinition,
@@ -189,6 +190,7 @@ export class MetricChartsState {
     if (kind === MetricChartKind.CPU) return new CpuMetricChartSource()
     if (kind === MetricChartKind.MEMORY) return new MemoryMetricChartSource()
     if (kind === MetricChartKind.NETWORK) return new NetworkMetricChartSource()
+    if (kind === MetricChartKind.STORAGE) return new StorageMetricChartSource()
     return new GpuMetricChartSource()
   }
 

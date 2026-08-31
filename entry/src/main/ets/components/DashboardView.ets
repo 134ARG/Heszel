@@ -200,6 +200,7 @@ export struct DashboardView {
             onOpenHealthCharts: () => this.openMetricCharts(MetricChartKind.HEALTH),
             onOpenCpuCharts: () => this.openMetricCharts(MetricChartKind.CPU),
             onOpenMemoryCharts: () => this.openMetricCharts(MetricChartKind.MEMORY),
+            onOpenStorageCharts: () => this.openMetricCharts(MetricChartKind.STORAGE),
             onOpenNetworkCharts: () => this.openMetricCharts(MetricChartKind.NETWORK),
             onOpenGpuCharts: () => this.openMetricCharts(MetricChartKind.GPU)
           })

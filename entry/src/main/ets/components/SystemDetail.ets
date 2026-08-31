@@ -29,6 +29,7 @@ export struct SystemDetail {
   onOpenHealthCharts: () => void = () => {}
   onOpenCpuCharts: () => void = () => {}
   onOpenMemoryCharts: () => void = () => {}
+  onOpenStorageCharts: () => void = () => {}
   onOpenNetworkCharts: () => void = () => {}
   onOpenGpuCharts: () => void = () => {}
 
@@ -140,7 +141,10 @@ export struct SystemDetail {
       })
     }
     if (this.detail.storageMetrics.isVisible()) {
-      StorageCard({ state: this.detail.storageMetrics })
+      StorageCard({
+        state: this.detail.storageMetrics,
+        onOpenHistory: () => this.onOpenStorageCharts()
+      })
     }
     if (this.detail.smartHealth.isVisible()) {
       SmartCard({

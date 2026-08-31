@@ -13,7 +13,8 @@ export enum MetricChartKind {
   CPU,
   MEMORY,
   NETWORK,
-  GPU
+  GPU,
+  STORAGE
 }
 
 export enum MetricChartPanelKind {
@@ -24,7 +25,10 @@ export enum MetricChartPanelKind {
   NETWORK_DOWNLOAD,
   GPU_USAGE,
   GPU_MEMORY,
-  GPU_POWER
+  GPU_POWER,
+  STORAGE_USAGE,
+  STORAGE_READ,
+  STORAGE_WRITE
 }
 
 export class MetricChartLabels {
@@ -38,6 +42,7 @@ export class MetricChartLabels {
   memoryCache: string = 'Buffer + cache'
   memoryZfs: string = 'ZFS ARC'
   memorySwap: string = 'Swap'
+  rootFilesystem: string = 'Root filesystem'
 }
 
 export class MetricChartDefinition {

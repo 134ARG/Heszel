@@ -40,6 +40,9 @@ struct MetricChartPanelView {
     if (this.panel.kind === MetricChartPanelKind.MEMORY_USAGE) return $r('app.string.chart_memory_usage')
     if (this.panel.kind === MetricChartPanelKind.NETWORK_UPLOAD) return $r('app.string.upload')
     if (this.panel.kind === MetricChartPanelKind.NETWORK_DOWNLOAD) return $r('app.string.download')
+    if (this.panel.kind === MetricChartPanelKind.STORAGE_USAGE) return $r('app.string.usage')
+    if (this.panel.kind === MetricChartPanelKind.STORAGE_READ) return $r('app.string.read')
+    if (this.panel.kind === MetricChartPanelKind.STORAGE_WRITE) return $r('app.string.write')
     if (this.panel.kind === MetricChartPanelKind.GPU_USAGE) return $r('app.string.chart_gpu_usage')
     if (this.panel.kind === MetricChartPanelKind.GPU_MEMORY) return $r('app.string.gpu_memory')
     return $r('app.string.power')
@@ -100,6 +103,7 @@ export struct MetricChartsView {
     if (this.state.kind === MetricChartKind.CPU) return $r('app.string.cpu_detail')
     if (this.state.kind === MetricChartKind.MEMORY) return $r('app.string.memory')
     if (this.state.kind === MetricChartKind.NETWORK) return $r('app.string.network')
+    if (this.state.kind === MetricChartKind.STORAGE) return $r('app.string.storage')
     return $r('app.string.metric_gpu')
   }
 }

@@ -1519,6 +1519,7 @@ export class DashboardController {
     labels.memoryCache = this.localized('buffer_cache', 'Buffer + cache')
     labels.memoryZfs = this.localized('metric_zfs_arc', 'ZFS ARC')
     labels.memorySwap = this.localized('swap', 'Swap')
+    labels.rootFilesystem = this.localized('root_filesystem', 'Root filesystem')
     return labels
   }
 

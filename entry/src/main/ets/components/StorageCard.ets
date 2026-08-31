@@ -39,10 +39,16 @@ struct FilesystemSection {
 @Component
 export struct StorageCard {
   @ObjectLink state: StorageMetricsState
+  onOpenHistory: () => void = () => {}
 
   build() {
     Column({ space: 12 }) {
-      DetailCardHeader({ title: $r('app.string.storage') })
+      DetailCardHeader({
+        title: $r('app.string.storage'),
+        showAction: true,
+        actionLabel: $r('app.string.history_chart'),
+        onAction: () => this.onOpenHistory()
+      })
       PressureBar({
         value: this.state.percent,
         label: $r('app.string.root_filesystem'),
