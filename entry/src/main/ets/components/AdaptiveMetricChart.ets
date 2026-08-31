@@ -9,7 +9,7 @@ import {
 } from '../model/MetricChartModels'
 
 const PLOT_INSET = 6
-const Y_LABEL_WIDTH = 58
+const Y_LABEL_WIDTH = 38
 
 class MetricChartBounds {
   minimum: number = 0
@@ -38,16 +38,22 @@ export struct AdaptiveMetricChart {
           Text(this.yLabel(this.bounds().maximum))
             .fontSize(9)
             .fontColor($r('app.color.text_tertiary'))
+            .width(Y_LABEL_WIDTH - 4)
+            .textAlign(TextAlign.End)
             .position({ x: 0, y: PLOT_INSET })
             .markAnchor({ x: 0, y: '50%' })
           Text(this.yLabel((this.bounds().minimum + this.bounds().maximum) / 2))
             .fontSize(9)
             .fontColor($r('app.color.text_tertiary'))
+            .width(Y_LABEL_WIDTH - 4)
+            .textAlign(TextAlign.End)
             .position({ x: 0, y: this.chartHeight / 2 })
             .markAnchor({ x: 0, y: '50%' })
           Text(this.yLabel(this.bounds().minimum))
             .fontSize(9)
             .fontColor($r('app.color.text_tertiary'))
+            .width(Y_LABEL_WIDTH - 4)
+            .textAlign(TextAlign.End)
             .position({ x: 0, y: this.chartHeight - PLOT_INSET })
             .markAnchor({ x: 0, y: '50%' })
         }
