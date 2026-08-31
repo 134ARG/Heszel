@@ -10,6 +10,8 @@ import {
 
 const PLOT_INSET = 6
 const Y_LABEL_WIDTH = 38
+const INSPECTION_POPUP_WIDTH = 172
+const INSPECTION_POPUP_MARGIN = 8
 
 class MetricChartBounds {
   minimum: number = 0
@@ -21,9 +23,16 @@ class MetricChartBounds {
 export struct AdaptiveMetricChart {
   @ObjectLink @Watch('onChartStateChanged') state: AdaptiveMetricChartState
   @Prop @Watch('onColorModeChanged') colorMode: AppColorMode = AppColorMode.SYSTEM
+  @Prop @Watch('onInspectionDismissRequested') inspectionDismissToken: number = 0
   @Prop chartHeight: number = 230
   @Prop loading: boolean = false
   @Prop showNoData: boolean = true
+  onPlotAreaChange: (left: number, top: number, width: number, height: number) => void =
+    (_left: number, _top: number, _width: number, _height: number) => {}
+  @State private chartWidth: number = 0
+  @State private inspectedTimestampMs: number = 0
+  @State private inspectionPopupAtTop: boolean = true
+  @State private inspectionRange: MetricChartRange = MetricChartRange.HOUR_1
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
   private ready: boolean = false
@@ -59,6 +68,7 @@ export struct AdaptiveMetricChart {
         }
         .width(Y_LABEL_WIDTH)
         .height(this.chartHeight)
+        .onClick(() => this.clearInspection())
 
         Column({ space: 4 }) {
           Stack({ alignContent: Alignment.Center }) {
@@ -69,10 +79,50 @@ export struct AdaptiveMetricChart {
               .borderRadius(4)
               .onReady(() => {
                 this.ready = true
+                this.chartWidth = this.context.width
                 this.drawnRevision = this.state.revision
                 this.draw()
               })
-              .onAreaChange(() => this.draw())
+              .onAreaChange((oldValue: Area, newValue: Area) => {
+                const width = this.areaLength(newValue.width, this.context.width)
+                this.chartWidth = width
+                this.onPlotAreaChange(
+                  this.areaLength(newValue.globalPosition.x, 0),
+                  this.areaLength(newValue.globalPosition.y, 0),
+                  width,
+                  this.areaLength(newValue.height, this.chartHeight)
+                )
+                this.draw()
+              })
+              .onTouch((event: TouchEvent) => this.onChartTouch(event))
+
+            if (this.inspectionVisible()) {
+              Row()
+                .width(1)
+                .height(this.chartHeight - PLOT_INSET * 2)
+                .backgroundColor($r('app.color.selected_border'))
+                .opacity(0.9)
+                .position({ x: this.inspectionLineX(), y: PLOT_INSET })
+                .hitTestBehavior(HitTestMode.None)
+
+              ForEach(this.selectedSeries(), (series: MetricChartSeries) => {
+                if (Number.isFinite(this.inspectionSeriesValue(series.key))) {
+                  Row()
+                    .width(7)
+                    .height(7)
+                    .borderRadius(4)
+                    .backgroundColor(this.seriesResourceColor(series.key))
+                    .border({ width: 1, color: $r('app.color.surface') })
+                    .position({
+                      x: this.inspectionLineX() - 3,
+                      y: this.inspectionMarkerY(series.key) - 3
+                    })
+                    .hitTestBehavior(HitTestMode.None)
+                }
+              }, (series: MetricChartSeries) => series.key)
+
+              this.inspectionPopup()
+            }
 
             if (this.loading) {
               Column({ space: 7 }) {
@@ -116,6 +166,7 @@ export struct AdaptiveMetricChart {
           }
           .width('100%')
           .padding({ left: 4, right: 4 })
+          .onClick(() => this.clearInspection())
         }
         .layoutWeight(1)
       }
@@ -142,12 +193,14 @@ export struct AdaptiveMetricChart {
         }
         .width('100%')
         .padding({ left: Y_LABEL_WIDTH + 6 })
+        .onClick(() => this.clearInspection())
       }
     }
     .width('100%')
   }
 
   private onChartStateChanged(): void {
+    this.validateInspection()
     if (!this.ready || this.drawnRevision === this.state.revision) return
     this.drawnRevision = this.state.revision
     this.draw()
@@ -155,6 +208,10 @@ export struct AdaptiveMetricChart {
 
   private onColorModeChanged(): void {
     if (this.ready) this.draw()
+  }
+
+  private onInspectionDismissRequested(): void {
+    this.clearInspection()
   }
 
   private selectedSeries(): MetricChartSeries[] {
@@ -167,6 +224,190 @@ export struct AdaptiveMetricChart {
       if (series.selected) indices.push(index)
     })
     return indices
+  }
+
+  @Builder
+  private inspectionPopup() {
+    Column({ space: 5 }) {
+      Text(this.inspectionTimestampLabel())
+        .fontSize(10)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('app.color.text_primary'))
+        .width('100%')
+
+      ForEach(this.selectedSeries(), (series: MetricChartSeries) => {
+        Row({ space: 5 }) {
+          Row()
+            .width(7)
+            .height(7)
+            .borderRadius(4)
+            .backgroundColor(this.seriesResourceColor(series.key))
+          Text(series.label)
+            .fontSize(10)
+            .fontColor($r('app.color.text_secondary'))
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(this.inspectionValueLabel(series.key))
+            .fontSize(10)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.text_primary'))
+            .maxLines(1)
+        }
+        .width('100%')
+      }, (series: MetricChartSeries) => series.key)
+    }
+    .width(INSPECTION_POPUP_WIDTH)
+    .padding(10)
+    .backgroundColor($r('app.color.surface'))
+    .border({ width: 1, color: $r('app.color.selected_border') })
+    .borderRadius(9)
+    .position({ x: this.inspectionPopupX(), y: this.inspectionPopupY() })
+    .hitTestBehavior(HitTestMode.None)
+  }
+
+  private onChartTouch(event: TouchEvent): void {
+    if (event.type === TouchType.Cancel) {
+      this.clearInspection()
+      return
+    }
+    if (event.type !== TouchType.Down && event.type !== TouchType.Move) return
+    const touch = event.touches.length > 0 ? event.touches[0] :
+      event.changedTouches.length > 0 ? event.changedTouches[0] : undefined
+    if (touch === undefined || this.loading || this.state.selectedCount() === 0) return
+    const width = this.effectiveChartWidth()
+    if (width <= PLOT_INSET * 2) return
+    const x = Math.max(PLOT_INSET, Math.min(width - PLOT_INSET, touch.x))
+    const ratio = (x - PLOT_INSET) / Math.max(1, width - PLOT_INSET * 2)
+    const targetTimestamp = this.state.windowStartMs +
+      ratio * (this.state.windowEndMs - this.state.windowStartMs)
+    const point = this.nearestInspectionPoint(targetTimestamp)
+    if (point === null) {
+      this.clearInspection()
+      return
+    }
+    if (this.inspectedTimestampMs !== point.timestampMs) this.inspectedTimestampMs = point.timestampMs
+    const popupAtTop = touch.y > this.chartHeight / 2
+    if (this.inspectionPopupAtTop !== popupAtTop) this.inspectionPopupAtTop = popupAtTop
+    this.inspectionRange = this.state.range
+  }
+
+  private nearestInspectionPoint(targetTimestamp: number): MetricChartPoint | null {
+    const selected = this.selectedIndices()
+    let nearest: MetricChartPoint | null = null
+    let nearestDistance = Number.POSITIVE_INFINITY
+    this.state.points.forEach((point: MetricChartPoint) => {
+      const hasValue = selected.some((index: number) => Number.isFinite(point.values[index]))
+      if (!hasValue) return
+      const distance = Math.abs(point.timestampMs - targetTimestamp)
+      if (distance < nearestDistance) {
+        nearest = point
+        nearestDistance = distance
+      }
+    })
+    return nearest
+  }
+
+  private inspectionPoint(): MetricChartPoint | null {
+    if (this.inspectedTimestampMs <= 0) return null
+    return this.state.points.find((point: MetricChartPoint) =>
+      point.timestampMs === this.inspectedTimestampMs) ?? null
+  }
+
+  private inspectionVisible(): boolean {
+    if (this.loading || this.inspectionRange !== this.state.range) return false
+    const point = this.inspectionPoint()
+    if (point === null) return false
+    return this.selectedIndices().some((index: number) => Number.isFinite(point.values[index]))
+  }
+
+  private validateInspection(): void {
+    if (this.inspectedTimestampMs <= 0) return
+    if (!this.inspectionVisible()) this.clearInspection()
+  }
+
+  private clearInspection(): void {
+    if (this.inspectedTimestampMs !== 0) this.inspectedTimestampMs = 0
+  }
+
+  private inspectionSeriesValue(key: string): number {
+    const point = this.inspectionPoint()
+    const index = this.state.series.findIndex((series: MetricChartSeries) => series.key === key)
+    if (point === null || index < 0 || index >= point.values.length) return Number.NaN
+    return point.values[index]
+  }
+
+  private inspectionLineX(): number {
+    return this.xPosition(this.inspectedTimestampMs, this.effectiveChartWidth())
+  }
+
+  private inspectionMarkerY(key: string): number {
+    return this.yPosition(this.inspectionSeriesValue(key), this.chartHeight, this.bounds())
+  }
+
+  private inspectionPopupX(): number {
+    const width = this.effectiveChartWidth()
+    const lineX = this.inspectionLineX()
+    const right = lineX + INSPECTION_POPUP_MARGIN
+    if (right + INSPECTION_POPUP_WIDTH <= width) return right
+    return Math.max(0, lineX - INSPECTION_POPUP_WIDTH - INSPECTION_POPUP_MARGIN)
+  }
+
+  private inspectionPopupY(): number {
+    const estimatedHeight = 34 + this.selectedSeries().length * 18
+    if (this.inspectionPopupAtTop) return INSPECTION_POPUP_MARGIN
+    return Math.max(INSPECTION_POPUP_MARGIN,
+      this.chartHeight - estimatedHeight - INSPECTION_POPUP_MARGIN)
+  }
+
+  private effectiveChartWidth(): number {
+    return this.chartWidth > 0 ? this.chartWidth : this.context.width
+  }
+
+  private areaLength(length: Length | undefined, fallback: number): number {
+    if (typeof length === 'number') return length
+    if (typeof length === 'string') {
+      const parsed = Number.parseFloat(length)
+      if (Number.isFinite(parsed)) return parsed
+    }
+    return fallback
+  }
+
+  private inspectionTimestampLabel(): string {
+    const date = new Date(this.inspectedTimestampMs)
+    return `${date.getFullYear()}-${this.twoDigits(date.getMonth() + 1)}-${this.twoDigits(date.getDate())} ` +
+      `${this.twoDigits(date.getHours())}:${this.twoDigits(date.getMinutes())}:${this.twoDigits(date.getSeconds())}`
+  }
+
+  private inspectionValueLabel(key: string): string {
+    const value = this.inspectionSeriesValue(key)
+    if (!Number.isFinite(value)) return '—'
+    if (this.state.valueFormat === MetricChartValueFormat.BYTES) {
+      return this.inspectionByteLabel(value, false)
+    }
+    if (this.state.valueFormat === MetricChartValueFormat.BYTES_PER_SECOND) {
+      return this.inspectionByteLabel(value, true)
+    }
+    const digits = Math.abs(value) > 0 && Math.abs(value) < 1 ? 2 : 1
+    return `${value.toFixed(digits)}${this.state.unit}`
+  }
+
+  private inspectionByteLabel(value: number, perSecond: boolean): string {
+    const magnitude = Math.abs(value)
+    let scale = 1
+    let unit = 'B'
+    if (magnitude >= 1024 * 1024 * 1024) {
+      scale = 1024 * 1024 * 1024
+      unit = 'GB'
+    } else if (magnitude >= 1024 * 1024) {
+      scale = 1024 * 1024
+      unit = 'MB'
+    } else if (magnitude >= 1024) {
+      scale = 1024
+      unit = 'KB'
+    }
+    const digits = scale === 1 ? 0 : 1
+    return `${(value / scale).toFixed(digits)}${unit}${perSecond ? '/s' : ''}`
   }
 
   private draw(): void {

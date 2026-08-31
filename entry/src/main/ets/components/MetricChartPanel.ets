@@ -67,6 +67,15 @@ export struct MetricChartPanel {
   @State private metricSheetVisible: boolean = false
   @State private metricFilter: string = ''
   @State private selectionLimitReached: boolean = false
+  @State private inspectionDismissToken: number = 0
+  private cardGlobalLeft: number = 0
+  private cardGlobalTop: number = 0
+  private plotGlobalLeft: number = 0
+  private plotGlobalTop: number = 0
+  private plotWidth: number = 0
+  private plotHeight: number = 0
+  private cardAreaReady: boolean = false
+  private plotAreaReady: boolean = false
   onRangeChange: (range: MetricChartRange) => void = () => {}
 
   build() {
@@ -90,6 +99,7 @@ export struct MetricChartPanel {
         }
       }
       .width('100%')
+      .onClick(() => this.dismissInspection())
 
       if (this.errorMessage.length > 0) {
         Text(this.errorMessage)
@@ -99,6 +109,7 @@ export struct MetricChartPanel {
           .padding(10)
           .backgroundColor($r('app.color.error_surface'))
           .borderRadius(8)
+          .onClick(() => this.dismissInspection())
       }
 
       AdaptiveMetricChart({
@@ -106,7 +117,15 @@ export struct MetricChartPanel {
         colorMode: this.colorMode,
         chartHeight: this.compact ? 210 : 260,
         loading: this.loading,
-        showNoData: this.errorMessage.length === 0
+        showNoData: this.errorMessage.length === 0,
+        inspectionDismissToken: this.inspectionDismissToken,
+        onPlotAreaChange: (left: number, top: number, width: number, height: number) => {
+          this.plotGlobalLeft = left
+          this.plotGlobalTop = top
+          this.plotWidth = width
+          this.plotHeight = height
+          this.plotAreaReady = true
+        }
       })
     }
     .width('100%')
@@ -114,6 +133,12 @@ export struct MetricChartPanel {
     .backgroundColor($r('app.color.surface'))
     .border({ width: 1, color: $r('app.color.card_border') })
     .borderRadius(16)
+    .onAreaChange((oldValue: Area, newValue: Area) => {
+      this.cardGlobalLeft = this.areaLength(newValue.globalPosition.x)
+      this.cardGlobalTop = this.areaLength(newValue.globalPosition.y)
+      this.cardAreaReady = true
+    })
+    .onClick((event: ClickEvent) => this.onCardClick(event))
   }
 
   @Builder
@@ -128,6 +153,7 @@ export struct MetricChartPanel {
       .borderRadius(9)
       .accessibilityText($r('app.string.chart_choose_metrics'))
       .onClick(() => {
+        this.dismissInspection()
         this.metricSheetVisible = true
         this.selectionLimitReached = false
       })
@@ -218,6 +244,7 @@ export struct MetricChartPanel {
       .backgroundColor($r('app.color.action_surface'))
       .borderRadius(9)
       .onSelect((index: number) => {
+        this.dismissInspection()
         if (index >= 0 && index < METRIC_CHART_RANGES.length) {
           const range = METRIC_CHART_RANGES[index]
           if (this.chart.range !== range) this.onRangeChange(range)
@@ -230,6 +257,31 @@ export struct MetricChartPanel {
     if (query.length === 0) return this.chart.series
     return this.chart.series.filter((series: MetricChartSeries) =>
       series.label.toLocaleLowerCase().includes(query))
+  }
+
+  private dismissInspection(): void {
+    this.inspectionDismissToken += 1
+  }
+
+  private onCardClick(event: ClickEvent): void {
+    if (!this.cardAreaReady || !this.plotAreaReady) {
+      this.dismissInspection()
+      return
+    }
+    const plotLeft = this.plotGlobalLeft - this.cardGlobalLeft
+    const plotTop = this.plotGlobalTop - this.cardGlobalTop
+    const insidePlot = event.x >= plotLeft && event.x <= plotLeft + this.plotWidth &&
+      event.y >= plotTop && event.y <= plotTop + this.plotHeight
+    if (!insidePlot) this.dismissInspection()
+  }
+
+  private areaLength(length: Length | undefined): number {
+    if (typeof length === 'number') return length
+    if (typeof length === 'string') {
+      const parsed = Number.parseFloat(length)
+      if (Number.isFinite(parsed)) return parsed
+    }
+    return 0
   }
 
   private rangeLabel(range: MetricChartRange): string {
