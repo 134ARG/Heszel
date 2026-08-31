@@ -6,6 +6,11 @@ import { SmartDetailsView } from './SmartDetailsView'
 import { SystemCard } from './SystemCard'
 import { SystemDetail } from './SystemDetail'
 
+const DETAIL_SWITCH_OFFSET_VP = 32
+const DETAIL_SWITCH_EXIT_MS = 80
+const DETAIL_SWITCH_ENTER_MS = 140
+const DETAIL_SWITCH_SWAP_DELAY_MS = 16
+
 class DashboardDestinationParam {
   systemId: string
 
@@ -21,7 +26,10 @@ export struct DashboardView {
   @ObjectLink @Watch('onModelChanged') controller: DashboardController
   @Prop @Watch('onExpandedChanged') expanded: boolean = false
   @State private detailVisible: boolean = false
+  @State private detailOffsetY: number = 0
+  @State private detailOpacity: number = 1
   private pathStack: NavPathStack = new NavPathStack()
+  private detailSwitchSequence: number = 0
 
   private onlineCount(): number {
     return this.controller.systems.filter((system: SystemSummary) => system.isUp()).length
@@ -137,13 +145,9 @@ export struct DashboardView {
       }
     }
       .hideTitleBar(true)
+      .backgroundColor($r('app.color.background'))
       .onShown(() => {
         this.syncDetailVisibility()
-      })
-      .onActive(() => {
-        if (name === 'detail') {
-          this.trimDetailHistory()
-        }
       })
       .onHidden(() => {
         this.syncDetailVisibility()
@@ -156,15 +160,14 @@ export struct DashboardView {
   @Builder
   private detailDestination(param: Object) {
     Column() {
-      ForEach(
-        this.detailSystems(param),
-        (system: SystemSummary) => {
+      Column() {
+        if (this.detailSystem(param) !== null) {
           SystemDetail({
             detail: this.controller.detailState,
-            systemName: system.name,
-            host: system.host,
-            status: system.status,
-            agentVersion: system.agentVersion,
+            systemName: this.detailSystemName(param),
+            host: this.detailSystemHost(param),
+            status: this.detailSystemStatus(param),
+            agentVersion: this.detailSystemAgentVersion(param),
             compact: !this.expanded,
             liveSampling: this.controller.liveMetrics && this.controller.realtimeConnected,
             cpuChartHeight: this.controller.cpuChartHeight,
@@ -173,12 +176,17 @@ export struct DashboardView {
             onScrollingChange: (scrolling: boolean) => this.controller.setDetailScrolling(scrolling),
             onOpenSmartDetails: () => this.openSmartDetails()
           })
-        },
-        (system: SystemSummary) => system.id
-      )
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .opacity(this.detailOpacity)
+      .translate({ y: this.detailOffsetY })
     }
     .width('100%')
     .height('100%')
+    .backgroundColor($r('app.color.background'))
+    .clip(true)
   }
 
   @Builder
@@ -296,19 +304,68 @@ export struct DashboardView {
 
   private selectSystem(id: string): void {
     if (id === this.controller.selectedId && this.topDestinationName() === 'detail') {
+      this.cancelDetailSwitchAnimation()
       return
     }
-    this.controller.selectSystem(id)
     if (this.expanded) {
       if (this.topDestinationName() === 'detail') {
-        this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
+        this.animateDetailSwitch(id)
         return
       }
+      this.cancelDetailSwitchAnimation()
+      this.controller.selectSystem(id)
       this.pathStack.clear(false)
       this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
     } else {
+      this.cancelDetailSwitchAnimation()
+      this.controller.selectSystem(id)
       this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
     }
+  }
+
+  private animateDetailSwitch(id: string): void {
+    const sequence = ++this.detailSwitchSequence
+    const direction = this.detailSwitchDirection(id)
+    this.getUIContext().animateTo({
+      duration: DETAIL_SWITCH_EXIT_MS,
+      curve: Curve.EaseIn,
+      onFinish: () => {
+        if (sequence !== this.detailSwitchSequence) {
+          return
+        }
+        this.controller.selectSystem(id)
+        this.detailOffsetY = DETAIL_SWITCH_OFFSET_VP * direction
+        this.detailOpacity = 0
+        setTimeout(() => {
+          if (sequence !== this.detailSwitchSequence) {
+            return
+          }
+          this.getUIContext().animateTo({
+            duration: DETAIL_SWITCH_ENTER_MS,
+            curve: Curve.EaseOut
+          }, () => {
+            this.detailOffsetY = 0
+            this.detailOpacity = 1
+          })
+        }, DETAIL_SWITCH_SWAP_DELAY_MS)
+      }
+    }, () => {
+      this.detailOffsetY = -DETAIL_SWITCH_OFFSET_VP * direction
+      this.detailOpacity = 0
+    })
+  }
+
+  private detailSwitchDirection(id: string): number {
+    const currentIndex = this.controller.systems.findIndex(
+      (system: SystemSummary) => system.id === this.controller.selectedId)
+    const nextIndex = this.controller.systems.findIndex((system: SystemSummary) => system.id === id)
+    return currentIndex >= 0 && nextIndex >= 0 && nextIndex < currentIndex ? -1 : 1
+  }
+
+  private cancelDetailSwitchAnimation(): void {
+    this.detailSwitchSequence += 1
+    this.detailOffsetY = 0
+    this.detailOpacity = 1
   }
 
   private openSettings(): void {
@@ -323,34 +380,37 @@ export struct DashboardView {
     }
   }
 
-  private detailSystems(param: Object): SystemSummary[] {
-    const requestedId = (param as DashboardDestinationParam).systemId
-    const requested = this.controller.systems.filter((system: SystemSummary) => system.id === requestedId)
-    if (requested.length > 0) {
+  private detailSystem(param: Object): SystemSummary | null {
+    const destinationId = (param as DashboardDestinationParam).systemId
+    const requestedId = this.expanded ? this.controller.selectedId : destinationId
+    const requested = this.controller.systems.find((system: SystemSummary) => system.id === requestedId)
+    if (requested !== undefined) {
       return requested
     }
-    return this.controller.systems.filter((system: SystemSummary) => system.id === this.controller.selectedId)
+    const selected = this.controller.systems.find(
+      (system: SystemSummary) => system.id === this.controller.selectedId)
+    return selected ?? null
+  }
+
+  private detailSystemName(param: Object): string {
+    return this.detailSystem(param)?.name ?? ''
+  }
+
+  private detailSystemHost(param: Object): string {
+    return this.detailSystem(param)?.host ?? ''
+  }
+
+  private detailSystemStatus(param: Object): string {
+    return this.detailSystem(param)?.status ?? 'unknown'
+  }
+
+  private detailSystemAgentVersion(param: Object): string {
+    return this.detailSystem(param)?.agentVersion ?? ''
   }
 
   private topDestinationName(): string {
     const pathNames = this.pathStack.getAllPathName()
     return pathNames.length > 0 ? pathNames[pathNames.length - 1] : ''
-  }
-
-  private trimDetailHistory(): void {
-    if (!this.expanded || this.topDestinationName() !== 'detail') {
-      return
-    }
-    const pathNames = this.pathStack.getAllPathName()
-    const staleIndexes: number[] = []
-    for (let index = 0; index < pathNames.length - 1; index += 1) {
-      if (pathNames[index] === 'detail') {
-        staleIndexes.push(index)
-      }
-    }
-    if (staleIndexes.length > 0) {
-      this.pathStack.removeByIndexes(staleIndexes)
-    }
   }
 
   private ensureDetailForSplit(): void {
