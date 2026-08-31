@@ -1,7 +1,6 @@
 import { DashboardView } from '../components/DashboardView'
 import { LoginView } from '../components/LoginView'
 import { DashboardController } from '../controller/DashboardController'
-import { AppColorMode, CpuChartHeight } from '../model/AppearanceModels'
 import { LoginRequest } from '../model/ConnectionModels'
 
 @Entry
@@ -60,33 +59,8 @@ struct Index {
         })
       } else {
         DashboardView({
-          systems: this.dashboard.systems,
-          selectedId: this.dashboard.selectedId,
-          detailState: this.dashboard.detailState,
-          loading: this.dashboard.refreshing,
-          errorMessage: this.dashboard.dashboardError,
-          lastRefresh: this.dashboard.lastRefresh,
-          expanded: this.curScreenSizeString === 'lg',
-          liveMetrics: this.dashboard.liveMetrics,
-          updateWhileScrolling: this.dashboard.updateWhileScrolling,
-          colorMode: this.dashboard.colorMode,
-          cpuChartHeight: this.dashboard.cpuChartHeight,
-          realtimeConnected: this.dashboard.realtimeConnected,
-          connectionMode: this.dashboard.savedConnectionMode,
-          connectionLabel: this.dashboard.connectionLabel(),
-          connectionDetail: this.dashboard.connectionDetail(),
-          email: this.dashboard.session.email,
-          onSelectedIdChange: (id: string) => this.dashboard.selectSystem(id),
-          onRefresh: () => this.dashboard.refresh(),
-          onLiveMetricsChange: (enabled: boolean) => this.dashboard.setLiveMetrics(enabled),
-          onUpdateWhileScrollingChange: (enabled: boolean) =>
-            this.dashboard.updateScrollingPreference(enabled),
-          onColorModeChange: (mode: AppColorMode) => this.dashboard.updateColorMode(mode),
-          onCpuChartHeightChange: (height: CpuChartHeight) => this.dashboard.updateCpuChartHeight(height),
-          onDetailVisibilityChange: (visible: boolean) => this.dashboard.setDetailVisible(visible),
-          onDetailScrollingChange: (scrolling: boolean) => this.dashboard.setDetailScrolling(scrolling),
-          onGatewayKeyChange: (gatewayKey: string) => this.dashboard.updateGatewayKey(gatewayKey),
-          onSignOut: () => this.dashboard.signOut()
+          controller: this.dashboard,
+          expanded: this.curScreenSizeString === 'lg'
         })
       }
     }

@@ -1,7 +1,6 @@
+import { DashboardController } from '../controller/DashboardController'
 import { SystemSummary } from '../model/BeszelModels'
 import { AppColorMode, CpuChartHeight } from '../model/AppearanceModels'
-import { ConnectionMode } from '../model/ConnectionModels'
-import { SystemDetailState } from '../model/SystemDetailModels'
 import { SettingsView } from './SettingsView'
 import { SmartDetailsView } from './SmartDetailsView'
 import { SystemCard } from './SystemCard'
@@ -17,46 +16,24 @@ class DashboardDestinationParam {
 
 @Component
 export struct DashboardView {
-  @Prop @Watch('onSystemsChanged') systems: SystemSummary[] = []
-  @Prop @Watch('onSelectedIdChanged') selectedId: string = ''
-  @ObjectLink detailState: SystemDetailState
-  @Prop loading: boolean = false
-  @Prop errorMessage: string = ''
-  @Prop lastRefresh: string = ''
+  // The controller is passed by reference so list items reach SystemCard as the
+  // live @Observed instances; @Prop would deep-copy the array and freeze cards.
+  @ObjectLink @Watch('onModelChanged') controller: DashboardController
   @Prop @Watch('onExpandedChanged') expanded: boolean = false
-  @Prop liveMetrics: boolean = false
-  @Prop updateWhileScrolling: boolean = false
-  @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
-  @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
-  @Prop realtimeConnected: boolean = false
-  @Prop connectionMode: ConnectionMode = ConnectionMode.HTTP
-  @Prop connectionLabel: string = ''
-  @Prop connectionDetail: string = ''
-  @Prop email: string = ''
   @State private detailVisible: boolean = false
-  onSelectedIdChange: (id: string) => void = () => {}
-  onRefresh: () => void = () => {}
-  onLiveMetricsChange: (enabled: boolean) => void = () => {}
-  onUpdateWhileScrollingChange: (enabled: boolean) => void = () => {}
-  onColorModeChange: (mode: AppColorMode) => void = () => {}
-  onCpuChartHeightChange: (height: CpuChartHeight) => void = () => {}
-  onDetailVisibilityChange: (visible: boolean) => void = () => {}
-  onDetailScrollingChange: (scrolling: boolean) => void = () => {}
-  onGatewayKeyChange: (gatewayKey: string) => void = () => {}
-  onSignOut: () => void = () => {}
   private pathStack: NavPathStack = new NavPathStack()
 
   private onlineCount(): number {
-    return this.systems.filter((system: SystemSummary) => system.isUp()).length
+    return this.controller.systems.filter((system: SystemSummary) => system.isUp()).length
   }
 
   build() {
     Column() {
       this.header()
 
-      if (this.errorMessage.length > 0) {
+      if (this.controller.dashboardError.length > 0) {
         Row({ space: 10 }) {
-          Text(this.errorMessage)
+          Text(this.controller.dashboardError)
             .fontSize(13)
             .fontColor($r('app.color.error_text'))
             .layoutWeight(1)
@@ -64,7 +41,7 @@ export struct DashboardView {
             .fontSize(13)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.action'))
-            .onClick(() => this.onRefresh())
+            .onClick(() => this.controller.refresh())
         }
         .width('100%')
         .padding({ left: 18, right: 18, top: 10, bottom: 10 })
@@ -93,13 +70,13 @@ export struct DashboardView {
 
   @Builder
   private navigationRoot() {
-    if (this.systems.length === 0) {
+    if (this.controller.systems.length === 0) {
       Column({ space: 12 }) {
-        Text(this.loading ? $r('app.string.loading_systems') : $r('app.string.no_shared_systems'))
+        Text(this.controller.refreshing ? $r('app.string.loading_systems') : $r('app.string.no_shared_systems'))
           .fontSize(20)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.text_primary'))
-        Text(this.loading ? $r('app.string.connecting_hub') : $r('app.string.share_system_hint'))
+        Text(this.controller.refreshing ? $r('app.string.connecting_hub') : $r('app.string.share_system_hint'))
           .fontSize(14)
           .fontColor($r('app.color.text_secondary'))
           .textAlign(TextAlign.Center)
@@ -120,41 +97,41 @@ export struct DashboardView {
         this.detailDestination(param)
       } else if (name === 'smart') {
         SmartDetailsView({
-          state: this.detailState.smartHealth,
+          state: this.controller.detailState.smartHealth,
           compact: !this.expanded,
           onBack: () => {
             this.pathStack.pop()
           },
-          onScrollingChange: (scrolling: boolean) => this.onDetailScrollingChange(scrolling)
+          onScrollingChange: (scrolling: boolean) => this.controller.setDetailScrolling(scrolling)
         })
       } else if (name === 'settings') {
         SettingsView({
-          connectionMode: this.connectionMode,
-          connectionLabel: this.connectionLabel,
-          connectionDetail: this.connectionDetail,
-          email: this.email,
+          connectionMode: this.controller.savedConnectionMode,
+          connectionLabel: this.controller.connectionLabel(),
+          connectionDetail: this.controller.connectionDetail(),
+          email: this.controller.session.email,
           expanded: this.expanded,
-          errorMessage: this.errorMessage,
-          updateWhileScrolling: this.updateWhileScrolling,
-          colorMode: this.colorMode,
-          cpuChartHeight: this.cpuChartHeight,
+          errorMessage: this.controller.dashboardError,
+          updateWhileScrolling: this.controller.updateWhileScrolling,
+          colorMode: this.controller.colorMode,
+          cpuChartHeight: this.controller.cpuChartHeight,
           onBack: () => {
             this.pathStack.pop()
           },
           onSignOut: () => {
-            this.onSignOut()
+            this.controller.signOut()
           },
           onGatewayKeyChange: (gatewayKey: string) => {
-            this.onGatewayKeyChange(gatewayKey)
+            this.controller.updateGatewayKey(gatewayKey)
           },
           onUpdateWhileScrollingChange: (enabled: boolean) => {
-            this.onUpdateWhileScrollingChange(enabled)
+            this.controller.updateScrollingPreference(enabled)
           },
           onColorModeChange: (mode: AppColorMode) => {
-            this.onColorModeChange(mode)
+            this.controller.updateColorMode(mode)
           },
           onCpuChartHeightChange: (height: CpuChartHeight) => {
-            this.onCpuChartHeightChange(height)
+            this.controller.updateCpuChartHeight(height)
           }
         })
       }
@@ -183,21 +160,21 @@ export struct DashboardView {
         this.detailSystems(param),
         (system: SystemSummary) => {
           SystemDetail({
-            detail: this.detailState,
+            detail: this.controller.detailState,
             systemName: system.name,
             host: system.host,
             status: system.status,
             agentVersion: system.agentVersion,
             compact: !this.expanded,
-            liveSampling: this.liveMetrics && this.realtimeConnected,
-            cpuChartHeight: this.cpuChartHeight,
-            colorMode: this.colorMode,
+            liveSampling: this.controller.liveMetrics && this.controller.realtimeConnected,
+            cpuChartHeight: this.controller.cpuChartHeight,
+            colorMode: this.controller.colorMode,
             onBack: () => this.pathStack.pop(),
-            onScrollingChange: (scrolling: boolean) => this.onDetailScrollingChange(scrolling),
+            onScrollingChange: (scrolling: boolean) => this.controller.setDetailScrolling(scrolling),
             onOpenSmartDetails: () => this.openSmartDetails()
           })
         },
-        (system: SystemSummary) => `${system.id}:${system.status}`
+        (system: SystemSummary) => system.id
       )
     }
     .width('100%')
@@ -224,7 +201,7 @@ export struct DashboardView {
         .fontSize(24)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
-      Text($r('app.string.systems_online', this.onlineCount(), this.systems.length))
+      Text($r('app.string.systems_online', this.onlineCount(), this.controller.systems.length))
         .fontSize(12)
         .fontColor($r('app.color.text_secondary'))
     }
@@ -239,20 +216,20 @@ export struct DashboardView {
         .width(7)
         .height(7)
         .borderRadius(4)
-        .backgroundColor(this.liveMetrics && this.realtimeConnected && this.detailVisible ?
+        .backgroundColor(this.controller.liveMetrics && this.controller.realtimeConnected && this.detailVisible ?
           $r('app.color.status_up') : $r('app.color.text_tertiary'))
       Text($r('app.string.live'))
         .fontSize(13)
         .fontColor($r('app.color.text_secondary'))
-      Toggle({ type: ToggleType.Switch, isOn: this.liveMetrics })
-        .onChange((enabled: boolean) => this.onLiveMetricsChange(enabled))
+      Toggle({ type: ToggleType.Switch, isOn: this.controller.liveMetrics })
+        .onChange((enabled: boolean) => this.controller.setLiveMetrics(enabled))
     }
   }
 
   @Builder
   private refreshButton() {
     Button() {
-      if (this.loading) {
+      if (this.controller.refreshing) {
         LoadingProgress()
           .width(18)
           .height(18)
@@ -267,9 +244,9 @@ export struct DashboardView {
       .height(36)
       .backgroundColor($r('app.color.action_surface'))
       .borderRadius(10)
-      .enabled(!this.loading)
+      .enabled(!this.controller.refreshing)
       .accessibilityText($r('app.string.refresh'))
-      .onClick(() => this.onRefresh())
+      .onClick(() => this.controller.refresh())
   }
 
   @Builder
@@ -290,23 +267,23 @@ export struct DashboardView {
   @Builder
   private systemList() {
     Column({ space: 10 }) {
-      if (this.lastRefresh.length > 0) {
-        Text($r('app.string.updated', this.lastRefresh))
+      if (this.controller.lastRefresh.length > 0) {
+        Text($r('app.string.updated', this.controller.lastRefresh))
           .fontSize(11)
           .fontColor($r('app.color.text_tertiary'))
           .width('100%')
       }
 
       List({ space: 10 }) {
-        ForEach(this.systems, (system: SystemSummary) => {
+        ForEach(this.controller.systems, (system: SystemSummary) => {
           ListItem() {
             SystemCard({
               system: system,
-              selected: this.expanded && system.id === this.selectedId,
+              selected: this.expanded && system.id === this.controller.selectedId,
               onSelect: () => this.selectSystem(system.id)
             })
           }
-        }, (system: SystemSummary) => `${system.id}:${system.status}`)
+        }, (system: SystemSummary) => system.id)
       }
       .layoutWeight(1)
       .width('100%')
@@ -318,10 +295,10 @@ export struct DashboardView {
   }
 
   private selectSystem(id: string): void {
-    if (id === this.selectedId && this.topDestinationName() === 'detail') {
+    if (id === this.controller.selectedId && this.topDestinationName() === 'detail') {
       return
     }
-    this.onSelectedIdChange(id)
+    this.controller.selectSystem(id)
     if (this.expanded) {
       if (this.topDestinationName() === 'detail') {
         this.pathStack.pushPath({ name: 'detail', param: new DashboardDestinationParam(id) })
@@ -341,18 +318,18 @@ export struct DashboardView {
   }
 
   private openSmartDetails(): void {
-    if (this.detailState.smartHealth.isVisible() && this.topDestinationName() !== 'smart') {
-      this.pathStack.pushPath({ name: 'smart', param: new DashboardDestinationParam(this.selectedId) })
+    if (this.controller.detailState.smartHealth.isVisible() && this.topDestinationName() !== 'smart') {
+      this.pathStack.pushPath({ name: 'smart', param: new DashboardDestinationParam(this.controller.selectedId) })
     }
   }
 
   private detailSystems(param: Object): SystemSummary[] {
     const requestedId = (param as DashboardDestinationParam).systemId
-    const requested = this.systems.filter((system: SystemSummary) => system.id === requestedId)
+    const requested = this.controller.systems.filter((system: SystemSummary) => system.id === requestedId)
     if (requested.length > 0) {
       return requested
     }
-    return this.systems.filter((system: SystemSummary) => system.id === this.selectedId)
+    return this.controller.systems.filter((system: SystemSummary) => system.id === this.controller.selectedId)
   }
 
   private topDestinationName(): string {
@@ -366,7 +343,7 @@ export struct DashboardView {
     }
     const pathNames = this.pathStack.getAllPathName()
     const staleIndexes: number[] = []
-    for (let index = 0; index < pathNames.length - 1; index++) {
+    for (let index = 0; index < pathNames.length - 1; index += 1) {
       if (pathNames[index] === 'detail') {
         staleIndexes.push(index)
       }
@@ -377,12 +354,12 @@ export struct DashboardView {
   }
 
   private ensureDetailForSplit(): void {
-    if (!this.expanded || this.selectedId.length === 0 || this.pathStack.size() > 0) {
+    if (!this.expanded || this.controller.selectedId.length === 0 || this.pathStack.size() > 0) {
       return
     }
     this.pathStack.pushPath({
       name: 'detail',
-      param: new DashboardDestinationParam(this.selectedId)
+      param: new DashboardDestinationParam(this.controller.selectedId)
     }, false)
   }
 
@@ -392,15 +369,12 @@ export struct DashboardView {
       return
     }
     this.detailVisible = visible
-    this.onDetailVisibilityChange(visible)
+    this.controller.setDetailVisible(visible)
   }
 
-  private onSelectedIdChanged(): void {
-    this.ensureDetailForSplit()
-  }
-
-  private onSystemsChanged(): void {
-    if (this.systems.length === 0) {
+  // Fires on every controller write; both branches are cheap guards.
+  private onModelChanged(): void {
+    if (this.controller.systems.length === 0) {
       this.pathStack.removeByName('detail')
       this.syncDetailVisibility()
       return
@@ -409,10 +383,10 @@ export struct DashboardView {
   }
 
   private onExpandedChanged(): void {
-    if (!this.expanded && this.topDestinationName() === 'detail' && this.selectedId.length > 0) {
+    if (!this.expanded && this.topDestinationName() === 'detail' && this.controller.selectedId.length > 0) {
       this.pathStack.replacePath({
         name: 'detail',
-        param: new DashboardDestinationParam(this.selectedId)
+        param: new DashboardDestinationParam(this.controller.selectedId)
       }, false)
       return
     }

@@ -168,18 +168,6 @@ export struct CpuTrendChart {
     this.context.stroke()
   }
 
-  // Anchoring the ceiling and midpoint is enough to read the even grid; a 0%
-  // label would stack on the "0" (= now) x-axis label in the bottom-right corner.
-  private drawScaleLabels(width: number): void {
-    const plotHeight = Math.max(1, this.context.height - 10)
-    this.context.font = '9px sans-serif'
-    this.context.textAlign = 'right'
-    this.context.textBaseline = 'middle'
-    this.context.fillStyle = this.resolveColor($r('app.color.text_tertiary'), 0xFF7A857D)
-    this.context.fillText('100%', width - 7, 5)
-    this.context.fillText('50%', width - 7, 5 + plotHeight / 2)
-  }
-
   private resolveColor(resource: Resource, fallback: number): number {
     const hostContext = this.getUIContext().getHostContext()
     if (hostContext === undefined) return fallback
