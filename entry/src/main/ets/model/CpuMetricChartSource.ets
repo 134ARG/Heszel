@@ -25,12 +25,12 @@ export class CpuMetricChartSource implements MetricChartSource {
   }
 
   initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
-    const series: MetricChartSeries[] = [new MetricChartSeries(CPU_TOTAL_KEY, labels.total, true)]
+    const series: MetricChartSeries[] = [new MetricChartSeries(CPU_TOTAL_KEY, labels.total)]
     const keys = [CPU_USER_KEY, CPU_SYSTEM_KEY, CPU_IO_WAIT_KEY, CPU_STEAL_KEY]
     const names = [labels.cpuUser, labels.cpuSystem, labels.cpuIoWait, labels.cpuSteal]
     const count = Math.min(detail.cpuMetrics.breakdown.length, keys.length)
     for (let index = 0; index < count; index += 1) {
-      series.push(new MetricChartSeries(keys[index], names[index], series.length < 4))
+      series.push(new MetricChartSeries(keys[index], names[index]))
     }
     detail.cpuMetrics.cores.forEach((core) => {
       series.push(new MetricChartSeries(`${CPU_CORE_PREFIX}${core.index}`, `${labels.cpuCore} ${core.index}`, false))

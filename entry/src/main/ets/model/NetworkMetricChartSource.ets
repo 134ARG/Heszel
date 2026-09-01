@@ -26,10 +26,10 @@ export class NetworkMetricChartSource implements MetricChartSource {
 
   initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
     if (detail.networkMetrics.interfaces.length === 0) {
-      return [new MetricChartSeries(NETWORK_TOTAL_KEY, labels.total, true)]
+      return [new MetricChartSeries(NETWORK_TOTAL_KEY, labels.total)]
     }
-    return detail.networkMetrics.interfaces.map((networkInterface, index: number) =>
-      new MetricChartSeries(networkInterface.name, networkInterface.name, index < 4))
+    return detail.networkMetrics.interfaces.map((networkInterface) =>
+      new MetricChartSeries(networkInterface.name, networkInterface.name))
   }
 
   initialValue(kind: MetricChartPanelKind, detail: SystemDetailState, key: string): number {

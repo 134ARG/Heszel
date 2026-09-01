@@ -1,6 +1,7 @@
 import { AppColorMode } from '../model/AppearanceModels'
 import {
   AdaptiveMetricChartState,
+  MAX_SELECTED_METRIC_SERIES,
   MetricChartAxisPolicy,
   MetricChartPoint,
   MetricChartRange,
@@ -23,7 +24,7 @@ class MetricChartBounds {
 export struct AdaptiveMetricChart {
   @ObjectLink @Watch('onChartStateChanged') state: AdaptiveMetricChartState
   @Prop @Watch('onPaletteChanged') colorMode: AppColorMode = AppColorMode.SYSTEM
-  @Prop @Watch('onPaletteChanged') primarySeriesColor: Resource = $r('app.color.chart_series_1')
+  @Prop @Watch('onPaletteChanged') primarySeriesColor: Resource = $r('app.color.chart_series_start')
   @Prop @Watch('onInspectionDismissRequested') inspectionDismissToken: number = 0
   @Prop chartHeight: number = 230
   @Prop loading: boolean = false
@@ -657,18 +658,7 @@ export struct AdaptiveMetricChart {
   }
 
   private seriesResourceColor(key: string): ResourceColor {
-    return this.seriesResourceColorByIndex(this.colorIndex(key))
-  }
-
-  private seriesResourceColorByIndex(index: number): ResourceColor {
-    switch (index) {
-      case 0: return this.primarySeriesColor
-      case 1: return $r('app.color.chart_series_2')
-      case 2: return $r('app.color.chart_series_3')
-      case 3: return $r('app.color.chart_series_4')
-      case 4: return $r('app.color.chart_series_5')
-      default: return $r('app.color.chart_series_6')
-    }
+    return this.seriesColor(key)
   }
 
   private dividerColor(): number {
@@ -690,11 +680,81 @@ export struct AdaptiveMetricChart {
     this.cachedColorMode = this.colorMode
     this.cachedPaletteReady = true
     this.cachedDividerColor = this.resolveColor($r('app.color.divider'), 0xFFE2E8E3)
+    const startColor = this.resolveColor(this.primarySeriesColor, 0xFFD83B4B)
+    const endColor = this.resolveColor($r('app.color.chart_series_end'), 0xFF844BC5)
+    this.cachedSeriesColors = this.spectrumColors(startColor, endColor, MAX_SELECTED_METRIC_SERIES)
+  }
+
+  private spectrumColors(startColor: number, endColor: number, count: number): number[] {
+    const start = this.colorHsl(startColor)
+    const end = this.colorHsl(endColor)
+    const hueDistance = (end[0] - start[0] + 360) % 360
+    const divisor = Math.max(1, count - 1)
     const colors: number[] = []
-    for (let index = 0; index < 6; index += 1) {
-      colors.push(this.resolveColor(this.seriesResourceColorByIndex(index) as Resource, 0xFF267454))
+    for (let index = 0; index < count; index += 1) {
+      const ratio = index / divisor
+      colors.push(this.hslColor(
+        (start[0] + hueDistance * ratio) % 360,
+        start[1] + (end[1] - start[1]) * ratio,
+        start[2] + (end[2] - start[2]) * ratio
+      ))
     }
-    this.cachedSeriesColors = colors
+    return colors
+  }
+
+  private colorHsl(color: number): number[] {
+    const red = (color >>> 16 & 0xFF) / 255
+    const green = (color >>> 8 & 0xFF) / 255
+    const blue = (color & 0xFF) / 255
+    const maximum = Math.max(red, green, blue)
+    const minimum = Math.min(red, green, blue)
+    const difference = maximum - minimum
+    const lightness = (maximum + minimum) / 2
+    let hue = 0
+    if (difference > 0) {
+      if (maximum === red) {
+        hue = 60 * ((green - blue) / difference % 6)
+      } else if (maximum === green) {
+        hue = 60 * ((blue - red) / difference + 2)
+      } else {
+        hue = 60 * ((red - green) / difference + 4)
+      }
+    }
+    const saturation = difference === 0 ? 0 : difference / (1 - Math.abs(2 * lightness - 1))
+    return [(hue + 360) % 360, saturation, lightness]
+  }
+
+  private hslColor(hue: number, saturation: number, lightness: number): number {
+    const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation
+    const sector = hue / 60
+    const intermediate = chroma * (1 - Math.abs(sector % 2 - 1))
+    let red = 0
+    let green = 0
+    let blue = 0
+    if (sector < 1) {
+      red = chroma
+      green = intermediate
+    } else if (sector < 2) {
+      red = intermediate
+      green = chroma
+    } else if (sector < 3) {
+      green = chroma
+      blue = intermediate
+    } else if (sector < 4) {
+      green = intermediate
+      blue = chroma
+    } else if (sector < 5) {
+      red = intermediate
+      blue = chroma
+    } else {
+      red = chroma
+      blue = intermediate
+    }
+    const offset = lightness - chroma / 2
+    const redByte = Math.round((red + offset) * 255)
+    const greenByte = Math.round((green + offset) * 255)
+    const blueByte = Math.round((blue + offset) * 255)
+    return 0xFF000000 + redByte * 0x10000 + greenByte * 0x100 + blueByte
   }
 
   private colorIndex(key: string): number {

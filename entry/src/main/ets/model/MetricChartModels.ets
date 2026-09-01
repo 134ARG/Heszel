@@ -7,6 +7,8 @@ export enum MetricChartRange {
   DAY_30
 }
 
+export const MAX_SELECTED_METRIC_SERIES = 6
+
 export enum MetricChartAxisPolicy {
   AUTO,
   ZERO_BASED,
@@ -180,7 +182,7 @@ export class AdaptiveMetricChartState {
       selectedIndices.some((index: number) => Number.isFinite(point.values[index])))
   }
 
-  toggleSeries(key: string, maximumSelected: number = 6): boolean {
+  toggleSeries(key: string, maximumSelected: number = MAX_SELECTED_METRIC_SERIES): boolean {
     const index = this.series.findIndex((series: MetricChartSeries) => series.key === key)
     if (index < 0) return false
     const target = this.series[index]

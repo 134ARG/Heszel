@@ -23,15 +23,15 @@ export class MemoryMetricChartSource implements MetricChartSource {
   }
 
   initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
-    const series: MetricChartSeries[] = [new MetricChartSeries(MEMORY_USED_KEY, labels.memoryUsed, true)]
+    const series: MetricChartSeries[] = [new MetricChartSeries(MEMORY_USED_KEY, labels.memoryUsed)]
     if (detail.memoryMetrics.cacheGb > 0) {
-      series.push(new MetricChartSeries(MEMORY_CACHE_KEY, labels.memoryCache, true))
+      series.push(new MetricChartSeries(MEMORY_CACHE_KEY, labels.memoryCache))
     }
     if (detail.memoryMetrics.zfsArcGb > 0) {
-      series.push(new MetricChartSeries(MEMORY_ZFS_KEY, labels.memoryZfs, true))
+      series.push(new MetricChartSeries(MEMORY_ZFS_KEY, labels.memoryZfs))
     }
     if (detail.memoryMetrics.swapTotalGb > 0 || detail.memoryMetrics.swapUsedGb > 0) {
-      series.push(new MetricChartSeries(MEMORY_SWAP_KEY, labels.memorySwap, true))
+      series.push(new MetricChartSeries(MEMORY_SWAP_KEY, labels.memorySwap))
     }
     return series
   }

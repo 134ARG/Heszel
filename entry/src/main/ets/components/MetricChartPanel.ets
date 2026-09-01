@@ -3,7 +3,12 @@ import {
   chartHeightVp,
   MetricChartHeight
 } from '../model/AppearanceModels'
-import { AdaptiveMetricChartState, MetricChartRange, MetricChartSeries } from '../model/MetricChartModels'
+import {
+  AdaptiveMetricChartState,
+  MAX_SELECTED_METRIC_SERIES,
+  MetricChartRange,
+  MetricChartSeries
+} from '../model/MetricChartModels'
 import { AdaptiveMetricChart } from './AdaptiveMetricChart'
 
 const METRIC_CHART_RANGES: MetricChartRange[] = [
@@ -68,7 +73,6 @@ export struct MetricChartPanel {
   @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   @Prop metricHint: ResourceStr = ''
   @Prop searchPlaceholder: ResourceStr = ''
-  @Prop maximumSelected: number = 6
   @State private metricSheetVisible: boolean = false
   @State private metricFilter: string = ''
   @State private selectionLimitReached: boolean = false
@@ -213,9 +217,9 @@ export struct MetricChartPanel {
           ListItem() {
             MetricChartChoice({
               series: series,
-              limitReached: this.chart.selectedCount() >= this.maximumSelected && !series.selected,
+              limitReached: this.chart.selectedCount() >= MAX_SELECTED_METRIC_SERIES && !series.selected,
               onToggle: () => {
-                const changed = this.chart.toggleSeries(series.key, this.maximumSelected)
+                const changed = this.chart.toggleSeries(series.key)
                 this.selectionLimitReached = !changed && !series.selected
               }
             })

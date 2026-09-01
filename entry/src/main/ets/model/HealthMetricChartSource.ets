@@ -18,8 +18,7 @@ export class HealthMetricChartSource implements MetricChartSource {
   initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
     const ranked = detail.healthMetrics.sensors.slice().sort((left: SensorMetric, right: SensorMetric) =>
       right.temperatureCelsius - left.temperatureCelsius)
-    return ranked.map((sensor: SensorMetric, index: number) =>
-      new MetricChartSeries(sensor.name, sensor.name, index < 4))
+    return ranked.map((sensor: SensorMetric) => new MetricChartSeries(sensor.name, sensor.name))
   }
 
   initialValue(kind: MetricChartPanelKind, detail: SystemDetailState, key: string): number {

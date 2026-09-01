@@ -4,6 +4,7 @@ import { HealthMetricChartSource } from './HealthMetricChartSource'
 import { MemoryMetricChartSource } from './MemoryMetricChartSource'
 import {
   AdaptiveMetricChartState,
+  MAX_SELECTED_METRIC_SERIES,
   MetricChartAxisPolicy,
   MetricChartPoint,
   MetricChartRange,
@@ -21,6 +22,16 @@ import {
   MetricChartSource
 } from './MetricChartSource'
 import { BeszelSystemStatsRecordWire, BeszelSystemStatsWire, SystemDetailState } from './SystemDetailModels'
+
+function applyDefaultSelection(series: MetricChartSeries[]): void {
+  let selectedCount = series.filter((item: MetricChartSeries) => item.selected).length
+  for (let index = 0; index < series.length && selectedCount < MAX_SELECTED_METRIC_SERIES; index += 1) {
+    if (!series[index].selected) {
+      series[index].selected = true
+      selectedCount += 1
+    }
+  }
+}
 
 @Observed
 export class MetricChartPanelState {
@@ -52,8 +63,10 @@ export class MetricChartPanelState {
   }
 
   setInitialSeries(series: MetricChartSeries[]): void {
-    this.chart.setSeries(series.map((item: MetricChartSeries) =>
-      new MetricChartSeries(item.key, item.label, item.selected)))
+    const next = series.map((item: MetricChartSeries) =>
+      new MetricChartSeries(item.key, item.label, false))
+    applyDefaultSelection(next)
+    this.chart.setSeries(next)
   }
 }
 
@@ -277,9 +290,7 @@ export class MetricChartsState {
         point.values = values
       })
     }
-    if (!next.some((item: MetricChartSeries) => item.selected)) {
-      for (let index = 0; index < Math.min(4, next.length); index += 1) next[index].selected = true
-    }
+    applyDefaultSelection(next)
     panel.chart.setSeries(next)
   }
 }

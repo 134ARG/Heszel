@@ -35,11 +35,10 @@ export class StorageMetricChartSource implements MetricChartSource {
 
   initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
     const series: MetricChartSeries[] = [
-      new MetricChartSeries(STORAGE_ROOT_KEY, labels.rootFilesystem, true)
+      new MetricChartSeries(STORAGE_ROOT_KEY, labels.rootFilesystem)
     ]
     detail.storageMetrics.filesystems.forEach((filesystem: FilesystemMetric) => {
-      series.push(new MetricChartSeries(this.filesystemKey(filesystem.name),
-        filesystem.name, series.length < 4))
+      series.push(new MetricChartSeries(this.filesystemKey(filesystem.name), filesystem.name))
     })
     return series
   }

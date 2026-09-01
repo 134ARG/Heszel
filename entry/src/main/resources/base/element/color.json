@@ -32,11 +32,7 @@
     { "name": "metric_disk", "value": "#9B6B2F" },
     { "name": "metric_gpu", "value": "#7B5EA7" },
     { "name": "metric_danger", "value": "#C93C32" },
-    { "name": "chart_series_1", "value": "#D83B4B" },
-    { "name": "chart_series_2", "value": "#E47716" },
-    { "name": "chart_series_3", "value": "#A88700" },
-    { "name": "chart_series_4", "value": "#15945F" },
-    { "name": "chart_series_5", "value": "#2474C8" },
-    { "name": "chart_series_6", "value": "#844BC5" }
+    { "name": "chart_series_start", "value": "#D83B4B" },
+    { "name": "chart_series_end", "value": "#844BC5" }
   ]
 }

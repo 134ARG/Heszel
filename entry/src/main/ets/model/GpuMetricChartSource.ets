@@ -25,8 +25,7 @@ export class GpuMetricChartSource implements MetricChartSource {
   }
 
   initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
-    return detail.gpuMetrics.gpus.map((gpu, index: number) =>
-      new MetricChartSeries(gpu.id, gpu.name, index < 4))
+    return detail.gpuMetrics.gpus.map((gpu) => new MetricChartSeries(gpu.id, gpu.name))
   }
 
   initialValue(kind: MetricChartPanelKind, detail: SystemDetailState, key: string): number {
