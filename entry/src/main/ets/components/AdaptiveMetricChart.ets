@@ -22,11 +22,13 @@ class MetricChartBounds {
 @Component
 export struct AdaptiveMetricChart {
   @ObjectLink @Watch('onChartStateChanged') state: AdaptiveMetricChartState
-  @Prop @Watch('onColorModeChanged') colorMode: AppColorMode = AppColorMode.SYSTEM
+  @Prop @Watch('onPaletteChanged') colorMode: AppColorMode = AppColorMode.SYSTEM
+  @Prop @Watch('onPaletteChanged') primarySeriesColor: Resource = $r('app.color.chart_series_1')
   @Prop @Watch('onInspectionDismissRequested') inspectionDismissToken: number = 0
   @Prop chartHeight: number = 230
   @Prop loading: boolean = false
   @Prop showNoData: boolean = true
+  @Prop showLegend: boolean = true
   onPlotAreaChange: (left: number, top: number, width: number, height: number) => void =
     (_left: number, _top: number, _width: number, _height: number) => {}
   @State private chartWidth: number = 0
@@ -188,7 +190,7 @@ export struct AdaptiveMetricChart {
       .alignItems(VerticalAlign.Top)
       .width('100%')
 
-      if (this.selectedSeries().length > 0) {
+      if (this.showLegend && this.selectedSeries().length > 0) {
         Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start, alignItems: ItemAlign.Center }) {
           ForEach(this.selectedSeries(), (series: MetricChartSeries) => {
             Row({ space: 5 }) {
@@ -221,7 +223,8 @@ export struct AdaptiveMetricChart {
     this.draw()
   }
 
-  private onColorModeChanged(): void {
+  private onPaletteChanged(): void {
+    this.cachedPaletteReady = false
     if (this.ready) this.draw()
   }
 
@@ -659,7 +662,7 @@ export struct AdaptiveMetricChart {
 
   private seriesResourceColorByIndex(index: number): ResourceColor {
     switch (index) {
-      case 0: return $r('app.color.chart_series_1')
+      case 0: return this.primarySeriesColor
       case 1: return $r('app.color.chart_series_2')
       case 2: return $r('app.color.chart_series_3')
       case 3: return $r('app.color.chart_series_4')

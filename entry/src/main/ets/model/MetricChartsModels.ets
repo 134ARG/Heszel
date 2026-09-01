@@ -204,7 +204,7 @@ export class MetricChartsState {
     this.panels.forEach((panel: MetricChartPanelState) => {
       if (panel.chart.range !== MetricChartRange.LIVE) return
       const latest = this.latestFor(panel.kind)
-      if (latest.size > 0) panel.chart.appendLive(nowMs, latest)
+      if (latest.size > 0) panel.chart.append(nowMs, latest)
     })
   }
 

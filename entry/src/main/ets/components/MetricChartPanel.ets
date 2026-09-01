@@ -1,7 +1,7 @@
 import {
   AppColorMode,
-  MetricChartHeight,
-  metricChartHeightScale
+  chartHeightVp,
+  MetricChartHeight
 } from '../model/AppearanceModels'
 import { AdaptiveMetricChartState, MetricChartRange, MetricChartSeries } from '../model/MetricChartModels'
 import { AdaptiveMetricChart } from './AdaptiveMetricChart'
@@ -120,7 +120,7 @@ export struct MetricChartPanel {
       AdaptiveMetricChart({
         state: this.chart,
         colorMode: this.colorMode,
-        chartHeight: (this.compact ? 150 : 180) * metricChartHeightScale(this.metricChartHeight),
+        chartHeight: chartHeightVp(this.metricChartHeight, this.compact),
         loading: this.loading,
         showNoData: this.errorMessage.length === 0,
         inspectionDismissToken: this.inspectionDismissToken,

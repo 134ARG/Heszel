@@ -1,6 +1,6 @@
-import { AppColorMode, CpuChartHeight, cpuChartHeightVp } from '../model/AppearanceModels'
+import { AppColorMode, chartHeightVp, CpuChartHeight } from '../model/AppearanceModels'
 import { GpuMetricsState, HealthMetricsState, MetricTrendState, OverviewMetricsState } from '../model/SystemDetailModels'
-import { CpuTrendChart } from './CpuTrendChart'
+import { AdaptiveMetricChart } from './AdaptiveMetricChart'
 import { PressureBar } from './PressureBar'
 
 @Component
@@ -34,11 +34,12 @@ export struct SystemOverview {
               // .fontColor($r('app.color.text_primary'))
           }
           .width('100%')
-          CpuTrendChart({
-            trend: this.cpuTrend,
-            revision: this.cpuTrend.revision,
-            chartHeight: cpuChartHeightVp(this.cpuChartHeight),
-            colorMode: this.colorMode
+          AdaptiveMetricChart({
+            state: this.cpuTrend.chart,
+            colorMode: this.colorMode,
+            primarySeriesColor: $r('app.color.metric_cpu'),
+            chartHeight: chartHeightVp(this.cpuChartHeight, this.compact, 67.2, 75.6),
+            showLegend: false
           })
           Row() {
             Text($r('app.string.latest_cpu_samples'))

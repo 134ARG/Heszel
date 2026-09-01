@@ -144,7 +144,7 @@ export class AdaptiveMetricChartState {
     this.revision += 1
   }
 
-  appendLive(timestampMs: number, valuesByKey: Map<string, number>): void {
+  append(timestampMs: number, valuesByKey: Map<string, number>): void {
     this.ensureSeries(Array.from(valuesByKey.keys()))
     const values: number[] = []
     this.series.forEach((series: MetricChartSeries) => {
@@ -153,7 +153,7 @@ export class AdaptiveMetricChartState {
     })
     // Points arrive in ascending time; drop the expired prefix in place instead
     // of rebuilding the array on every append.
-    const windowStartMs = timestampMs - chartRangeDurationMs(MetricChartRange.LIVE)
+    const windowStartMs = timestampMs - chartRangeDurationMs(this.range)
     let expired = 0
     while (expired < this.points.length && this.points[expired].timestampMs <= windowStartMs) {
       expired += 1

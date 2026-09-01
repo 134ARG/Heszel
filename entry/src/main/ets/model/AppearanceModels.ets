@@ -5,6 +5,11 @@ export enum AppColorMode {
 }
 
 export enum CpuChartHeight {
+  DEFAULT = 'default',
+  SPACIOUS = 'spacious'
+}
+
+export enum MetricChartHeight {
   COMPACT = 'compact',
   DEFAULT = 'default',
   SPACIOUS = 'spacious'
@@ -21,29 +26,10 @@ export function parseAppColorMode(value: string): AppColorMode {
 }
 
 export function parseCpuChartHeight(value: string): CpuChartHeight {
-  if (value === CpuChartHeight.COMPACT) {
-    return CpuChartHeight.COMPACT
-  }
   if (value === CpuChartHeight.SPACIOUS) {
     return CpuChartHeight.SPACIOUS
   }
   return CpuChartHeight.DEFAULT
-}
-
-export function cpuChartHeightVp(value: CpuChartHeight): number {
-  if (value === CpuChartHeight.COMPACT) {
-    return 64
-  }
-  if (value === CpuChartHeight.SPACIOUS) {
-    return 128
-  }
-  return 96
-}
-
-export enum MetricChartHeight {
-  COMPACT = 'compact',
-  DEFAULT = 'default',
-  SPACIOUS = 'spacious'
 }
 
 export function parseMetricChartHeight(value: string): MetricChartHeight {
@@ -56,13 +42,14 @@ export function parseMetricChartHeight(value: string): MetricChartHeight {
   return MetricChartHeight.DEFAULT
 }
 
-// Multiplies the compact/expanded base heights kept in MetricChartPanel.
-export function metricChartHeightScale(value: MetricChartHeight): number {
+export function chartHeightVp(value: CpuChartHeight | MetricChartHeight, compactLayout: boolean,
+  compactBaseHeight: number = 150, expandedBaseHeight: number = 180): number {
+  const baseHeight = compactLayout ? compactBaseHeight : expandedBaseHeight
   if (value === MetricChartHeight.COMPACT) {
-    return 0.7
+    return baseHeight * 0.7
   }
-  if (value === MetricChartHeight.SPACIOUS) {
-    return 1.35
+  if (value === CpuChartHeight.SPACIOUS || value === MetricChartHeight.SPACIOUS) {
+    return baseHeight * 1.35
   }
-  return 1
+  return baseHeight
 }

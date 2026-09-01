@@ -1,4 +1,11 @@
 import { BeszelSystemInfoWire, SystemSummary } from './BeszelModels'
+import {
+  AdaptiveMetricChartState,
+  MetricChartAxisPolicy,
+  MetricChartPoint,
+  MetricChartRange,
+  MetricChartSeries
+} from './MetricChartModels'
 import { BeszelSmartDeviceWire, SmartHealthState } from './SmartModels'
 
 export interface BeszelSystemDetailsWire {
@@ -90,7 +97,7 @@ export interface BeszelContainerStatsListWire {
   items: BeszelContainerStatsRecordWire[]
 }
 
-const CPU_TREND_CAPACITY = 60
+const CPU_TREND_KEY = 'cpu'
 
 function safeNumber(value: number | undefined): number {
   return value !== undefined && Number.isFinite(value) ? Math.max(0, value) : 0
@@ -362,30 +369,36 @@ export class OverviewMetricsState {
 
 @Observed
 export class MetricTrendState {
-  samples: number[] = []
-  revision: number = 0
+  chart: AdaptiveMetricChartState = new AdaptiveMetricChartState()
 
-  seed(values: number[]): void {
-    const start = Math.max(0, values.length - CPU_TREND_CAPACITY)
-    const next: number[] = []
-    for (let index = start; index < values.length; index += 1) {
-      if (Number.isFinite(values[index])) next.push(Math.min(100, safeNumber(values[index])))
-    }
-    this.samples = next
-    this.revision += 1
+  constructor() {
+    this.chart.configure(MetricChartRange.HOUR_1, MetricChartAxisPolicy.PERCENT, '%', Date.now())
+    this.chart.setSeries([new MetricChartSeries(CPU_TREND_KEY, 'CPU', true)])
   }
 
-  append(value: number): void {
+  seed(records: BeszelSystemStatsRecordWire[]): void {
+    const points: MetricChartPoint[] = []
+    records.forEach((record: BeszelSystemStatsRecordWire) => {
+      const timestampMs = Date.parse(record.created ?? '')
+      const value = record.stats?.cpu
+      if (Number.isFinite(timestampMs) && value !== undefined && Number.isFinite(value)) {
+        points.push(new MetricChartPoint(timestampMs, [Math.min(100, safeNumber(value))]))
+      }
+    })
+    const nowMs = Date.now()
+    this.chart.configure(MetricChartRange.HOUR_1, MetricChartAxisPolicy.PERCENT, '%', nowMs)
+    this.chart.replacePoints(points, nowMs)
+  }
+
+  append(value: number, range: MetricChartRange = MetricChartRange.HOUR_1): void {
     if (!Number.isFinite(value)) return
-    const next = this.samples.slice()
-    next.push(Math.min(100, safeNumber(value)))
-    if (next.length > CPU_TREND_CAPACITY) next.shift()
-    this.samples = next
-    this.revision += 1
-  }
-
-  capacity(): number {
-    return CPU_TREND_CAPACITY
+    const nowMs = Date.now()
+    if (this.chart.range !== range) {
+      this.chart.configure(range, MetricChartAxisPolicy.PERCENT, '%', nowMs)
+    }
+    const values = new Map<string, number>()
+    values.set(CPU_TREND_KEY, Math.min(100, safeNumber(value)))
+    this.chart.append(nowMs, values)
   }
 }
 
@@ -888,11 +901,7 @@ export class SystemDetailState {
   }
 
   seedCpuTrend(records: BeszelSystemStatsRecordWire[]): void {
-    const values: number[] = []
-    records.forEach((record: BeszelSystemStatsRecordWire) => {
-      if (record.stats?.cpu !== undefined) values.push(record.stats.cpu)
-    })
-    this.cpuTrend.seed(values)
+    this.cpuTrend.seed(records)
   }
 
   appendCpuSample(value: number): void {
@@ -901,9 +910,9 @@ export class SystemDetailState {
 
   appendRealtimeCpu(info: BeszelSystemInfoWire | undefined, stats: BeszelSystemStatsWire | undefined): void {
     if (stats?.cpu !== undefined) {
-      this.cpuTrend.append(stats.cpu)
+      this.cpuTrend.append(stats.cpu, MetricChartRange.LIVE)
     } else if (info?.cpu !== undefined) {
-      this.cpuTrend.append(info.cpu)
+      this.cpuTrend.append(info.cpu, MetricChartRange.LIVE)
     }
   }
 

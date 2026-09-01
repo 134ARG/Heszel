@@ -136,7 +136,6 @@ export struct SettingsView {
                 .layoutWeight(1)
 
               Select([
-                { value: $r('app.string.cpu_chart_height_compact') },
                 { value: $r('app.string.cpu_chart_height_default') },
                 { value: $r('app.string.cpu_chart_height_spacious') }
               ])
@@ -456,19 +455,10 @@ export struct SettingsView {
   }
 
   private cpuChartHeightIndex(): number {
-    if (this.cpuChartHeight === CpuChartHeight.COMPACT) {
-      return 0
-    }
-    if (this.cpuChartHeight === CpuChartHeight.SPACIOUS) {
-      return 2
-    }
-    return 1
+    return this.cpuChartHeight === CpuChartHeight.SPACIOUS ? 1 : 0
   }
 
   private cpuChartHeightValue(): ResourceStr {
-    if (this.cpuChartHeight === CpuChartHeight.COMPACT) {
-      return $r('app.string.cpu_chart_height_compact')
-    }
     if (this.cpuChartHeight === CpuChartHeight.SPACIOUS) {
       return $r('app.string.cpu_chart_height_spacious')
     }
@@ -476,8 +466,7 @@ export struct SettingsView {
   }
 
   private changeCpuChartHeight(index: number): void {
-    const height = index === 0 ? CpuChartHeight.COMPACT :
-      index === 2 ? CpuChartHeight.SPACIOUS : CpuChartHeight.DEFAULT
+    const height = index === 1 ? CpuChartHeight.SPACIOUS : CpuChartHeight.DEFAULT
     if (height !== this.cpuChartHeight) {
       this.onCpuChartHeightChange(height)
     }
