@@ -125,7 +125,8 @@ export struct DashboardView {
             this.pathStack.pop()
           },
           onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
-            this.controller.setMetricChartRange(kind, range)
+            this.controller.setMetricChartRange(kind, range),
+          onScrollingChange: (scrolling: boolean) => this.controller.setChartsScrolling(scrolling)
         })
       } else if (name === 'settings') {
         SettingsView({

@@ -11,6 +11,8 @@ export class ConnectionRuntimeService {
   private openTask: Promise<string> | null = null
   private closeTask: Promise<void> | null = null
   private networkMonitor: connection.NetConnection | null = null
+  // unregister requires the exact callback instance passed to register.
+  private monitorRegisterCallback: () => void = () => {}
 
   constructor(repository: SessionRepository) {
     this.repository = repository
@@ -110,6 +112,9 @@ export class ConnectionRuntimeService {
         // A failed open has no live tunnel to preserve.
       }
     }
+    // The subscription follows the tunnel: stop it before tearing down so a
+    // backgrounded app has no network listener left to wake it.
+    this.stopNetworkMonitor()
     if (!this.irohRunning && iroh.getTunnelInfo().state === 'stopped') {
       return
     }
@@ -143,13 +148,28 @@ export class ConnectionRuntimeService {
     }
     try {
       const monitor = connection.createNetConnection()
-      monitor.on('netAvailable', () => this.notifyNetworkChange())
-      monitor.on('netLost', () => this.notifyNetworkChange())
-      monitor.on('netCapabilitiesChange', () => this.notifyNetworkChange())
-      monitor.register(() => {})
+      const changed = (): void => this.notifyNetworkChange()
+      monitor.on('netAvailable', changed)
+      monitor.on('netLost', changed)
+      monitor.on('netCapabilitiesChange', changed)
+      monitor.register(this.monitorRegisterCallback)
       this.networkMonitor = monitor
     } catch (_) {
       // Without monitor callbacks the tunnel still recovers via its own reconnect timers.
+    }
+  }
+
+  private stopNetworkMonitor(): void {
+    const monitor = this.networkMonitor
+    if (monitor === null) {
+      return
+    }
+    this.networkMonitor = null
+    try {
+      // unregister deactivates the whole connection; event callbacks stop with it.
+      monitor.unregister(this.monitorRegisterCallback)
+    } catch (_) {
+      // A stale subscription dies with the process regardless.
     }
   }
 

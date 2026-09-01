@@ -39,6 +39,11 @@ export struct AdaptiveMetricChart {
   private drawnRevision: number = -1
   private cachedBoundsRevision: number = -1
   private cachedBounds: MetricChartBounds = new MetricChartBounds()
+  // Canvas colors are resolved once per color mode instead of per draw.
+  private cachedColorMode: AppColorMode = AppColorMode.SYSTEM
+  private cachedPaletteReady: boolean = false
+  private cachedDividerColor: number = 0xFFE2E8E3
+  private cachedSeriesColors: number[] = []
 
   build() {
     Column({ space: 8 }) {
@@ -430,7 +435,7 @@ export struct AdaptiveMetricChart {
       this.context.moveTo(PLOT_INSET, y)
       this.context.lineTo(width - PLOT_INSET, y)
     }
-    this.context.strokeStyle = this.resolveColor($r('app.color.divider'), 0xFFE2E8E3)
+    this.context.strokeStyle = this.dividerColor()
     this.context.lineWidth = 1
     this.context.stroke()
   }
@@ -638,7 +643,11 @@ export struct AdaptiveMetricChart {
   }
 
   private seriesResourceColor(key: string): ResourceColor {
-    switch (this.colorIndex(key)) {
+    return this.seriesResourceColorByIndex(this.colorIndex(key))
+  }
+
+  private seriesResourceColorByIndex(index: number): ResourceColor {
+    switch (index) {
       case 0: return $r('app.color.chart_series_1')
       case 1: return $r('app.color.chart_series_2')
       case 2: return $r('app.color.chart_series_3')
@@ -648,9 +657,30 @@ export struct AdaptiveMetricChart {
     }
   }
 
+  private dividerColor(): number {
+    this.refreshColorCache()
+    return this.cachedDividerColor
+  }
+
   private seriesColor(key: string): number {
-    const resource = this.seriesResourceColor(key) as Resource
-    return this.resolveColor(resource, 0xFF267454)
+    this.refreshColorCache()
+    const index = this.colorIndex(key)
+    return index >= 0 && index < this.cachedSeriesColors.length ?
+      this.cachedSeriesColors[index] : 0xFF267454
+  }
+
+  private refreshColorCache(): void {
+    if (this.cachedPaletteReady && this.cachedColorMode === this.colorMode) {
+      return
+    }
+    this.cachedColorMode = this.colorMode
+    this.cachedPaletteReady = true
+    this.cachedDividerColor = this.resolveColor($r('app.color.divider'), 0xFFE2E8E3)
+    const colors: number[] = []
+    for (let index = 0; index < 6; index += 1) {
+      colors.push(this.resolveColor(this.seriesResourceColorByIndex(index) as Resource, 0xFF267454))
+    }
+    this.cachedSeriesColors = colors
   }
 
   private colorIndex(key: string): number {

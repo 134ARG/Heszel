@@ -58,6 +58,16 @@ export class MetricChartPanelState {
 }
 
 @Observed
+class BufferedLiveSample {
+  timestampMs: number = 0
+  stats: BeszelSystemStatsWire
+
+  constructor(timestampMs: number, stats: BeszelSystemStatsWire) {
+    this.timestampMs = timestampMs
+    this.stats = stats
+  }
+}
+
 export class MetricChartsState {
   active: boolean = false
   visible: boolean = false
@@ -70,6 +80,8 @@ export class MetricChartsState {
   private source: MetricChartSource | null = null
   private latestValues: Map<MetricChartPanelKind, Map<string, number>> =
     new Map<MetricChartPanelKind, Map<string, number>>()
+  private livePaused: boolean = false
+  private liveBuffer: BufferedLiveSample[] = []
 
   begin(kind: MetricChartKind, systemId: string, systemName: string, entryLiveEnabled: boolean,
     detail: SystemDetailState, labels: MetricChartLabels): void {
@@ -148,6 +160,33 @@ export class MetricChartsState {
 
   appendRealtime(stats: BeszelSystemStatsWire | undefined): void {
     if (!this.active || !this.visible || !this.hasLivePanel()) return
+    const nowMs = Date.now()
+    if (this.livePaused) {
+      if (stats !== undefined) {
+        this.liveBuffer.push(new BufferedLiveSample(nowMs, stats))
+      }
+      return
+    }
+    this.applyRealtime(nowMs, stats)
+  }
+
+  // Pausing only parks the render path: samples keep buffering with their
+  // arrival timestamps so the live window stays continuous after the flush.
+  setLivePaused(paused: boolean): void {
+    if (this.livePaused === paused) {
+      return
+    }
+    this.livePaused = paused
+    if (paused) {
+      return
+    }
+    const buffered = this.liveBuffer
+    this.liveBuffer = []
+    buffered.forEach((entry: BufferedLiveSample) => this.applyRealtime(entry.timestampMs, entry.stats))
+  }
+
+  private applyRealtime(nowMs: number, stats: BeszelSystemStatsWire | undefined): void {
+    if (!this.active || !this.visible || !this.hasLivePanel()) return
     const source = this.source
     if (stats !== undefined && source !== null) {
       const definitions: MetricChartDefinition[] = []
@@ -162,7 +201,6 @@ export class MetricChartsState {
         })
       })
     }
-    const nowMs = Date.now()
     this.panels.forEach((panel: MetricChartPanelState) => {
       if (panel.chart.range !== MetricChartRange.LIVE) return
       const latest = this.latestFor(panel.kind)
@@ -173,6 +211,8 @@ export class MetricChartsState {
   close(): void {
     this.active = false
     this.visible = false
+    this.livePaused = false
+    this.liveBuffer = []
     this.latestValues.clear()
     this.panels.forEach((panel: MetricChartPanelState) => {
       panel.loading = false

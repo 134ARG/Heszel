@@ -214,6 +214,11 @@ export class DashboardController {
     this.detailScrolling = scrolling
   }
 
+  setChartsScrolling(scrolling: boolean): void {
+    this.detailScrolling = scrolling
+    this.metricChartsState.setLivePaused(scrolling)
+  }
+
   async login(request: LoginRequest): Promise<void> {
     this.loginError = ''
     const profile = request.toConnectionProfile()
@@ -493,6 +498,11 @@ export class DashboardController {
   }
 
   private handleRealtimeMetrics(systemId: string, metrics: BeszelRealtimeMetrics): void {
+    // Charts buffer internally while their view scrolls, so live samples keep
+    // flowing (with arrival timestamps) even when the rest of the tick is gated.
+    if (this.metricChartsState.active && this.metricChartsState.systemId === systemId) {
+      this.metricChartsState.appendRealtime(metrics.stats)
+    }
     if (this.detailScrolling && !this.updateWhileScrolling) {
       return
     }
@@ -506,10 +516,6 @@ export class DashboardController {
       detail.applyRealtime(metrics.info, metrics.stats, metrics.container)
       detail.appendRealtimeCpu(metrics.info, metrics.stats)
     }
-    if (this.metricChartsState.active && this.metricChartsState.systemId === systemId) {
-      this.metricChartsState.appendRealtime(metrics.stats)
-    }
-
   }
 
   refresh(): void {

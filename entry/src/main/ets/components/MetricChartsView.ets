@@ -56,6 +56,7 @@ export struct MetricChartsView {
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   onBack: () => void = () => {}
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
+  onScrollingChange: (scrolling: boolean) => void = () => {}
 
   build() {
     Column() {
@@ -68,9 +69,11 @@ export struct MetricChartsView {
         onBack: () => this.onBack()
       })
 
-      Scroll() {
-        Column({ space: 14 }) {
-          ForEach(this.state.panels, (panel: MetricChartPanelState) => {
+      // List virtualization keeps off-screen panels unmounted, so the per-second
+      // live redraws only cover visible charts.
+      List({ space: 14 }) {
+        ForEach(this.state.panels, (panel: MetricChartPanelState) => {
+          ListItem() {
             MetricChartPanelView({
               panel: panel,
               chart: panel.chart,
@@ -79,19 +82,20 @@ export struct MetricChartsView {
               onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
                 this.onRangeChange(kind, range)
             })
-          }, (panel: MetricChartPanelState) => panel.kind.toString())
-        }
-        .width('100%')
-        .padding({
-          left: this.compact ? 16 : 22,
-          right: this.compact ? 16 : 22,
-          top: 14,
-          bottom: 30
-        })
+          }
+        }, (panel: MetricChartPanelState) => panel.kind.toString())
       }
       .layoutWeight(1)
       .width('100%')
       .scrollBar(BarState.Off)
+      .onScrollStart(() => this.onScrollingChange(true))
+      .onScrollStop(() => this.onScrollingChange(false))
+      .padding({
+        left: this.compact ? 16 : 22,
+        right: this.compact ? 16 : 22,
+        top: 14,
+        bottom: 30
+      })
     }
     .width('100%')
     .height('100%')
