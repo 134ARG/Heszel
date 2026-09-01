@@ -7,7 +7,8 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/dashboard-tablet.png" width="840" alt="Heszel on a tablet">
+  <img src="docs/screenshots/dashboard-tablet.png" width="410" alt="Heszel on a tablet in light mode">
+  <img src="docs/screenshots/dashboard-tablet-dark.png" width="410" alt="Heszel on a tablet in dark mode">
 </p>
 
 ## Overview
@@ -19,14 +20,15 @@ Heszel focuses on the mobile monitoring experience and does not include a Beszel
 ## Features
 
 - **All systems at a glance**: See online status, CPU, memory, disk usage, and temperature in one compact list, making unhealthy systems easy to spot.
-- **Detailed resource metrics**: Explore CPU history and per-core usage, memory, swap, ZFS ARC, filesystems, disk I/O, load averages, temperatures, uptime, and more.
+- **Detailed resource metrics**: Explore CPU overview and per-core usage, memory, swap, ZFS ARC, filesystems, disk I/O, load averages, temperatures, uptime, and more.
+- **Multi-metric history charts**: Inspect CPU, memory, network, storage, GPU, and temperature history. Switch between live, 1-hour, 12-hour, 1-day, 7-day, and 30-day ranges, choose which metrics to display, and compare values at the same timestamp with the inspection popup.
 - **GPU and container monitoring**: View GPU utilization, VRAM, and power draw, plus CPU, memory, and network metrics for Docker / Podman containers.
 - **Network and service health**: Inspect per-interface transfer rates and totals, systemd service health, and host sensor readings.
 - **Drive health**: Review S.M.A.R.T. health, key indicators, and full attributes for SATA, NVMe, and other supported drives.
 - **Live metrics**: Enable real-time updates and choose whether values continue updating while you scroll, balancing responsiveness and power use.
 - **Home-screen service card**: Check CPU, memory, disk, temperature, load, network, and disk I/O without opening the app. Switch between systems or refresh directly from the card.
 - **Adaptive HarmonyOS layout**: Designed for phones, tablets, and foldables, with a split layout on larger screens.
-- **Personalized display**: Supports light, dark, and system color modes, Chinese and English interfaces, and adjustable CPU chart height.
+- **Personalized display**: Supports light, dark, and system color modes, Chinese and English interfaces, plus independent height controls for the overview CPU chart and history charts.
 - **Protected connection data**: Your password is never stored. Session and connection secrets are protected using HarmonyOS security capabilities.
 
 > Available metrics depend on your Beszel Hub and Agent versions, server hardware, and Agent configuration.
@@ -42,9 +44,9 @@ Heszel focuses on the mobile monitoring experience and does not include a Beszel
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/dashboard-phone.png" width="260" alt="Systems dashboard"></td>
-    <td align="center"><img src="docs/screenshots/overview-phone.png" width="260" alt="Resource overview"></td>
-    <td align="center"><img src="docs/screenshots/details-phone.png" width="260" alt="GPU and container details"></td>
+    <td align="center"><img src="docs/screenshots/dashboard-phone-en.png" width="260" alt="Systems dashboard"></td>
+    <td align="center"><img src="docs/screenshots/overview-phone-en.png" width="260" alt="Resource overview"></td>
+    <td align="center"><img src="docs/screenshots/details-phone-en.png" width="260" alt="GPU and container details"></td>
   </tr>
   <tr>
     <td align="center">Systems</td>
@@ -55,14 +57,32 @@ Heszel focuses on the mobile monitoring experience and does not include a Beszel
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/smart-phone.png" width="300" alt="Drive S.M.A.R.T. details"></td>
-    <td align="center"><img src="docs/screenshots/widget-phone.png" width="300" alt="HarmonyOS home-screen service card"></td>
+    <td align="center"><img src="docs/screenshots/cpu-history-phone-en.png" width="260" alt="Multi-metric CPU history chart"></td>
+    <td align="center"><img src="docs/screenshots/gpu-history-phone-en.png" width="260" alt="GPU history charts"></td>
+    <td align="center"><img src="docs/screenshots/smart-phone-en.png" width="260" alt="Drive S.M.A.R.T. details"></td>
   </tr>
   <tr>
+    <td align="center">Multi-metric CPU history</td>
+    <td align="center">GPU usage and memory history</td>
     <td align="center">Drive health and S.M.A.R.T. attributes</td>
-    <td align="center">Home-screen service card</td>
   </tr>
 </table>
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/dark-overview-phone-en.png" width="260" alt="Heszel resource overview in dark mode"></td>
+    <td align="center"><img src="docs/screenshots/dark-history-phone-en.png" width="260" alt="Heszel history chart in dark mode"></td>
+  </tr>
+  <tr>
+    <td align="center">Resource overview in dark mode</td>
+    <td align="center">History charts in dark mode</td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/widget-phone.png" width="560" alt="HarmonyOS home-screen service card">
+</p>
+<p align="center">Home-screen service card</p>
 
 ## Before you start
 

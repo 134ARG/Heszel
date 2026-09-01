@@ -7,7 +7,8 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/dashboard-tablet.png" width="840" alt="Heszel 平板界面">
+  <img src="docs/screenshots/dashboard-tablet-zh.png" width="410" alt="Heszel 浅色平板界面">
+  <img src="docs/screenshots/dashboard-tablet-dark-zh.png" width="410" alt="Heszel 深色平板界面">
 </p>
 
 ## 简介
@@ -19,14 +20,15 @@ Heszel 专注于移动端监控体验，本身不包含 Beszel Hub、Agent 或 I
 ## 主要功能
 
 - **集中查看系统状态**：在一个列表中查看在线状态、CPU、内存、磁盘和温度，快速发现异常系统。
-- **丰富的资源详情**：展示 CPU 历史趋势与各核心用量、内存、Swap、ZFS ARC、文件系统、磁盘 I/O、平均负载、温度、运行时间等数据。
+- **丰富的资源详情**：展示 CPU 总览与各核心用量、内存、Swap、ZFS ARC、文件系统、磁盘 I/O、平均负载、温度、运行时间等数据。
+- **多指标历史图表**：查看 CPU、内存、网络、存储、GPU 和温度历史；可在实时、1 小时、12 小时、1 天、7 天和 30 天范围间切换，选择要显示的指标，并通过采样浮层对比同一时刻的数据。
 - **GPU 与容器监控**：查看 GPU 使用率、显存和功耗，以及 Docker / Podman 容器的 CPU、内存和网络流量。
 - **网络与服务状态**：查看网卡实时速率、累计流量、systemd 服务状态和主机传感器数据。
 - **磁盘健康信息**：集中展示 SATA、NVMe 等设备的 S.M.A.R.T. 健康状态、关键指标与完整属性。
 - **实时指标**：支持实时刷新，并可选择滚动页面时是否继续更新，以平衡流畅度与耗电。
 - **桌面服务卡片**：无需打开应用即可查看常用系统的 CPU、内存、磁盘、温度、负载、网络和磁盘 I/O；支持切换系统与手动刷新。
 - **HarmonyOS 自适应设计**：适配手机、平板和折叠屏，在大屏设备上使用分栏布局。
-- **个性化显示**：支持浅色、深色和跟随系统模式，提供中文与英文界面，并可调节 CPU 图表高度。
+- **个性化显示**：支持浅色、深色和跟随系统模式，提供中文与英文界面，并可分别调节详情页 CPU 图表与历史图表的高度。
 - **安全保存连接信息**：登录密码不会被保存；会话和连接密钥使用 HarmonyOS 提供的安全能力保护。
 
 > 实际可显示的数据取决于 Beszel Hub、Agent 版本、服务器硬件和 Agent 配置。
@@ -44,25 +46,43 @@ Heszel 专注于移动端监控体验，本身不包含 Beszel Hub、Agent 或 I
   <tr>
     <td align="center"><img src="docs/screenshots/dashboard-phone.png" width="260" alt="系统列表"></td>
     <td align="center"><img src="docs/screenshots/overview-phone.png" width="260" alt="资源总览"></td>
-    <td align="center"><img src="docs/screenshots/details-phone.png" width="260" alt="GPU 与容器详情"></td>
+    <td align="center"><img src="docs/screenshots/details-phone.png" width="260" alt="网络与 GPU 详情"></td>
   </tr>
   <tr>
     <td align="center">系统列表</td>
     <td align="center">资源总览</td>
-    <td align="center">GPU 与容器</td>
+    <td align="center">网络与 GPU</td>
   </tr>
 </table>
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/smart-phone.png" width="300" alt="磁盘 S.M.A.R.T. 详情"></td>
-    <td align="center"><img src="docs/screenshots/widget-phone.png" width="300" alt="HarmonyOS 桌面服务卡片"></td>
+    <td align="center"><img src="docs/screenshots/cpu-history-phone.png" width="260" alt="CPU 多指标历史图表"></td>
+    <td align="center"><img src="docs/screenshots/network-history-phone.png" width="260" alt="网络历史图表与采样浮层"></td>
+    <td align="center"><img src="docs/screenshots/smart-phone.png" width="260" alt="磁盘 S.M.A.R.T. 详情"></td>
   </tr>
   <tr>
+    <td align="center">CPU 多指标历史</td>
+    <td align="center">网络历史与采样对比</td>
     <td align="center">磁盘健康与 S.M.A.R.T. 属性</td>
-    <td align="center">桌面服务卡片</td>
   </tr>
 </table>
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/dark-overview-phone.png" width="260" alt="Heszel 深色资源总览"></td>
+    <td align="center"><img src="docs/screenshots/storage-history-phone.png" width="260" alt="Heszel 深色存储历史图表"></td>
+  </tr>
+  <tr>
+    <td align="center">深色资源总览</td>
+    <td align="center">深色历史图表</td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/widget-phone.png" width="560" alt="HarmonyOS 桌面服务卡片">
+</p>
+<p align="center">桌面服务卡片</p>
 
 ## 使用前准备
 
