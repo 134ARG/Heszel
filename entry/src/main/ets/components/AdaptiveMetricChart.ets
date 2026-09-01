@@ -46,6 +46,18 @@ export struct AdaptiveMetricChart {
   private cachedSeriesColors: number[] = []
 
   build() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.chartContent()
+
+      if (this.inspectionVisible()) {
+        this.inspectionPopup()
+      }
+    }
+    .width('100%')
+  }
+
+  @Builder
+  private chartContent() {
     Column({ space: 8 }) {
       Row({ space: 6 }) {
         Stack({ alignContent: Alignment.TopEnd }) {
@@ -125,8 +137,6 @@ export struct AdaptiveMetricChart {
                     .hitTestBehavior(HitTestMode.None)
                 }
               }, (series: MetricChartSeries) => series.key)
-
-              this.inspectionPopup()
             }
 
             if (this.loading) {
@@ -354,8 +364,9 @@ export struct AdaptiveMetricChart {
     const width = this.effectiveChartWidth()
     const lineX = this.inspectionLineX()
     const right = lineX + INSPECTION_POPUP_MARGIN
-    if (right + INSPECTION_POPUP_WIDTH <= width) return right
-    return Math.max(0, lineX - INSPECTION_POPUP_WIDTH - INSPECTION_POPUP_MARGIN)
+    const plotX = right + INSPECTION_POPUP_WIDTH <= width ?
+      right : Math.max(0, lineX - INSPECTION_POPUP_WIDTH - INSPECTION_POPUP_MARGIN)
+    return Y_LABEL_WIDTH + 6 + plotX
   }
 
   private inspectionPopupY(): number {
