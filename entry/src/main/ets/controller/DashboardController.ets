@@ -5,7 +5,7 @@ import {
   BeszelSystemRealtimeEvent
 } from '../api/BeszelRealtimeClient'
 import { common, ConfigurationConstant } from '@kit.AbilityKit'
-import { AppColorMode, CpuChartHeight } from '../model/AppearanceModels'
+import { AppColorMode, CpuChartHeight, MetricChartHeight } from '../model/AppearanceModels'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
 import { ConnectionMode, ConnectionPhase, ConnectionProfile, LoginRequest } from '../model/ConnectionModels'
 import {
@@ -71,6 +71,7 @@ export class DashboardController {
   updateWhileScrolling: boolean = false
   colorMode: AppColorMode = AppColorMode.SYSTEM
   cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
+  metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   metricChartsState: MetricChartsState = new MetricChartsState()
   chartLiveActive: boolean = false
   realtimeConnected: boolean = false
@@ -873,6 +874,7 @@ export class DashboardController {
       this.updateWhileScrolling = stored.updateWhileScrolling
       this.colorMode = stored.colorMode
       this.cpuChartHeight = stored.cpuChartHeight
+      this.metricChartHeight = stored.metricChartHeight
       this.applyColorMode(stored.colorMode)
       this.pendingSelectedId = stored.selectedSystemId
       this.lastPersistedSelectedId = stored.selectedSystemId
@@ -973,6 +975,23 @@ export class DashboardController {
       }
       this.dashboardError = this.localized(
         'error_save_cpu_chart_height', 'Unable to save the CPU chart height preference.')
+    }
+  }
+
+  async updateMetricChartHeight(height: MetricChartHeight): Promise<void> {
+    if (height === this.metricChartHeight || this.sessionRepository === null) {
+      return
+    }
+    const previous = this.metricChartHeight
+    this.metricChartHeight = height
+    try {
+      await this.sessionRepository.saveMetricChartHeight(height)
+    } catch (_) {
+      if (this.metricChartHeight === height) {
+        this.metricChartHeight = previous
+      }
+      this.dashboardError = this.localized(
+        'error_save_metric_chart_height', 'Unable to save the history chart height preference.')
     }
   }
 

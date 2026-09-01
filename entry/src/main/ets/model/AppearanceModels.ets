@@ -39,3 +39,30 @@ export function cpuChartHeightVp(value: CpuChartHeight): number {
   }
   return 96
 }
+
+export enum MetricChartHeight {
+  COMPACT = 'compact',
+  DEFAULT = 'default',
+  SPACIOUS = 'spacious'
+}
+
+export function parseMetricChartHeight(value: string): MetricChartHeight {
+  if (value === MetricChartHeight.COMPACT) {
+    return MetricChartHeight.COMPACT
+  }
+  if (value === MetricChartHeight.SPACIOUS) {
+    return MetricChartHeight.SPACIOUS
+  }
+  return MetricChartHeight.DEFAULT
+}
+
+// Multiplies the compact/expanded base heights kept in MetricChartPanel.
+export function metricChartHeightScale(value: MetricChartHeight): number {
+  if (value === MetricChartHeight.COMPACT) {
+    return 0.7
+  }
+  if (value === MetricChartHeight.SPACIOUS) {
+    return 1.35
+  }
+  return 1
+}

@@ -1,5 +1,5 @@
 import { i18n } from '@kit.LocalizationKit'
-import { AppColorMode, CpuChartHeight } from '../model/AppearanceModels'
+import { AppColorMode, CpuChartHeight, MetricChartHeight } from '../model/AppearanceModels'
 import { ConnectionMode } from '../model/ConnectionModels'
 import { HeszelTextInputStyle } from '../styles/HeszelTextInputStyle'
 import { PageHeader } from './PageHeader'
@@ -15,6 +15,7 @@ export struct SettingsView {
   @Prop updateWhileScrolling: boolean = false
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
+  @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   @State private gatewayKeyInput: string = ''
   @State private gatewayKeyInputFocused: boolean = false
   @State private languageCode: string = 'default'
@@ -24,6 +25,7 @@ export struct SettingsView {
   onUpdateWhileScrollingChange: (enabled: boolean) => void = () => {}
   onColorModeChange: (mode: AppColorMode) => void = () => {}
   onCpuChartHeightChange: (height: CpuChartHeight) => void = () => {}
+  onMetricChartHeightChange: (height: MetricChartHeight) => void = () => {}
 
   aboutToAppear(): void {
     try {
@@ -145,6 +147,31 @@ export struct SettingsView {
                 .fontColor($r('app.color.text_primary'))
                 .backgroundColor($r('app.color.surface_input'))
                 .onSelect((index: number) => this.changeCpuChartHeight(index))
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor($r('app.color.surface'))
+            .border({ width: 1, color: $r('app.color.card_border') })
+            .borderRadius(16)
+
+            Row({ space: 12 }) {
+              Text($r('app.string.metric_chart_height'))
+                .fontSize(14)
+                .fontColor($r('app.color.text_primary'))
+                .layoutWeight(1)
+
+              Select([
+                { value: $r('app.string.metric_chart_height_compact') },
+                { value: $r('app.string.metric_chart_height_default') },
+                { value: $r('app.string.metric_chart_height_spacious') }
+              ])
+                .selected(this.metricChartHeightIndex())
+                .value(this.metricChartHeightValue())
+                .height(42)
+                .font({ size: 13 })
+                .fontColor($r('app.color.text_primary'))
+                .backgroundColor($r('app.color.surface_input'))
+                .onSelect((index: number) => this.changeMetricChartHeight(index))
             }
             .width('100%')
             .padding(16)
@@ -453,6 +480,34 @@ export struct SettingsView {
       index === 2 ? CpuChartHeight.SPACIOUS : CpuChartHeight.DEFAULT
     if (height !== this.cpuChartHeight) {
       this.onCpuChartHeightChange(height)
+    }
+  }
+
+  private metricChartHeightIndex(): number {
+    if (this.metricChartHeight === MetricChartHeight.COMPACT) {
+      return 0
+    }
+    if (this.metricChartHeight === MetricChartHeight.SPACIOUS) {
+      return 2
+    }
+    return 1
+  }
+
+  private metricChartHeightValue(): ResourceStr {
+    if (this.metricChartHeight === MetricChartHeight.COMPACT) {
+      return $r('app.string.metric_chart_height_compact')
+    }
+    if (this.metricChartHeight === MetricChartHeight.SPACIOUS) {
+      return $r('app.string.metric_chart_height_spacious')
+    }
+    return $r('app.string.metric_chart_height_default')
+  }
+
+  private changeMetricChartHeight(index: number): void {
+    const height = index === 0 ? MetricChartHeight.COMPACT :
+      index === 2 ? MetricChartHeight.SPACIOUS : MetricChartHeight.DEFAULT
+    if (height !== this.metricChartHeight) {
+      this.onMetricChartHeightChange(height)
     }
   }
 }

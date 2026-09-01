@@ -7,8 +7,10 @@ import { BeszelSession } from '../model/BeszelModels'
 import {
   AppColorMode,
   CpuChartHeight,
+  MetricChartHeight,
   parseAppColorMode,
-  parseCpuChartHeight
+  parseCpuChartHeight,
+  parseMetricChartHeight
 } from '../model/AppearanceModels'
 import { ConnectionMode, ConnectionProfile, IrohPairing } from '../model/ConnectionModels'
 import { IrohPairingCodec } from '../service/IrohPairingCodec'
@@ -22,6 +24,7 @@ const KEY_SELECTED_SYSTEM = 'selected_system'
 const KEY_UPDATE_WHILE_SCROLLING = 'update_while_scrolling'
 const KEY_COLOR_MODE = 'color_mode'
 const KEY_CPU_CHART_HEIGHT = 'cpu_chart_height'
+const KEY_METRIC_CHART_HEIGHT = 'metric_chart_height'
 const TOKEN_ALIAS = 'heszel.beszel.auth-token'
 const GATEWAY_KEY_ALIAS = 'heszel.gateway.header-key'
 const IROH_SECRET_ALIAS = 'heszel.iroh.phone-secret-key'
@@ -38,6 +41,7 @@ export class StoredSession {
   updateWhileScrolling: boolean = false
   colorMode: AppColorMode = AppColorMode.SYSTEM
   cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
+  metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
 
   canRestore(): boolean {
     const connectionReady = this.connectionMode === ConnectionMode.IROH ?
@@ -86,6 +90,8 @@ export class SessionRepository {
       stored.colorMode = parseAppColorMode(await store.get(KEY_COLOR_MODE, AppColorMode.SYSTEM) as string)
       stored.cpuChartHeight = parseCpuChartHeight(
         await store.get(KEY_CPU_CHART_HEIGHT, CpuChartHeight.DEFAULT) as string)
+      stored.metricChartHeight = parseMetricChartHeight(
+        await store.get(KEY_METRIC_CHART_HEIGHT, MetricChartHeight.DEFAULT) as string)
       stored.token = await this.readToken()
       stored.gatewayKey = await this.readSecret(GATEWAY_KEY_ALIAS)
       return stored
@@ -153,6 +159,16 @@ export class SessionRepository {
       await store.flush()
     } catch (error) {
       throw this.storageError(error, 'Unable to save the CPU chart height preference.')
+    }
+  }
+
+  async saveMetricChartHeight(height: MetricChartHeight): Promise<void> {
+    try {
+      const store = await this.getStore()
+      await store.put(KEY_METRIC_CHART_HEIGHT, height)
+      await store.flush()
+    } catch (error) {
+      throw this.storageError(error, 'Unable to save the history chart height preference.')
     }
   }
 

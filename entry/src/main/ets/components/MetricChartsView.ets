@@ -1,4 +1,4 @@
-import { AppColorMode } from '../model/AppearanceModels'
+import { AppColorMode, MetricChartHeight } from '../model/AppearanceModels'
 import { AdaptiveMetricChartState, MetricChartRange } from '../model/MetricChartModels'
 import { MetricChartPanelState, MetricChartsState } from '../model/MetricChartsModels'
 import {
@@ -14,6 +14,7 @@ struct MetricChartPanelView {
   @ObjectLink chart: AdaptiveMetricChartState
   @Prop compact: boolean = false
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
+  @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
 
   build() {
@@ -24,6 +25,7 @@ struct MetricChartPanelView {
       errorMessage: this.panel.errorMessage,
       compact: this.compact,
       colorMode: this.colorMode,
+      metricChartHeight: this.metricChartHeight,
       metricHint: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
         $r('app.string.chart_metric_hint') : $r('app.string.chart_metric_generic_hint'),
       searchPlaceholder: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
@@ -54,6 +56,7 @@ export struct MetricChartsView {
   @ObjectLink state: MetricChartsState
   @Prop compact: boolean = false
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
+  @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   onBack: () => void = () => {}
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
   onScrollingChange: (scrolling: boolean) => void = () => {}
@@ -79,6 +82,7 @@ export struct MetricChartsView {
               chart: panel.chart,
               compact: this.compact,
               colorMode: this.colorMode,
+              metricChartHeight: this.metricChartHeight,
               onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
                 this.onRangeChange(kind, range)
             })

@@ -1,6 +1,6 @@
 import { DashboardController } from '../controller/DashboardController'
 import { SystemSummary } from '../model/BeszelModels'
-import { AppColorMode, CpuChartHeight } from '../model/AppearanceModels'
+import { AppColorMode, CpuChartHeight, MetricChartHeight } from '../model/AppearanceModels'
 import { MetricChartRange } from '../model/MetricChartModels'
 import { MetricChartKind, MetricChartPanelKind } from '../model/MetricChartSource'
 import { SettingsView } from './SettingsView'
@@ -120,6 +120,7 @@ export struct DashboardView {
           state: this.controller.metricChartsState,
           compact: !this.expanded,
           colorMode: this.controller.colorMode,
+          metricChartHeight: this.controller.metricChartHeight,
           onBack: () => {
             this.controller.closeMetricCharts()
             this.pathStack.pop()
@@ -139,6 +140,7 @@ export struct DashboardView {
           updateWhileScrolling: this.controller.updateWhileScrolling,
           colorMode: this.controller.colorMode,
           cpuChartHeight: this.controller.cpuChartHeight,
+          metricChartHeight: this.controller.metricChartHeight,
           onBack: () => {
             this.pathStack.pop()
           },
@@ -156,6 +158,9 @@ export struct DashboardView {
           },
           onCpuChartHeightChange: (height: CpuChartHeight) => {
             this.controller.updateCpuChartHeight(height)
+          },
+          onMetricChartHeightChange: (height: MetricChartHeight) => {
+            this.controller.updateMetricChartHeight(height)
           }
         })
       }

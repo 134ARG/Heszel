@@ -1,4 +1,8 @@
-import { AppColorMode } from '../model/AppearanceModels'
+import {
+  AppColorMode,
+  MetricChartHeight,
+  metricChartHeightScale
+} from '../model/AppearanceModels'
 import { AdaptiveMetricChartState, MetricChartRange, MetricChartSeries } from '../model/MetricChartModels'
 import { AdaptiveMetricChart } from './AdaptiveMetricChart'
 
@@ -61,6 +65,7 @@ export struct MetricChartPanel {
   @Prop errorMessage: string = ''
   @Prop compact: boolean = false
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
+  @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   @Prop metricHint: ResourceStr = ''
   @Prop searchPlaceholder: ResourceStr = ''
   @Prop maximumSelected: number = 6
@@ -115,7 +120,7 @@ export struct MetricChartPanel {
       AdaptiveMetricChart({
         state: this.chart,
         colorMode: this.colorMode,
-        chartHeight: this.compact ? 210 : 260,
+        chartHeight: (this.compact ? 150 : 180) * metricChartHeightScale(this.metricChartHeight),
         loading: this.loading,
         showNoData: this.errorMessage.length === 0,
         inspectionDismissToken: this.inspectionDismissToken,
