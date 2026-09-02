@@ -96,7 +96,7 @@
     { "name": "beszel_hub", "value": "Beszel Hub" },
     { "name": "signed_in_as", "value": "当前账户" },
     { "name": "sign_out", "value": "退出登录" },
-    { "name": "app_version", "value": "版本 1.0.0" },
+    { "name": "app_version", "value": "版本 1.0.1" },
 
     { "name": "no_host_label", "value": "没有主机地址" },
     { "name": "status_up", "value": "在线" },
