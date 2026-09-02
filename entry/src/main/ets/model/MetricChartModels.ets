@@ -174,6 +174,11 @@ export class AdaptiveMetricChartState {
     return this.series.filter((series: MetricChartSeries) => series.selected).length
   }
 
+  selectedKeys(): string[] {
+    return this.series.filter((series: MetricChartSeries) => series.selected)
+      .map((series: MetricChartSeries) => series.key)
+  }
+
   hasSelectedData(): boolean {
     const selectedIndices: number[] = []
     this.series.forEach((series: MetricChartSeries, index: number) => {

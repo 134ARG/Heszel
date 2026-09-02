@@ -5,6 +5,7 @@ import { MemoryMetricChartSource } from './MemoryMetricChartSource'
 import {
   AdaptiveMetricChartState,
   DEFAULT_SELECTED_METRIC_SERIES_LIMIT,
+  MAX_SELECTED_METRIC_SERIES,
   MetricChartAxisPolicy,
   MetricChartPoint,
   MetricChartRange,
@@ -44,6 +45,7 @@ export class MetricChartPanelState {
   loading: boolean = false
   errorMessage: string = ''
   loadSequence: number = 0
+  private explicitSelectionKeys: string[] | null = null
 
   constructor(definition: MetricChartPanelDefinition) {
     this.kind = definition.kind
@@ -65,8 +67,29 @@ export class MetricChartPanelState {
   setInitialSeries(series: MetricChartSeries[]): void {
     const next = series.map((item: MetricChartSeries) =>
       new MetricChartSeries(item.key, item.label, false))
-    applyDefaultSelection(next)
+    this.applySelection(next)
     this.chart.setSeries(next)
+  }
+
+  restoreSelection(selectedKeys: string[]): void {
+    this.explicitSelectionKeys = selectedKeys.slice(0, MAX_SELECTED_METRIC_SERIES)
+    const next = this.chart.series.slice()
+    this.applySelection(next)
+    this.chart.setSeries(next)
+  }
+
+  rememberSelection(selectedKeys: string[]): void {
+    this.explicitSelectionKeys = selectedKeys.slice(0, MAX_SELECTED_METRIC_SERIES)
+  }
+
+  applySelection(series: MetricChartSeries[]): void {
+    if (this.explicitSelectionKeys === null) {
+      applyDefaultSelection(series)
+      return
+    }
+    series.forEach((item: MetricChartSeries) => {
+      item.selected = this.explicitSelectionKeys?.includes(item.key) ?? false
+    })
   }
 }
 
@@ -290,7 +313,7 @@ export class MetricChartsState {
         point.values = values
       })
     }
-    applyDefaultSelection(next)
+    panel.applySelection(next)
     panel.chart.setSeries(next)
   }
 }

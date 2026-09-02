@@ -245,6 +245,7 @@
     { "name": "error_save_cpu_chart_height", "value": "Unable to save the CPU chart height preference." },
     { "name": "error_save_metric_chart_height", "value": "Unable to save the history chart height preference." },
     { "name": "error_save_metric_inspection_sort", "value": "Unable to save the sample popup sorting preference." },
+    { "name": "error_save_metric_chart_selection", "value": "Unable to save the metric chart selection." },
     { "name": "error_gateway_rejected", "value": "The nginx gateway rejected this key." },
     { "name": "error_load_detail", "value": "Unable to load detailed system data." },
     { "name": "error_load_chart_history", "value": "Unable to load metric history." },

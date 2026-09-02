@@ -78,6 +78,7 @@ export struct MetricChartPanel {
   @State private metricSheetVisible: boolean = false
   @State private metricFilter: string = ''
   @State private selectionLimitReached: boolean = false
+  @State private metricSelectionDirty: boolean = false
   @State private inspectionDismissToken: number = 0
   private cardGlobalLeft: number = 0
   private cardGlobalTop: number = 0
@@ -88,6 +89,8 @@ export struct MetricChartPanel {
   private cardAreaReady: boolean = false
   private plotAreaReady: boolean = false
   onRangeChange: (range: MetricChartRange) => void = () => {}
+  onSelectionChange: (selectedKeys: string[]) => void = (_selectedKeys: string[]) => {}
+  onSelectionCommit: (selectedKeys: string[]) => void = (_selectedKeys: string[]) => {}
 
   build() {
     Column({ space: 12 }) {
@@ -168,6 +171,7 @@ export struct MetricChartPanel {
         this.dismissInspection()
         this.metricSheetVisible = true
         this.selectionLimitReached = false
+        this.metricSelectionDirty = false
       })
       .bindSheet(this.metricSheetVisible, this.metricSheet, {
         height: SheetSize.MEDIUM,
@@ -187,6 +191,7 @@ export struct MetricChartPanel {
           action.dismiss()
         },
         onDisappear: () => {
+          this.commitMetricSelection()
           this.metricSheetVisible = false
           this.selectionLimitReached = false
         }
@@ -226,7 +231,9 @@ export struct MetricChartPanel {
           .enabled(this.chart.selectedCount() < this.chart.series.length)
           .opacity(this.chart.selectedCount() < this.chart.series.length ? 1 : 0.45)
           .onClick(() => {
+            const previousCount = this.chart.selectedCount()
             this.selectionLimitReached = this.chart.selectAllSeries()
+            if (this.chart.selectedCount() !== previousCount) this.markMetricSelectionChanged()
           })
 
         Button($r('app.string.chart_deselect_all'))
@@ -241,6 +248,7 @@ export struct MetricChartPanel {
           .onClick(() => {
             this.chart.deselectAllSeries()
             this.selectionLimitReached = false
+            this.markMetricSelectionChanged()
           })
       }
       .width('100%')
@@ -254,6 +262,7 @@ export struct MetricChartPanel {
               onToggle: () => {
                 const changed = this.chart.toggleSeries(series.key)
                 this.selectionLimitReached = !changed && !series.selected
+                if (changed) this.markMetricSelectionChanged()
               }
             })
           }
@@ -303,6 +312,17 @@ export struct MetricChartPanel {
 
   private dismissInspection(): void {
     this.inspectionDismissToken += 1
+  }
+
+  private markMetricSelectionChanged(): void {
+    this.metricSelectionDirty = true
+    this.onSelectionChange(this.chart.selectedKeys())
+  }
+
+  private commitMetricSelection(): void {
+    if (!this.metricSelectionDirty) return
+    this.metricSelectionDirty = false
+    this.onSelectionCommit(this.chart.selectedKeys())
   }
 
   private onCardClick(event: ClickEvent): void {

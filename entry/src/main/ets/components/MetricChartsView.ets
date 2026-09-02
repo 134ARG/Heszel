@@ -25,6 +25,8 @@ struct MetricChartPanelView {
   @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
+  onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) => void =
+    (_kind: MetricChartPanelKind, _selectedKeys: string[]) => {}
 
   build() {
     MetricChartPanel({
@@ -41,7 +43,9 @@ struct MetricChartPanelView {
         $r('app.string.chart_metric_generic_hint', MAX_SELECTED_METRIC_SERIES),
       searchPlaceholder: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
         $r('app.string.chart_search_metrics') : $r('app.string.chart_search_metrics_generic'),
-      onRangeChange: (range: MetricChartRange) => this.onRangeChange(this.panel.kind, range)
+      onRangeChange: (range: MetricChartRange) => this.onRangeChange(this.panel.kind, range),
+      onSelectionChange: (selectedKeys: string[]) => this.panel.rememberSelection(selectedKeys),
+      onSelectionCommit: (selectedKeys: string[]) => this.onSelectionCommit(this.panel.kind, selectedKeys)
     })
   }
 
@@ -71,6 +75,8 @@ export struct MetricChartsView {
   @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   onBack: () => void = () => {}
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
+  onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) => void =
+    (_kind: MetricChartPanelKind, _selectedKeys: string[]) => {}
   onScrollingChange: (scrolling: boolean) => void = () => {}
 
   build() {
@@ -97,7 +103,9 @@ export struct MetricChartsView {
               metricChartHeight: this.metricChartHeight,
               metricInspectionSort: this.metricInspectionSort,
               onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
-                this.onRangeChange(kind, range)
+                this.onRangeChange(kind, range),
+              onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) =>
+                this.onSelectionCommit(kind, selectedKeys)
             })
           }
         }, (panel: MetricChartPanelState) => panel.kind.toString())

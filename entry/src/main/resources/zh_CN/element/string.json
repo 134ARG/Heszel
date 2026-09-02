@@ -245,6 +245,7 @@
     { "name": "error_save_cpu_chart_height", "value": "无法保存 CPU 图表高度。" },
     { "name": "error_save_metric_chart_height", "value": "无法保存历史图表高度。" },
     { "name": "error_save_metric_inspection_sort", "value": "无法保存采样浮窗排序设置。" },
+    { "name": "error_save_metric_chart_selection", "value": "无法保存图表指标选择。" },
     { "name": "error_gateway_rejected", "value": "nginx 网关拒绝了此密钥。" },
     { "name": "error_load_detail", "value": "无法加载系统详细数据。" },
     { "name": "error_load_chart_history", "value": "无法加载指标历史数据。" },

@@ -15,6 +15,7 @@ import {
   parseMetricInspectionSort
 } from '../model/AppearanceModels'
 import { ConnectionMode, ConnectionProfile, IrohPairing } from '../model/ConnectionModels'
+import { MetricChartPanelKind } from '../model/MetricChartSource'
 import { IrohPairingCodec } from '../service/IrohPairingCodec'
 
 const PREFERENCES_NAME = 'heszel_session'
@@ -28,6 +29,7 @@ const KEY_COLOR_MODE = 'color_mode'
 const KEY_CPU_CHART_HEIGHT = 'cpu_chart_height'
 const KEY_METRIC_CHART_HEIGHT = 'metric_chart_height'
 const KEY_METRIC_INSPECTION_SORT = 'metric_inspection_sort'
+const METRIC_CHART_SELECTION_PREFIX = 'metric_chart_selection:'
 const TOKEN_ALIAS = 'heszel.beszel.auth-token'
 const GATEWAY_KEY_ALIAS = 'heszel.gateway.header-key'
 const IROH_SECRET_ALIAS = 'heszel.iroh.phone-secret-key'
@@ -188,6 +190,35 @@ export class SessionRepository {
     }
   }
 
+  metricChartSelection(systemId: string, panelKind: MetricChartPanelKind): string[] | null {
+    const store = this.store
+    if (store === null) return null
+    try {
+      const key = this.metricChartSelectionKey(systemId, panelKind)
+      if (!store.hasSync(key)) return null
+      const selectedKeys = store.getSync(key, [] as string[]) as string[]
+      return selectedKeys.length > 0 ? selectedKeys : null
+    } catch (_) {
+      return null
+    }
+  }
+
+  async saveMetricChartSelection(systemId: string, panelKind: MetricChartPanelKind,
+    selectedKeys: string[]): Promise<void> {
+    try {
+      const store = await this.getStore()
+      const key = this.metricChartSelectionKey(systemId, panelKind)
+      if (selectedKeys.length === 0) {
+        store.deleteSync(key)
+      } else {
+        store.putSync(key, selectedKeys.slice())
+      }
+      await store.flush()
+    } catch (error) {
+      throw this.storageError(error, 'Unable to save the metric chart selection.')
+    }
+  }
+
   async clearToken(): Promise<void> {
     await this.clearSecret(TOKEN_ALIAS)
   }
@@ -229,6 +260,10 @@ export class SessionRepository {
       }
     }
     return this.store
+  }
+
+  private metricChartSelectionKey(systemId: string, panelKind: MetricChartPanelKind): string {
+    return `${METRIC_CHART_SELECTION_PREFIX}${systemId}:${panelKind}`
   }
 
   private async readToken(): Promise<string> {

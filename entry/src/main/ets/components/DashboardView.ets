@@ -133,6 +133,8 @@ export struct DashboardView {
           },
           onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
             this.controller.setMetricChartRange(kind, range),
+          onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) =>
+            this.controller.saveMetricChartSelection(kind, selectedKeys),
           onScrollingChange: (scrolling: boolean) => this.controller.setChartsScrolling(scrolling)
         })
       } else if (name === 'settings') {

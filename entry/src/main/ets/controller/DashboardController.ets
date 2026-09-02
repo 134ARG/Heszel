@@ -176,6 +176,13 @@ export class DashboardController {
     const system = this.systems.find((candidate: SystemSummary) => candidate.id === this.selectedId)
     this.metricChartsState.begin(kind, this.selectedId, system?.name ?? '', this.liveMetrics,
       this.detailState, this.metricChartLabels())
+    const repository = this.sessionRepository
+    if (repository !== null) {
+      this.metricChartsState.panels.forEach((panel: MetricChartPanelState) => {
+        const selectedKeys = repository.metricChartSelection(this.selectedId, panel.kind)
+        if (selectedKeys !== null) panel.restoreSelection(selectedKeys)
+      })
+    }
     this.loadMetricChartHistories()
   }
 
@@ -194,6 +201,18 @@ export class DashboardController {
       return
     }
     this.loadMetricChartHistory(range, [new MetricChartHistoryTarget(kind, sequence)])
+  }
+
+  async saveMetricChartSelection(kind: MetricChartPanelKind, selectedKeys: string[]): Promise<void> {
+    const repository = this.sessionRepository
+    const systemId = this.metricChartsState.systemId
+    if (repository === null || systemId.length === 0) return
+    try {
+      await repository.saveMetricChartSelection(systemId, kind, selectedKeys)
+    } catch (_) {
+      this.dashboardError = this.localized(
+        'error_save_metric_chart_selection', 'Unable to save the metric chart selection.')
+    }
   }
 
   closeMetricCharts(): void {
