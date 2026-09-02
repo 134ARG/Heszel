@@ -107,6 +107,7 @@ export struct SystemDetail {
 
           if (this.detail.layoutVersion >= 0 && this.compactLayout()) {
             Column({ space: 14 }) {
+              this.cpuDetailCard()
               this.primaryDetailCards()
               this.secondaryDetailCards()
             }
@@ -119,6 +120,7 @@ export struct SystemDetail {
               .layoutWeight(1)
 
               Column({ space: 14 }) {
+                this.cpuDetailCard()
                 this.secondaryDetailCards()
               }
               .layoutWeight(1)
@@ -192,13 +194,17 @@ export struct SystemDetail {
   }
 
   @Builder
-  private secondaryDetailCards() {
+  private cpuDetailCard() {
     if (this.detail.cpuMetrics.isVisible()) {
       CpuCard({
         state: this.detail.cpuMetrics,
         onOpenHistory: () => this.onOpenCpuCharts()
       })
     }
+  }
+
+  @Builder
+  private secondaryDetailCards() {
     if (this.detail.networkMetrics.isVisible()) {
       NetworkCard({
         state: this.detail.networkMetrics,
