@@ -1,4 +1,9 @@
-import { AppColorMode, CpuChartHeight } from '../model/AppearanceModels'
+import {
+  AppColorMode,
+  ChartLineOpacity,
+  ChartLineWidth,
+  CpuChartHeight
+} from '../model/AppearanceModels'
 import { SystemDetailState } from '../model/SystemDetailModels'
 import { ContainersCard } from './ContainersCard'
 import { CpuCard } from './CpuCard'
@@ -23,6 +28,8 @@ export struct SystemDetail {
   @Prop liveSampling: boolean = false
   @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
+  @Prop chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
+  @Prop chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
   onBack: () => void = () => {}
   onScrollingChange: (scrolling: boolean) => void = () => {}
   onOpenSmartDetails: () => void = () => {}
@@ -57,7 +64,9 @@ export struct SystemDetail {
             compact: this.compact,
             liveSampling: this.liveSampling,
             cpuChartHeight: this.cpuChartHeight,
-            colorMode: this.colorMode
+            colorMode: this.colorMode,
+            chartLineWidth: this.chartLineWidth,
+            chartLineOpacity: this.chartLineOpacity
           })
 
           if (this.detail.loading && !this.detail.loaded) {

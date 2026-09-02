@@ -1,6 +1,8 @@
 import { i18n } from '@kit.LocalizationKit'
 import {
   AppColorMode,
+  ChartLineOpacity,
+  ChartLineWidth,
   CpuChartHeight,
   MetricChartHeight,
   MetricInspectionSort
@@ -22,6 +24,8 @@ export struct SettingsView {
   @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
+  @Prop chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
+  @Prop chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
   @State private gatewayKeyInput: string = ''
   @State private gatewayKeyInputFocused: boolean = false
   @State private languageCode: string = 'default'
@@ -33,6 +37,8 @@ export struct SettingsView {
   onCpuChartHeightChange: (height: CpuChartHeight) => void = () => {}
   onMetricChartHeightChange: (height: MetricChartHeight) => void = () => {}
   onMetricInspectionSortChange: (sort: MetricInspectionSort) => void = () => {}
+  onChartLineWidthChange: (width: ChartLineWidth) => void = () => {}
+  onChartLineOpacityChange: (opacity: ChartLineOpacity) => void = () => {}
 
   aboutToAppear(): void {
     try {
@@ -178,6 +184,56 @@ export struct SettingsView {
                 .fontColor($r('app.color.text_primary'))
                 .backgroundColor($r('app.color.surface_input'))
                 .onSelect((index: number) => this.changeMetricChartHeight(index))
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor($r('app.color.surface'))
+            .border({ width: 1, color: $r('app.color.card_border') })
+            .borderRadius(16)
+
+            Row({ space: 12 }) {
+              Text($r('app.string.chart_line_width'))
+                .fontSize(14)
+                .fontColor($r('app.color.text_primary'))
+                .layoutWeight(1)
+
+              Select([
+                { value: $r('app.string.chart_line_width_thin') },
+                { value: $r('app.string.chart_line_width_default') },
+                { value: $r('app.string.chart_line_width_thick') }
+              ])
+                .selected(this.chartLineWidthIndex())
+                .value(this.chartLineWidthValue())
+                .height(42)
+                .font({ size: 13 })
+                .fontColor($r('app.color.text_primary'))
+                .backgroundColor($r('app.color.surface_input'))
+                .onSelect((index: number) => this.changeChartLineWidth(index))
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor($r('app.color.surface'))
+            .border({ width: 1, color: $r('app.color.card_border') })
+            .borderRadius(16)
+
+            Row({ space: 12 }) {
+              Text($r('app.string.chart_line_opacity'))
+                .fontSize(14)
+                .fontColor($r('app.color.text_primary'))
+                .layoutWeight(1)
+
+              Select([
+                { value: $r('app.string.chart_line_opacity_soft') },
+                { value: $r('app.string.chart_line_opacity_default') },
+                { value: $r('app.string.chart_line_opacity_solid') }
+              ])
+                .selected(this.chartLineOpacityIndex())
+                .value(this.chartLineOpacityValue())
+                .height(42)
+                .font({ size: 13 })
+                .fontColor($r('app.color.text_primary'))
+                .backgroundColor($r('app.color.surface_input'))
+                .onSelect((index: number) => this.changeChartLineOpacity(index))
             }
             .width('100%')
             .padding(16)
@@ -529,6 +585,42 @@ export struct SettingsView {
     if (height !== this.metricChartHeight) {
       this.onMetricChartHeightChange(height)
     }
+  }
+
+  private chartLineWidthIndex(): number {
+    if (this.chartLineWidth === ChartLineWidth.THIN) return 0
+    if (this.chartLineWidth === ChartLineWidth.THICK) return 2
+    return 1
+  }
+
+  private chartLineWidthValue(): ResourceStr {
+    if (this.chartLineWidth === ChartLineWidth.THIN) return $r('app.string.chart_line_width_thin')
+    if (this.chartLineWidth === ChartLineWidth.THICK) return $r('app.string.chart_line_width_thick')
+    return $r('app.string.chart_line_width_default')
+  }
+
+  private changeChartLineWidth(index: number): void {
+    const width = index === 0 ? ChartLineWidth.THIN :
+      index === 2 ? ChartLineWidth.THICK : ChartLineWidth.DEFAULT
+    if (width !== this.chartLineWidth) this.onChartLineWidthChange(width)
+  }
+
+  private chartLineOpacityIndex(): number {
+    if (this.chartLineOpacity === ChartLineOpacity.SOFT) return 0
+    if (this.chartLineOpacity === ChartLineOpacity.SOLID) return 2
+    return 1
+  }
+
+  private chartLineOpacityValue(): ResourceStr {
+    if (this.chartLineOpacity === ChartLineOpacity.SOFT) return $r('app.string.chart_line_opacity_soft')
+    if (this.chartLineOpacity === ChartLineOpacity.SOLID) return $r('app.string.chart_line_opacity_solid')
+    return $r('app.string.chart_line_opacity_default')
+  }
+
+  private changeChartLineOpacity(index: number): void {
+    const opacity = index === 0 ? ChartLineOpacity.SOFT :
+      index === 2 ? ChartLineOpacity.SOLID : ChartLineOpacity.DEFAULT
+    if (opacity !== this.chartLineOpacity) this.onChartLineOpacityChange(opacity)
   }
 
   private metricInspectionSortIndex(): number {

@@ -2,6 +2,8 @@ import { DashboardController } from '../controller/DashboardController'
 import { SystemSummary } from '../model/BeszelModels'
 import {
   AppColorMode,
+  ChartLineOpacity,
+  ChartLineWidth,
   CpuChartHeight,
   MetricChartHeight,
   MetricInspectionSort
@@ -127,6 +129,8 @@ export struct DashboardView {
           colorMode: this.controller.colorMode,
           metricChartHeight: this.controller.metricChartHeight,
           metricInspectionSort: this.controller.metricInspectionSort,
+          chartLineWidth: this.controller.chartLineWidth,
+          chartLineOpacity: this.controller.chartLineOpacity,
           onBack: () => {
             this.controller.closeMetricCharts()
             this.pathStack.pop()
@@ -150,6 +154,8 @@ export struct DashboardView {
           cpuChartHeight: this.controller.cpuChartHeight,
           metricChartHeight: this.controller.metricChartHeight,
           metricInspectionSort: this.controller.metricInspectionSort,
+          chartLineWidth: this.controller.chartLineWidth,
+          chartLineOpacity: this.controller.chartLineOpacity,
           onBack: () => {
             this.pathStack.pop()
           },
@@ -173,6 +179,12 @@ export struct DashboardView {
           },
           onMetricInspectionSortChange: (sort: MetricInspectionSort) => {
             this.controller.updateMetricInspectionSort(sort)
+          },
+          onChartLineWidthChange: (width: ChartLineWidth) => {
+            this.controller.updateChartLineWidth(width)
+          },
+          onChartLineOpacityChange: (opacity: ChartLineOpacity) => {
+            this.controller.updateChartLineOpacity(opacity)
           }
         })
       }
@@ -212,6 +224,8 @@ export struct DashboardView {
             liveSampling: this.controller.liveMetrics && this.controller.realtimeConnected,
             cpuChartHeight: this.controller.cpuChartHeight,
             colorMode: this.controller.colorMode,
+            chartLineWidth: this.controller.chartLineWidth,
+            chartLineOpacity: this.controller.chartLineOpacity,
             onBack: () => this.pathStack.pop(),
             onScrollingChange: (scrolling: boolean) => this.controller.setDetailScrolling(scrolling),
             onOpenSmartDetails: () => this.openSmartDetails(),

@@ -1,5 +1,7 @@
 import {
   AppColorMode,
+  ChartLineOpacity,
+  ChartLineWidth,
   MetricChartHeight,
   MetricInspectionSort
 } from '../model/AppearanceModels'
@@ -24,6 +26,8 @@ struct MetricChartPanelView {
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
+  @Prop chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
+  @Prop chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
   onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) => void =
     (_kind: MetricChartPanelKind, _selectedKeys: string[]) => {}
@@ -38,6 +42,8 @@ struct MetricChartPanelView {
       colorMode: this.colorMode,
       metricChartHeight: this.metricChartHeight,
       metricInspectionSort: this.metricInspectionSort,
+      chartLineWidth: this.chartLineWidth,
+      chartLineOpacity: this.chartLineOpacity,
       metricHint: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
         $r('app.string.chart_metric_hint', MAX_SELECTED_METRIC_SERIES) :
         $r('app.string.chart_metric_generic_hint', MAX_SELECTED_METRIC_SERIES),
@@ -73,6 +79,8 @@ export struct MetricChartsView {
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
+  @Prop chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
+  @Prop chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
   onBack: () => void = () => {}
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
   onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) => void =
@@ -102,6 +110,8 @@ export struct MetricChartsView {
               colorMode: this.colorMode,
               metricChartHeight: this.metricChartHeight,
               metricInspectionSort: this.metricInspectionSort,
+              chartLineWidth: this.chartLineWidth,
+              chartLineOpacity: this.chartLineOpacity,
               onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
                 this.onRangeChange(kind, range),
               onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) =>

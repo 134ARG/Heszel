@@ -1,5 +1,7 @@
 import {
   AppColorMode,
+  ChartLineOpacity,
+  ChartLineWidth,
   chartHeightVp,
   MetricChartHeight,
   MetricInspectionSort
@@ -73,6 +75,8 @@ export struct MetricChartPanel {
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
+  @Prop chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
+  @Prop chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
   @Prop metricHint: ResourceStr = ''
   @Prop searchPlaceholder: ResourceStr = ''
   @State private metricSheetVisible: boolean = false
@@ -129,6 +133,8 @@ export struct MetricChartPanel {
       AdaptiveMetricChart({
         state: this.chart,
         colorMode: this.colorMode,
+        chartLineWidth: this.chartLineWidth,
+        chartLineOpacity: this.chartLineOpacity,
         metricInspectionSort: this.metricInspectionSort,
         chartHeight: chartHeightVp(this.metricChartHeight, this.compact),
         loading: this.loading,

@@ -7,6 +7,8 @@ import {
 import { common, ConfigurationConstant } from '@kit.AbilityKit'
 import {
   AppColorMode,
+  ChartLineOpacity,
+  ChartLineWidth,
   CpuChartHeight,
   MetricChartHeight,
   MetricInspectionSort
@@ -78,6 +80,8 @@ export class DashboardController {
   cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
+  chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
+  chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
   metricChartsState: MetricChartsState = new MetricChartsState()
   chartLiveActive: boolean = false
   realtimeConnected: boolean = false
@@ -151,6 +155,9 @@ export class DashboardController {
   }
 
   setLiveMetrics(enabled: boolean): void {
+    if (enabled === this.liveMetrics) {
+      return
+    }
     if (this.metricChartsState.active) {
       // A header toggle is a deliberate preference change, unlike the
       // temporary enable performed by selecting the Live chart range.
@@ -901,6 +908,8 @@ export class DashboardController {
       this.cpuChartHeight = stored.cpuChartHeight
       this.metricChartHeight = stored.metricChartHeight
       this.metricInspectionSort = stored.metricInspectionSort
+      this.chartLineWidth = stored.chartLineWidth
+      this.chartLineOpacity = stored.chartLineOpacity
       this.applyColorMode(stored.colorMode)
       this.pendingSelectedId = stored.selectedSystemId
       this.lastPersistedSelectedId = stored.selectedSystemId
@@ -1035,6 +1044,32 @@ export class DashboardController {
       }
       this.dashboardError = this.localized(
         'error_save_metric_inspection_sort', 'Unable to save the sample popup sorting preference.')
+    }
+  }
+
+  async updateChartLineWidth(width: ChartLineWidth): Promise<void> {
+    if (width === this.chartLineWidth || this.sessionRepository === null) return
+    const previous = this.chartLineWidth
+    this.chartLineWidth = width
+    try {
+      await this.sessionRepository.saveChartLineWidth(width)
+    } catch (_) {
+      if (this.chartLineWidth === width) this.chartLineWidth = previous
+      this.dashboardError = this.localized(
+        'error_save_chart_line_width', 'Unable to save the chart line width preference.')
+    }
+  }
+
+  async updateChartLineOpacity(opacity: ChartLineOpacity): Promise<void> {
+    if (opacity === this.chartLineOpacity || this.sessionRepository === null) return
+    const previous = this.chartLineOpacity
+    this.chartLineOpacity = opacity
+    try {
+      await this.sessionRepository.saveChartLineOpacity(opacity)
+    } catch (_) {
+      if (this.chartLineOpacity === opacity) this.chartLineOpacity = previous
+      this.dashboardError = this.localized(
+        'error_save_chart_line_opacity', 'Unable to save the chart line opacity preference.')
     }
   }
 

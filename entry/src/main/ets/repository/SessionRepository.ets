@@ -6,10 +6,14 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { BeszelSession } from '../model/BeszelModels'
 import {
   AppColorMode,
+  ChartLineOpacity,
+  ChartLineWidth,
   CpuChartHeight,
   MetricChartHeight,
   MetricInspectionSort,
   parseAppColorMode,
+  parseChartLineOpacity,
+  parseChartLineWidth,
   parseCpuChartHeight,
   parseMetricChartHeight,
   parseMetricInspectionSort
@@ -29,6 +33,8 @@ const KEY_COLOR_MODE = 'color_mode'
 const KEY_CPU_CHART_HEIGHT = 'cpu_chart_height'
 const KEY_METRIC_CHART_HEIGHT = 'metric_chart_height'
 const KEY_METRIC_INSPECTION_SORT = 'metric_inspection_sort'
+const KEY_CHART_LINE_WIDTH = 'chart_line_width'
+const KEY_CHART_LINE_OPACITY = 'chart_line_opacity'
 const METRIC_CHART_SELECTION_PREFIX = 'metric_chart_selection:'
 const TOKEN_ALIAS = 'heszel.beszel.auth-token'
 const GATEWAY_KEY_ALIAS = 'heszel.gateway.header-key'
@@ -48,6 +54,8 @@ export class StoredSession {
   cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
   metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
+  chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
+  chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
 
   canRestore(): boolean {
     const connectionReady = this.connectionMode === ConnectionMode.IROH ?
@@ -100,6 +108,10 @@ export class SessionRepository {
         await store.get(KEY_METRIC_CHART_HEIGHT, MetricChartHeight.DEFAULT) as string)
       stored.metricInspectionSort = parseMetricInspectionSort(
         await store.get(KEY_METRIC_INSPECTION_SORT, MetricInspectionSort.VALUE) as string)
+      stored.chartLineWidth = parseChartLineWidth(
+        await store.get(KEY_CHART_LINE_WIDTH, ChartLineWidth.DEFAULT) as string)
+      stored.chartLineOpacity = parseChartLineOpacity(
+        await store.get(KEY_CHART_LINE_OPACITY, ChartLineOpacity.DEFAULT) as string)
       stored.token = await this.readToken()
       stored.gatewayKey = await this.readSecret(GATEWAY_KEY_ALIAS)
       return stored
@@ -187,6 +199,26 @@ export class SessionRepository {
       await store.flush()
     } catch (error) {
       throw this.storageError(error, 'Unable to save the sample popup sorting preference.')
+    }
+  }
+
+  async saveChartLineWidth(width: ChartLineWidth): Promise<void> {
+    try {
+      const store = await this.getStore()
+      await store.put(KEY_CHART_LINE_WIDTH, width)
+      await store.flush()
+    } catch (error) {
+      throw this.storageError(error, 'Unable to save the chart line width preference.')
+    }
+  }
+
+  async saveChartLineOpacity(opacity: ChartLineOpacity): Promise<void> {
+    try {
+      const store = await this.getStore()
+      await store.put(KEY_CHART_LINE_OPACITY, opacity)
+      await store.flush()
+    } catch (error) {
+      throw this.storageError(error, 'Unable to save the chart line opacity preference.')
     }
   }
 

@@ -1,4 +1,11 @@
-import { AppColorMode, MetricInspectionSort } from '../model/AppearanceModels'
+import {
+  AppColorMode,
+  ChartLineOpacity,
+  ChartLineWidth,
+  chartLineOpacityValue,
+  chartLineWidthVp,
+  MetricInspectionSort
+} from '../model/AppearanceModels'
 import {
   AdaptiveMetricChartState,
   MetricChartAxisPolicy,
@@ -18,7 +25,6 @@ const INSPECTION_POPUP_ROW_HEIGHT = 18
 const INSPECTION_POPUP_MAX_ROWS = 8
 const INSPECTION_POPUP_CHROME_HEIGHT = 37
 const INSPECTION_POPUP_SCROLLBAR_GUTTER = 8
-
 class MetricChartBounds {
   minimum: number = 0
   maximum: number = 1
@@ -30,6 +36,8 @@ export struct AdaptiveMetricChart {
   @ObjectLink @Watch('onChartStateChanged') state: AdaptiveMetricChartState
   @Prop @Watch('onPaletteChanged') colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop @Watch('onPaletteChanged') primarySeriesColor: Resource = $r('app.color.chart_series_start')
+  @Prop @Watch('onLineStyleChanged') chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
+  @Prop @Watch('onLineStyleChanged') chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
   @Prop @Watch('onInspectionDismissRequested') inspectionDismissToken: number = 0
   @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   @Prop chartHeight: number = 230
@@ -235,6 +243,10 @@ export struct AdaptiveMetricChart {
 
   private onPaletteChanged(): void {
     this.cachedPaletteReady = false
+    if (this.ready) this.draw()
+  }
+
+  private onLineStyleChanged(): void {
     if (this.ready) this.draw()
   }
 
@@ -526,6 +538,7 @@ export struct AdaptiveMetricChart {
 
   private drawLine(seriesIndex: number, width: number, height: number, bounds: MetricChartBounds): void {
     const color = this.seriesColor(this.state.series[seriesIndex].key)
+    const lineWidth = chartLineWidthVp(this.chartLineWidth)
     const gapThreshold = this.state.expectedIntervalMs * 1.5
     let drawing = false
     let validCount = 0
@@ -548,8 +561,10 @@ export struct AdaptiveMetricChart {
       validCount += 1
       lastTimestamp = point.timestampMs
     })
+    this.context.save()
+    this.context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity)
     this.context.strokeStyle = color
-    this.context.lineWidth = 2
+    this.context.lineWidth = lineWidth
     this.context.lineJoin = 'round'
     this.context.lineCap = 'round'
     this.context.stroke()
@@ -560,11 +575,12 @@ export struct AdaptiveMetricChart {
       if (point !== undefined) {
         this.context.beginPath()
         this.context.arc(this.xPosition(point.timestampMs, width),
-          this.yPosition(point.values[seriesIndex], height, bounds), 2, 0, Math.PI * 2)
+          this.yPosition(point.values[seriesIndex], height, bounds), lineWidth / 2, 0, Math.PI * 2)
         this.context.fillStyle = color
         this.context.fill()
       }
     }
+    this.context.restore()
   }
 
   private drawFill(seriesIndex: number, width: number, height: number, bounds: MetricChartBounds): void {

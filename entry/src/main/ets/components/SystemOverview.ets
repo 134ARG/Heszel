@@ -1,4 +1,10 @@
-import { AppColorMode, chartHeightVp, CpuChartHeight } from '../model/AppearanceModels'
+import {
+  AppColorMode,
+  ChartLineOpacity,
+  ChartLineWidth,
+  chartHeightVp,
+  CpuChartHeight
+} from '../model/AppearanceModels'
 import { GpuMetricsState, HealthMetricsState, MetricTrendState, OverviewMetricsState } from '../model/SystemDetailModels'
 import { AdaptiveMetricChart } from './AdaptiveMetricChart'
 import { PressureBar } from './PressureBar'
@@ -13,6 +19,8 @@ export struct SystemOverview {
   @Prop liveSampling: boolean = false
   @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
+  @Prop chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
+  @Prop chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
 
   build() {
     Column({ space: 18 }) {
@@ -37,6 +45,8 @@ export struct SystemOverview {
           AdaptiveMetricChart({
             state: this.cpuTrend.chart,
             colorMode: this.colorMode,
+            chartLineWidth: this.chartLineWidth,
+            chartLineOpacity: this.chartLineOpacity,
             primarySeriesColor: $r('app.color.metric_cpu'),
             chartHeight: chartHeightVp(this.cpuChartHeight, this.compact, 67.2, 75.6),
             showLegend: false
