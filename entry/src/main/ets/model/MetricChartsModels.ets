@@ -59,6 +59,7 @@ export class MetricChartPanelState {
     this.stackAvailable = definition.stackAvailable
     this.stackNormalize = definition.stackNormalize
     this.stackOutlineKey = definition.stackOutlineKey
+    this.stacked = definition.defaultStacked
   }
 
   setRange(range: MetricChartRange, nowMs: number): number {

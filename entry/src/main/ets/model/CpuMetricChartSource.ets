@@ -24,7 +24,7 @@ export class CpuMetricChartSource implements MetricChartSource {
       new MetricChartPanelDefinition(MetricChartPanelKind.CPU_USAGE,
         MetricChartAxisPolicy.PERCENT, MetricChartValueFormat.NUMBER, '%', true, false, CPU_TOTAL_KEY),
       new MetricChartPanelDefinition(MetricChartPanelKind.CPU_CORES,
-        MetricChartAxisPolicy.PERCENT, MetricChartValueFormat.NUMBER, '%', true, true)
+        MetricChartAxisPolicy.PERCENT, MetricChartValueFormat.NUMBER, '%', true, true, '', true)
     ]
   }
 

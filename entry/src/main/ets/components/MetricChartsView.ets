@@ -30,6 +30,8 @@ struct MetricChartPanelView {
   @Prop chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
   @Prop chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
+  onStackedChange: (kind: MetricChartPanelKind, stacked: boolean) => void =
+    (_kind: MetricChartPanelKind, _stacked: boolean) => {}
   onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) => void =
     (_kind: MetricChartPanelKind, _selectedKeys: string[]) => {}
 
@@ -55,7 +57,7 @@ struct MetricChartPanelView {
       searchPlaceholder: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
         $r('app.string.chart_search_metrics') : $r('app.string.chart_search_metrics_generic'),
       onRangeChange: (range: MetricChartRange) => this.onRangeChange(this.panel.kind, range),
-      onStackedChange: (stacked: boolean) => this.panel.setStacked(stacked),
+      onStackedChange: (stacked: boolean) => this.onStackedChange(this.panel.kind, stacked),
       onSelectionChange: (selectedKeys: string[]) => this.panel.rememberSelection(selectedKeys),
       onSelectionCommit: (selectedKeys: string[]) => this.onSelectionCommit(this.panel.kind, selectedKeys)
     })
@@ -90,6 +92,8 @@ export struct MetricChartsView {
   @Prop chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
   onBack: () => void = () => {}
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
+  onStackedChange: (kind: MetricChartPanelKind, stacked: boolean) => void =
+    (_kind: MetricChartPanelKind, _stacked: boolean) => {}
   onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) => void =
     (_kind: MetricChartPanelKind, _selectedKeys: string[]) => {}
   onScrollingChange: (scrolling: boolean) => void = () => {}
@@ -121,6 +125,8 @@ export struct MetricChartsView {
               chartLineOpacity: this.chartLineOpacity,
               onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
                 this.onRangeChange(kind, range),
+              onStackedChange: (kind: MetricChartPanelKind, stacked: boolean) =>
+                this.onStackedChange(kind, stacked),
               onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) =>
                 this.onSelectionCommit(kind, selectedKeys)
             })

@@ -64,10 +64,11 @@ export class MetricChartPanelDefinition {
   stackAvailable: boolean = false
   stackNormalize: boolean = false
   stackOutlineKey: string = ''
+  defaultStacked: boolean = false
 
   constructor(kind: MetricChartPanelKind, axisPolicy: MetricChartAxisPolicy,
     valueFormat: MetricChartValueFormat, unit: string = '', stackAvailable: boolean = false,
-    stackNormalize: boolean = false, stackOutlineKey: string = '') {
+    stackNormalize: boolean = false, stackOutlineKey: string = '', defaultStacked: boolean = false) {
     this.kind = kind
     this.axisPolicy = axisPolicy
     this.valueFormat = valueFormat
@@ -75,6 +76,7 @@ export class MetricChartPanelDefinition {
     this.stackAvailable = stackAvailable
     this.stackNormalize = stackNormalize
     this.stackOutlineKey = stackOutlineKey
+    this.defaultStacked = defaultStacked
   }
 }
 

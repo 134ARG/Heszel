@@ -138,6 +138,8 @@ export struct DashboardView {
           },
           onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
             this.controller.setMetricChartRange(kind, range),
+          onStackedChange: (kind: MetricChartPanelKind, stacked: boolean) =>
+            this.controller.setMetricChartStacked(kind, stacked),
           onSelectionCommit: (kind: MetricChartPanelKind, selectedKeys: string[]) =>
             this.controller.saveMetricChartSelection(kind, selectedKeys),
           onScrollingChange: (scrolling: boolean) => this.controller.setChartsScrolling(scrolling)

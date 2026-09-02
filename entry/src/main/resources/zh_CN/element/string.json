@@ -259,6 +259,7 @@
     { "name": "error_save_chart_line_width", "value": "无法保存图表线宽设置。" },
     { "name": "error_save_chart_line_opacity", "value": "无法保存图表线条透明度设置。" },
     { "name": "error_save_metric_chart_selection", "value": "无法保存图表指标选择。" },
+    { "name": "error_save_metric_chart_mode", "value": "无法保存图表显示模式。" },
     { "name": "error_gateway_rejected", "value": "nginx 网关拒绝了此密钥。" },
     { "name": "error_load_detail", "value": "无法加载系统详细数据。" },
     { "name": "error_load_chart_history", "value": "无法加载指标历史数据。" },

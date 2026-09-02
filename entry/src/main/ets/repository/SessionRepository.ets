@@ -36,6 +36,7 @@ const KEY_METRIC_INSPECTION_SORT = 'metric_inspection_sort'
 const KEY_CHART_LINE_WIDTH = 'chart_line_width'
 const KEY_CHART_LINE_OPACITY = 'chart_line_opacity'
 const METRIC_CHART_SELECTION_PREFIX = 'metric_chart_selection_v2:'
+const METRIC_CHART_STACKED_PREFIX = 'metric_chart_stacked:'
 const TOKEN_ALIAS = 'heszel.beszel.auth-token'
 const GATEWAY_KEY_ALIAS = 'heszel.gateway.header-key'
 const IROH_SECRET_ALIAS = 'heszel.iroh.phone-secret-key'
@@ -251,6 +252,28 @@ export class SessionRepository {
     }
   }
 
+  metricChartStacked(systemId: string, panelKind: MetricChartPanelKind): boolean | null {
+    const store = this.store
+    if (store === null) return null
+    try {
+      const key = this.metricChartStackedKey(systemId, panelKind)
+      return store.hasSync(key) ? store.getSync(key, false) as boolean : null
+    } catch (_) {
+      return null
+    }
+  }
+
+  async saveMetricChartStacked(systemId: string, panelKind: MetricChartPanelKind,
+    stacked: boolean): Promise<void> {
+    try {
+      const store = await this.getStore()
+      store.putSync(this.metricChartStackedKey(systemId, panelKind), stacked)
+      await store.flush()
+    } catch (error) {
+      throw this.storageError(error, 'Unable to save the metric chart mode.')
+    }
+  }
+
   async clearToken(): Promise<void> {
     await this.clearSecret(TOKEN_ALIAS)
   }
@@ -296,6 +319,10 @@ export class SessionRepository {
 
   private metricChartSelectionKey(systemId: string, panelKind: MetricChartPanelKind): string {
     return `${METRIC_CHART_SELECTION_PREFIX}${systemId}:${panelKind}`
+  }
+
+  private metricChartStackedKey(systemId: string, panelKind: MetricChartPanelKind): string {
+    return `${METRIC_CHART_STACKED_PREFIX}${systemId}:${panelKind}`
   }
 
   private async readToken(): Promise<string> {

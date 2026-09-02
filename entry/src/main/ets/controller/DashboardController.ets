@@ -192,6 +192,8 @@ export class DashboardController {
       this.metricChartsState.panels.forEach((panel: MetricChartPanelState) => {
         const selectedKeys = repository.metricChartSelection(this.selectedId, panel.kind)
         if (selectedKeys !== null) panel.restoreSelection(selectedKeys)
+        const stacked = repository.metricChartStacked(this.selectedId, panel.kind)
+        if (stacked !== null) panel.setStacked(stacked)
       })
     }
     this.loadMetricChartHistories()
@@ -223,6 +225,21 @@ export class DashboardController {
     } catch (_) {
       this.dashboardError = this.localized(
         'error_save_metric_chart_selection', 'Unable to save the metric chart selection.')
+    }
+  }
+
+  async setMetricChartStacked(kind: MetricChartPanelKind, stacked: boolean): Promise<void> {
+    const panel = this.metricChartsState.panel(kind)
+    if (panel === null || !panel.stackAvailable || panel.stacked === stacked) return
+    panel.setStacked(stacked)
+    const repository = this.sessionRepository
+    const systemId = this.metricChartsState.systemId
+    if (repository === null || systemId.length === 0) return
+    try {
+      await repository.saveMetricChartStacked(systemId, kind, stacked)
+    } catch (_) {
+      this.dashboardError = this.localized(
+        'error_save_metric_chart_mode', 'Unable to save the metric chart mode.')
     }
   }
 
