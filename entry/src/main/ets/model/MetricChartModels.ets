@@ -7,7 +7,8 @@ export enum MetricChartRange {
   DAY_30
 }
 
-export const MAX_SELECTED_METRIC_SERIES = 6
+export const DEFAULT_SELECTED_METRIC_SERIES_LIMIT = 6
+export const MAX_SELECTED_METRIC_SERIES = 32
 
 export enum MetricChartAxisPolicy {
   AUTO,
@@ -188,11 +189,40 @@ export class AdaptiveMetricChartState {
     const target = this.series[index]
     if (!target.selected && this.selectedCount() >= maximumSelected) return false
     target.selected = !target.selected
+    this.commitSeriesSelection()
+    return true
+  }
+
+  selectAllSeries(maximumSelected: number = MAX_SELECTED_METRIC_SERIES): boolean {
+    let selectedCount = this.selectedCount()
+    let changed = false
+    for (let index = 0; index < this.series.length && selectedCount < maximumSelected; index += 1) {
+      if (!this.series[index].selected) {
+        this.series[index].selected = true
+        selectedCount += 1
+        changed = true
+      }
+    }
+    if (changed) this.commitSeriesSelection()
+    return selectedCount < this.series.length
+  }
+
+  deselectAllSeries(): void {
+    let changed = false
+    this.series.forEach((series: MetricChartSeries) => {
+      if (series.selected) {
+        series.selected = false
+        changed = true
+      }
+    })
+    if (changed) this.commitSeriesSelection()
+  }
+
+  private commitSeriesSelection(): void {
     // Reassigning the array makes selection changes visible to both the list
     // and the canvas without rebuilding the point data.
     this.series = this.series.slice()
     this.revision += 1
-    return true
   }
 
   private ensureSeries(keys: string[]): void {

@@ -1,7 +1,6 @@
 import { AppColorMode } from '../model/AppearanceModels'
 import {
   AdaptiveMetricChartState,
-  MAX_SELECTED_METRIC_SERIES,
   MetricChartAxisPolicy,
   MetricChartPoint,
   MetricChartRange,
@@ -46,7 +45,10 @@ export struct AdaptiveMetricChart {
   private cachedColorMode: AppColorMode = AppColorMode.SYSTEM
   private cachedPaletteReady: boolean = false
   private cachedDividerColor: number = 0xFFE2E8E3
-  private cachedSeriesColors: number[] = []
+  private cachedSeriesStartColor: number = 0xFFD83B4B
+  private cachedSeriesEndColor: number = 0xFF844BC5
+  private cachedSeriesStartHsl: number[] = [0, 0, 0]
+  private cachedSeriesEndHsl: number[] = [0, 0, 0]
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -668,9 +670,20 @@ export struct AdaptiveMetricChart {
 
   private seriesColor(key: string): number {
     this.refreshColorCache()
-    const index = this.colorIndex(key)
-    return index >= 0 && index < this.cachedSeriesColors.length ?
-      this.cachedSeriesColors[index] : 0xFF267454
+    const selected = this.selectedSeries()
+    const index = selected.findIndex((series: MetricChartSeries) => series.key === key)
+    if (index < 0) return 0xFF267454
+    if (selected.length <= 1 || index === 0) return this.cachedSeriesStartColor
+    if (index === selected.length - 1) return this.cachedSeriesEndColor
+    const ratio = index / (selected.length - 1)
+    const hueDistance = (this.cachedSeriesEndHsl[0] - this.cachedSeriesStartHsl[0] + 360) % 360
+    return this.hslColor(
+      (this.cachedSeriesStartHsl[0] + hueDistance * ratio) % 360,
+      this.cachedSeriesStartHsl[1] +
+        (this.cachedSeriesEndHsl[1] - this.cachedSeriesStartHsl[1]) * ratio,
+      this.cachedSeriesStartHsl[2] +
+        (this.cachedSeriesEndHsl[2] - this.cachedSeriesStartHsl[2]) * ratio
+    )
   }
 
   private refreshColorCache(): void {
@@ -680,26 +693,10 @@ export struct AdaptiveMetricChart {
     this.cachedColorMode = this.colorMode
     this.cachedPaletteReady = true
     this.cachedDividerColor = this.resolveColor($r('app.color.divider'), 0xFFE2E8E3)
-    const startColor = this.resolveColor(this.primarySeriesColor, 0xFFD83B4B)
-    const endColor = this.resolveColor($r('app.color.chart_series_end'), 0xFF844BC5)
-    this.cachedSeriesColors = this.spectrumColors(startColor, endColor, MAX_SELECTED_METRIC_SERIES)
-  }
-
-  private spectrumColors(startColor: number, endColor: number, count: number): number[] {
-    const start = this.colorHsl(startColor)
-    const end = this.colorHsl(endColor)
-    const hueDistance = (end[0] - start[0] + 360) % 360
-    const divisor = Math.max(1, count - 1)
-    const colors: number[] = []
-    for (let index = 0; index < count; index += 1) {
-      const ratio = index / divisor
-      colors.push(this.hslColor(
-        (start[0] + hueDistance * ratio) % 360,
-        start[1] + (end[1] - start[1]) * ratio,
-        start[2] + (end[2] - start[2]) * ratio
-      ))
-    }
-    return colors
+    this.cachedSeriesStartColor = this.resolveColor(this.primarySeriesColor, 0xFFD83B4B)
+    this.cachedSeriesEndColor = this.resolveColor($r('app.color.chart_series_end'), 0xFF844BC5)
+    this.cachedSeriesStartHsl = this.colorHsl(this.cachedSeriesStartColor)
+    this.cachedSeriesEndHsl = this.colorHsl(this.cachedSeriesEndColor)
   }
 
   private colorHsl(color: number): number[] {
@@ -755,11 +752,6 @@ export struct AdaptiveMetricChart {
     const greenByte = Math.round((green + offset) * 255)
     const blueByte = Math.round((blue + offset) * 255)
     return 0xFF000000 + redByte * 0x10000 + greenByte * 0x100 + blueByte
-  }
-
-  private colorIndex(key: string): number {
-    const index = this.selectedSeries().findIndex((series: MetricChartSeries) => series.key === key)
-    return index >= 0 ? index : 0
   }
 
   private resolveColor(resource: Resource, fallback: number): number {

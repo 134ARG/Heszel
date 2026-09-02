@@ -4,7 +4,7 @@ import { HealthMetricChartSource } from './HealthMetricChartSource'
 import { MemoryMetricChartSource } from './MemoryMetricChartSource'
 import {
   AdaptiveMetricChartState,
-  MAX_SELECTED_METRIC_SERIES,
+  DEFAULT_SELECTED_METRIC_SERIES_LIMIT,
   MetricChartAxisPolicy,
   MetricChartPoint,
   MetricChartRange,
@@ -25,7 +25,7 @@ import { BeszelSystemStatsRecordWire, BeszelSystemStatsWire, SystemDetailState }
 
 function applyDefaultSelection(series: MetricChartSeries[]): void {
   let selectedCount = series.filter((item: MetricChartSeries) => item.selected).length
-  for (let index = 0; index < series.length && selectedCount < MAX_SELECTED_METRIC_SERIES; index += 1) {
+  for (let index = 0; index < series.length && selectedCount < DEFAULT_SELECTED_METRIC_SERIES_LIMIT; index += 1) {
     if (!series[index].selected) {
       series[index].selected = true
       selectedCount += 1

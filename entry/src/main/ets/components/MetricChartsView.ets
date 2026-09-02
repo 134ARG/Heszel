@@ -1,5 +1,9 @@
 import { AppColorMode, MetricChartHeight } from '../model/AppearanceModels'
-import { AdaptiveMetricChartState, MetricChartRange } from '../model/MetricChartModels'
+import {
+  AdaptiveMetricChartState,
+  MAX_SELECTED_METRIC_SERIES,
+  MetricChartRange
+} from '../model/MetricChartModels'
 import { MetricChartPanelState, MetricChartsState } from '../model/MetricChartsModels'
 import {
   MetricChartKind,
@@ -27,7 +31,8 @@ struct MetricChartPanelView {
       colorMode: this.colorMode,
       metricChartHeight: this.metricChartHeight,
       metricHint: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
-        $r('app.string.chart_metric_hint') : $r('app.string.chart_metric_generic_hint'),
+        $r('app.string.chart_metric_hint', MAX_SELECTED_METRIC_SERIES) :
+        $r('app.string.chart_metric_generic_hint', MAX_SELECTED_METRIC_SERIES),
       searchPlaceholder: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
         $r('app.string.chart_search_metrics') : $r('app.string.chart_search_metrics_generic'),
       onRangeChange: (range: MetricChartRange) => this.onRangeChange(this.panel.kind, range)

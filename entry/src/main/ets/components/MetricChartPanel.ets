@@ -204,13 +204,43 @@ export struct MetricChartPanel {
           this.metricFilter = value
         })
 
-      Text(this.selectionLimitReached ?
-        $r('app.string.chart_metric_limit') :
-        $r('app.string.chart_metrics_selected', this.chart.selectedCount(), this.chart.series.length))
-        .fontSize(11)
-        .fontColor(this.selectionLimitReached ?
-          $r('app.color.error_text') : $r('app.color.text_tertiary'))
-        .width('100%')
+      Row({ space: 6 }) {
+        Text(this.selectionLimitReached ?
+          $r('app.string.chart_metric_limit', MAX_SELECTED_METRIC_SERIES) :
+          $r('app.string.chart_metrics_selected', this.chart.selectedCount(), this.chart.series.length))
+          .fontSize(11)
+          .fontColor(this.selectionLimitReached ?
+            $r('app.color.error_text') : $r('app.color.text_tertiary'))
+          .layoutWeight(1)
+
+        Button($r('app.string.chart_select_all'))
+          .height(28)
+          .fontSize(11)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.action'))
+          .backgroundColor($r('app.color.action_surface'))
+          .borderRadius(8)
+          .enabled(this.chart.selectedCount() < this.chart.series.length)
+          .opacity(this.chart.selectedCount() < this.chart.series.length ? 1 : 0.45)
+          .onClick(() => {
+            this.selectionLimitReached = this.chart.selectAllSeries()
+          })
+
+        Button($r('app.string.chart_deselect_all'))
+          .height(28)
+          .fontSize(11)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.action'))
+          .backgroundColor($r('app.color.action_surface'))
+          .borderRadius(8)
+          .enabled(this.chart.selectedCount() > 0)
+          .opacity(this.chart.selectedCount() > 0 ? 1 : 0.45)
+          .onClick(() => {
+            this.chart.deselectAllSeries()
+            this.selectionLimitReached = false
+          })
+      }
+      .width('100%')
 
       List({ space: 2 }) {
         ForEach(this.filteredSeries(), (series: MetricChartSeries) => {
