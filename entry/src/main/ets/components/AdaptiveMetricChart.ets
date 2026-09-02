@@ -26,6 +26,7 @@ const INSPECTION_POPUP_ROW_HEIGHT = 18
 const INSPECTION_POPUP_MAX_ROWS = 8
 const INSPECTION_POPUP_CHROME_HEIGHT = 37
 const INSPECTION_POPUP_SCROLLBAR_GUTTER = 8
+const RETAINED_STACK_EXTRA_RATIO = 0.5
 class MetricChartBounds {
   minimum: number = 0
   maximum: number = 1
@@ -55,8 +56,8 @@ export struct AdaptiveMetricChart {
   @Prop @Watch('onLineStyleChanged') chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
   @Prop @Watch('onLineStyleChanged') chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
   @Prop @Watch('onStackModeChanged') stacked: boolean = false
-  @Prop stackNormalize: boolean = false
-  @Prop stackOutlineKey: string = ''
+  @Prop @Watch('onStackModeChanged') stackNormalize: boolean = false
+  @Prop @Watch('onStackModeChanged') stackOutlineKey: string = ''
   @Prop @Watch('onInspectionDismissRequested') inspectionDismissToken: number = 0
   @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   @Prop chartHeight: number = 230
@@ -69,9 +70,12 @@ export struct AdaptiveMetricChart {
   @State private inspectedTimestampMs: number = 0
   @State private inspectionPopupAtTop: boolean = true
   @State private inspectionRange: MetricChartRange = MetricChartRange.HOUR_1
+  @State private stackLayerOffsetX: number = 0
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
+  private stackContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
   private ready: boolean = false
+  private stackReady: boolean = false
   private chartVisible: boolean = true
   private drawDirty: boolean = true
   private drawPending: boolean = false
@@ -90,16 +94,15 @@ export struct AdaptiveMetricChart {
   private cachedSeriesEndColor: number = 0xFF844BC5
   private cachedSeriesStartHsl: number[] = [0, 0, 0]
   private cachedSeriesEndHsl: number[] = [0, 0, 0]
+  private baseLayerNeedsRedraw: boolean = true
+  private stackLayerNeedsRebuild: boolean = true
+  private stackLayerOriginMs: number = 0
+  private stackLayerLastPoint: MetricChartPoint | null = null
+  private stackLayerSignature: string = ''
+  private stackLayerRevision: number = -1
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      this.chartContent()
-
-      if (this.inspectionVisible()) {
-        this.inspectionPopup()
-      }
-    }
-    .width('100%')
+    this.chartContent()
   }
 
   @Builder
@@ -135,40 +138,67 @@ export struct AdaptiveMetricChart {
 
         Column({ space: 4 }) {
           Stack({ alignContent: Alignment.Center }) {
-            Canvas(this.context)
+            Stack({ alignContent: Alignment.TopStart }) {
+              Canvas(this.context)
+                .width('100%')
+                .height(this.chartHeight)
+                .onReady(() => {
+                  this.ready = true
+                  this.canvasWidth = this.context.width
+                  this.canvasHeight = this.context.height
+                  this.chartWidth = this.canvasWidth
+                  this.baseLayerNeedsRedraw = true
+                  this.scheduleDraw()
+                })
+                .onAreaChange((oldValue: Area, newValue: Area) => {
+                  const width = this.areaLength(newValue.width, this.context.width)
+                  const height = this.areaLength(newValue.height, this.context.height)
+                  const sizeChanged = Math.abs(width - this.canvasWidth) > 0.5 ||
+                    Math.abs(height - this.canvasHeight) > 0.5
+                  if (Math.abs(width - this.chartWidth) > 0.5) this.chartWidth = width
+                  this.onPlotAreaChange(
+                    this.areaLength(newValue.globalPosition.x, 0),
+                    this.areaLength(newValue.globalPosition.y, 0),
+                    width,
+                    height
+                  )
+                  if (sizeChanged) {
+                    this.canvasWidth = width
+                    this.canvasHeight = height
+                    this.baseLayerNeedsRedraw = true
+                    this.invalidateStackLayer()
+                    this.scheduleDraw()
+                  }
+                })
+                .onVisibleAreaChange([0.01], (isExpanding: boolean, _currentRatio: number) => {
+                  this.onChartVisibilityChanged(isExpanding)
+                })
+                .onTouch((event: TouchEvent) => this.onChartTouch(event))
+
+              if (this.usesRetainedStackLayer()) {
+                Canvas(this.stackContext)
+                  .width(this.retainedStackCanvasWidth())
+                  .height(this.chartHeight)
+                  .position({ x: 0, y: 0 })
+                  .translate({ x: this.stackLayerOffsetX })
+                  .hitTestBehavior(HitTestMode.None)
+                  .onReady(() => {
+                    this.stackReady = true
+                    this.baseLayerNeedsRedraw = true
+                    this.invalidateStackLayer()
+                    this.scheduleDraw()
+                  })
+                  .onDisAppear(() => {
+                    this.stackReady = false
+                    this.stackLayerNeedsRebuild = true
+                  })
+              }
+            }
               .width('100%')
               .height(this.chartHeight)
               .backgroundColor($r('app.color.surface_input'))
               .borderRadius(4)
-              .onReady(() => {
-                this.ready = true
-                this.canvasWidth = this.context.width
-                this.canvasHeight = this.context.height
-                this.chartWidth = this.canvasWidth
-                this.scheduleDraw()
-              })
-              .onAreaChange((oldValue: Area, newValue: Area) => {
-                const width = this.areaLength(newValue.width, this.context.width)
-                const height = this.areaLength(newValue.height, this.context.height)
-                const sizeChanged = Math.abs(width - this.canvasWidth) > 0.5 ||
-                  Math.abs(height - this.canvasHeight) > 0.5
-                if (Math.abs(width - this.chartWidth) > 0.5) this.chartWidth = width
-                this.onPlotAreaChange(
-                  this.areaLength(newValue.globalPosition.x, 0),
-                  this.areaLength(newValue.globalPosition.y, 0),
-                  width,
-                  height
-                )
-                if (sizeChanged) {
-                  this.canvasWidth = width
-                  this.canvasHeight = height
-                  this.scheduleDraw()
-                }
-              })
-              .onVisibleAreaChange([0.01], (isExpanding: boolean, _currentRatio: number) => {
-                this.onChartVisibilityChanged(isExpanding)
-              })
-              .onTouch((event: TouchEvent) => this.onChartTouch(event))
+              .clip(true)
 
             if (this.inspectionVisible()) {
               Row()
@@ -194,6 +224,10 @@ export struct AdaptiveMetricChart {
                     .hitTestBehavior(HitTestMode.None)
                 }
               }, (series: MetricChartSeries) => series.key)
+            }
+
+            if (this.inspectionVisible()) {
+              this.inspectionPopup()
             }
 
             if (this.loading) {
@@ -279,21 +313,28 @@ export struct AdaptiveMetricChart {
 
   private onPaletteChanged(): void {
     this.cachedPaletteReady = false
+    this.baseLayerNeedsRedraw = true
+    this.invalidateStackLayer()
     this.scheduleDraw()
   }
 
   private onLineStyleChanged(): void {
+    this.invalidateStackLayer()
     this.scheduleDraw()
   }
 
   private onStackModeChanged(): void {
+    this.baseLayerNeedsRedraw = true
+    this.invalidateStackLayer()
     this.scheduleDraw()
   }
 
   private onChartVisibilityChanged(visible: boolean): void {
     if (this.chartVisible === visible) return
     this.chartVisible = visible
-    if (visible && (this.drawDirty || this.drawnRevision !== this.state.revision)) {
+    if (visible) {
+      this.baseLayerNeedsRedraw = true
+      this.invalidateStackLayer()
       this.scheduleDraw()
     }
   }
@@ -309,7 +350,11 @@ export struct AdaptiveMetricChart {
     this.drawPending = false
     if (!this.ready || !this.chartVisible) return
     this.drawnRevision = this.state.revision
-    this.draw()
+    if (this.usesRetainedStackLayer() && this.stackReady) {
+      this.drawRetainedStack()
+    } else {
+      this.draw()
+    }
     this.drawDirty = false
   }
 
@@ -512,12 +557,20 @@ export struct AdaptiveMetricChart {
     return Math.ceil(this.selectedSeries().length / this.inspectionPopupColumns())
   }
 
+  private inspectionPopupMaximumRows(): number {
+    const availableHeight = this.chartHeight - INSPECTION_POPUP_MARGIN * 2 -
+      INSPECTION_POPUP_CHROME_HEIGHT
+    return Math.max(1, Math.min(INSPECTION_POPUP_MAX_ROWS,
+      Math.floor(availableHeight / INSPECTION_POPUP_ROW_HEIGHT)))
+  }
+
   private inspectionPopupBodyHeight(): number {
-    return Math.min(INSPECTION_POPUP_MAX_ROWS, this.inspectionPopupRows()) * INSPECTION_POPUP_ROW_HEIGHT
+    return Math.min(this.inspectionPopupMaximumRows(), this.inspectionPopupRows()) *
+      INSPECTION_POPUP_ROW_HEIGHT
   }
 
   private inspectionPopupScrollable(): boolean {
-    return this.inspectionPopupRows() > INSPECTION_POPUP_MAX_ROWS
+    return this.inspectionPopupRows() > this.inspectionPopupMaximumRows()
   }
 
   private inspectionPopupWidth(): number {
@@ -531,7 +584,7 @@ export struct AdaptiveMetricChart {
     const right = lineX + INSPECTION_POPUP_MARGIN
     const plotX = right + popupWidth <= width ?
       right : Math.max(0, lineX - popupWidth - INSPECTION_POPUP_MARGIN)
-    return Y_LABEL_WIDTH + 6 + plotX
+    return plotX
   }
 
   private inspectionPopupY(): number {
@@ -543,6 +596,25 @@ export struct AdaptiveMetricChart {
 
   private effectiveChartWidth(): number {
     return this.chartWidth > 0 ? this.chartWidth : this.context.width
+  }
+
+  private usesRetainedStackLayer(): boolean {
+    return this.stacked && this.state.range === MetricChartRange.LIVE
+  }
+
+  private retainedStackCanvasWidth(): number {
+    const width = this.effectiveChartWidth()
+    const plotWidth = Math.max(1, width - PLOT_INSET * 2)
+    return PLOT_INSET * 2 + plotWidth * (1 + RETAINED_STACK_EXTRA_RATIO)
+  }
+
+  private invalidateStackLayer(): void {
+    this.stackLayerNeedsRebuild = true
+    this.stackLayerOriginMs = 0
+    this.stackLayerLastPoint = null
+    this.stackLayerSignature = ''
+    this.stackLayerRevision = -1
+    if (Math.abs(this.stackLayerOffsetX) > 0.05) this.stackLayerOffsetX = 0
   }
 
   private areaLength(length: Length | undefined, fallback: number): number {
@@ -600,15 +672,111 @@ export struct AdaptiveMetricChart {
     const indices = this.selectedIndices()
     const bounds = this.bounds()
     if (this.stacked) {
-      this.drawStacked(indices, width, height, bounds)
+      this.drawStackedRange(this.context, indices, width, height, bounds, 0,
+        this.state.points.length - 1, this.state.windowStartMs,
+        Math.max(1, this.state.windowEndMs - this.state.windowStartMs), true)
       return
     }
     if (indices.length === 1) this.drawFill(indices[0], width, height, bounds)
     indices.forEach((seriesIndex: number) => this.drawLine(seriesIndex, width, height, bounds))
   }
 
-  private drawStacked(selectedIndices: number[], width: number, height: number,
-    bounds: MetricChartBounds): void {
+  private drawRetainedStack(): void {
+    const width = this.context.width
+    const height = this.context.height
+    const stackWidth = this.stackContext.width
+    if (width <= 0 || height <= 0 || stackWidth <= 0 || this.stackContext.height <= 0) return
+    if (this.baseLayerNeedsRedraw) {
+      this.context.clearRect(0, 0, width, height)
+      this.drawGrid(width, height)
+      this.baseLayerNeedsRedraw = false
+    }
+
+    const indices = this.selectedIndices()
+    const bounds = this.bounds()
+    const signature = this.retainedStackSignature(indices, bounds, width, height)
+    const lastPoint = this.state.points.length > 0 ?
+      this.state.points[this.state.points.length - 1] : null
+    if (this.stackLayerNeedsRebuild || this.stackLayerSignature !== signature) {
+      this.rebuildRetainedStack(indices, bounds, width, height, signature, lastPoint)
+      return
+    }
+    if (this.stackLayerRevision === this.state.revision) return
+    if (this.stackLayerLastPoint === null || lastPoint === null ||
+      lastPoint === this.stackLayerLastPoint) {
+      this.rebuildRetainedStack(indices, bounds, width, height, signature, lastPoint)
+      return
+    }
+
+    const previousIndex = this.state.points.indexOf(this.stackLayerLastPoint)
+    const lastIndex = this.state.points.length - 1
+    const durationMs = Math.max(1, this.state.windowEndMs - this.state.windowStartMs)
+    const offsetX = (this.state.windowStartMs - this.stackLayerOriginMs) / durationMs *
+      Math.max(1, width - PLOT_INSET * 2)
+    const maximumOffsetX = Math.max(0, stackWidth - width)
+    if (previousIndex < 0 || previousIndex >= lastIndex || offsetX < 0 ||
+      offsetX > maximumOffsetX) {
+      this.rebuildRetainedStack(indices, bounds, width, height, signature, lastPoint)
+      return
+    }
+    this.appendRetainedStack(indices, bounds, width, height, signature,
+      previousIndex, lastIndex, offsetX, lastPoint)
+  }
+
+  private retainedStackSignature(indices: number[], bounds: MetricChartBounds,
+    width: number, height: number): string {
+    const keys = indices.map((seriesIndex: number) => this.state.series[seriesIndex].key).join(',')
+    return `${keys}|${bounds.minimum}|${bounds.maximum}|${width}|${height}|` +
+      `${this.stackNormalize}|${this.stackOutlineKey}|${this.state.expectedIntervalMs}|` +
+      `${this.chartLineWidth}|${this.chartLineOpacity}`
+  }
+
+  private rebuildRetainedStack(indices: number[], bounds: MetricChartBounds,
+    width: number, height: number, signature: string, lastPoint: MetricChartPoint | null): void {
+    this.stackContext.clearRect(0, 0, this.stackContext.width, this.stackContext.height)
+    const durationMs = Math.max(1, this.state.windowEndMs - this.state.windowStartMs)
+    this.stackLayerOriginMs = this.state.windowStartMs
+    this.drawStackedRange(this.stackContext, indices, width, height, bounds, 0,
+      this.state.points.length - 1, this.stackLayerOriginMs, durationMs, true)
+    this.stackLayerLastPoint = lastPoint
+    this.stackLayerSignature = signature
+    this.stackLayerRevision = this.state.revision
+    this.stackLayerNeedsRebuild = false
+    if (Math.abs(this.stackLayerOffsetX) > 0.05) this.stackLayerOffsetX = 0
+  }
+
+  private appendRetainedStack(indices: number[], bounds: MetricChartBounds,
+    width: number, height: number, signature: string, previousIndex: number,
+    lastIndex: number, offsetX: number, lastPoint: MetricChartPoint): void {
+    const durationMs = Math.max(1, this.state.windowEndMs - this.state.windowStartMs)
+    const clearPointIndex = Math.max(0, previousIndex - 1)
+    const renderPointIndex = Math.max(0, clearPointIndex - 1)
+    const drawingPadding = Math.max(2, chartLineWidthVp(this.chartLineWidth))
+    const clearX = Math.max(0, this.renderXPosition(
+      this.state.points[clearPointIndex].timestampMs, this.stackLayerOriginMs,
+      durationMs, width) - drawingPadding)
+    const clearRight = Math.min(this.stackContext.width, this.renderXPosition(
+      this.state.points[lastIndex].timestampMs, this.stackLayerOriginMs,
+      durationMs, width) + drawingPadding)
+    const clearWidth = Math.max(0, clearRight - clearX)
+    this.stackContext.clearRect(clearX, 0, clearWidth, height)
+    this.stackContext.save()
+    this.stackContext.beginPath()
+    this.stackContext.rect(clearX, 0, clearWidth, height)
+    this.stackContext.clip()
+    this.drawStackedRange(this.stackContext, indices, width, height, bounds,
+      renderPointIndex, lastIndex, this.stackLayerOriginMs, durationMs, false)
+    this.stackContext.restore()
+    this.stackLayerLastPoint = lastPoint
+    this.stackLayerSignature = signature
+    this.stackLayerRevision = this.state.revision
+    if (Math.abs(this.stackLayerOffsetX + offsetX) > 0.05) this.stackLayerOffsetX = -offsetX
+  }
+
+  private drawStackedRange(context: CanvasRenderingContext2D, selectedIndices: number[],
+    width: number, height: number, bounds: MetricChartBounds, pointStart: number, pointEnd: number,
+    windowStartMs: number, durationMs: number, drawSingleSample: boolean): void {
+    if (pointStart < 0 || pointEnd < pointStart || pointEnd >= this.state.points.length) return
     const stackIndices = selectedIndices.filter((seriesIndex: number) =>
       this.state.series[seriesIndex].key !== this.stackOutlineKey)
     if (stackIndices.length > 0) {
@@ -617,11 +785,12 @@ export struct AdaptiveMetricChart {
       const cumulativeCoordinates: number[][] = stackIndices.map(() => [])
       const validPoints: boolean[] = []
       const divisor = this.stackDivisor(stackIndices)
-      this.state.points.forEach((point: MetricChartPoint) => {
+      for (let pointIndex = pointStart; pointIndex <= pointEnd; pointIndex += 1) {
+        const point = this.state.points[pointIndex]
         const valid = stackIndices.every((seriesIndex: number) =>
           Number.isFinite(point.values[seriesIndex]))
         validPoints.push(valid)
-        xCoordinates.push(this.xPosition(point.timestampMs, width))
+        xCoordinates.push(this.renderXPosition(point.timestampMs, windowStartMs, durationMs, width))
         baselineCoordinates.push(this.yPosition(0, height, bounds))
         let cumulative = 0
         stackIndices.forEach((seriesIndex: number, stackPosition: number) => {
@@ -629,21 +798,27 @@ export struct AdaptiveMetricChart {
           cumulativeCoordinates[stackPosition].push(valid ?
             this.yPosition(cumulative / divisor, height, bounds) : 0)
         })
-      })
+      }
       const segmentStarts: number[] = []
       const segmentEnds: number[] = []
-      this.stackSegments(validPoints, segmentStarts, segmentEnds)
+      this.stackSegments(validPoints, pointStart, segmentStarts, segmentEnds)
       stackIndices.forEach((seriesIndex: number, stackPosition: number) => {
         const lowerCoordinates = stackPosition === 0 ?
           baselineCoordinates : cumulativeCoordinates[stackPosition - 1]
-        this.drawStackBand(seriesIndex, xCoordinates, lowerCoordinates,
+        this.drawStackBand(context, seriesIndex, xCoordinates, lowerCoordinates,
           cumulativeCoordinates[stackPosition], segmentStarts, segmentEnds)
       })
-      this.drawSingleStackSample(stackIndices, xCoordinates, cumulativeCoordinates, validPoints)
+      if (drawSingleSample) {
+        this.drawSingleStackSample(context, stackIndices, xCoordinates,
+          cumulativeCoordinates, validPoints)
+      }
     }
     const outlineIndex = selectedIndices.find((seriesIndex: number) =>
       this.state.series[seriesIndex].key === this.stackOutlineKey)
-    if (outlineIndex !== undefined) this.drawLine(outlineIndex, width, height, bounds)
+    if (outlineIndex !== undefined) {
+      this.drawLineRange(context, outlineIndex, pointStart, pointEnd, width, height, bounds,
+        windowStartMs, durationMs, drawSingleSample)
+    }
   }
 
   private stackSeriesIndices(): number[] {
@@ -655,12 +830,13 @@ export struct AdaptiveMetricChart {
     return this.stackNormalize ? Math.max(1, stackIndices.length) : 1
   }
 
-  private stackSegments(validPoints: boolean[], starts: number[], ends: number[]): void {
+  private stackSegments(validPoints: boolean[], pointStart: number,
+    starts: number[], ends: number[]): void {
     const gapThreshold = this.state.expectedIntervalMs * 1.5
     let segmentStart = -1
-    for (let index = 0; index <= this.state.points.length; index += 1) {
-      const point = index < this.state.points.length ? this.state.points[index] : undefined
-      const previous = index > 0 ? this.state.points[index - 1] : undefined
+    for (let index = 0; index <= validPoints.length; index += 1) {
+      const point = index < validPoints.length ? this.state.points[pointStart + index] : undefined
+      const previous = index > 0 ? this.state.points[pointStart + index - 1] : undefined
       const gap = point !== undefined && previous !== undefined &&
         point.timestampMs - previous.timestampMs > gapThreshold
       const valid = point !== undefined && validPoints[index]
@@ -676,41 +852,44 @@ export struct AdaptiveMetricChart {
     }
   }
 
-  private drawStackBand(seriesIndex: number, xCoordinates: number[], lowerCoordinates: number[],
-    upperCoordinates: number[], segmentStarts: number[], segmentEnds: number[]): void {
+  private drawStackBand(context: CanvasRenderingContext2D, seriesIndex: number,
+    xCoordinates: number[], lowerCoordinates: number[], upperCoordinates: number[],
+    segmentStarts: number[], segmentEnds: number[]): void {
     for (let segment = 0; segment < segmentStarts.length; segment += 1) {
-      this.fillStackSegment(seriesIndex, xCoordinates, lowerCoordinates, upperCoordinates,
+      this.fillStackSegment(context, seriesIndex, xCoordinates, lowerCoordinates, upperCoordinates,
         segmentStarts[segment], segmentEnds[segment])
     }
   }
 
-  private fillStackSegment(seriesIndex: number, xCoordinates: number[], lowerCoordinates: number[],
-    upperCoordinates: number[], start: number, end: number): void {
+  private fillStackSegment(context: CanvasRenderingContext2D, seriesIndex: number,
+    xCoordinates: number[], lowerCoordinates: number[], upperCoordinates: number[],
+    start: number, end: number): void {
     const segmentX = this.coordinateSegment(xCoordinates, start, end)
     const segmentLower = this.coordinateSegment(lowerCoordinates, start, end)
     const segmentUpper = this.coordinateSegment(upperCoordinates, start, end)
-    this.context.beginPath()
-    this.traceSmoothCoordinates(segmentX, segmentUpper, true)
-    this.context.lineTo(segmentX[segmentX.length - 1], segmentLower[segmentLower.length - 1])
-    this.traceSmoothCoordinates(segmentX.slice().reverse(), segmentLower.slice().reverse(), false)
-    this.context.closePath()
+    context.beginPath()
+    this.traceSmoothCoordinates(context, segmentX, segmentUpper, true)
+    context.lineTo(segmentX[segmentX.length - 1], segmentLower[segmentLower.length - 1])
+    this.traceSmoothCoordinates(context, segmentX.slice().reverse(),
+      segmentLower.slice().reverse(), false)
+    context.closePath()
     const color = this.seriesColor(this.state.series[seriesIndex].key)
-    this.context.save()
-    this.context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity) * 0.55
-    this.context.fillStyle = color
-    this.context.fill()
-    this.context.restore()
+    context.save()
+    context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity) * 0.55
+    context.fillStyle = color
+    context.fill()
+    context.restore()
 
-    this.context.beginPath()
-    this.traceSmoothCoordinates(segmentX, segmentUpper, true)
-    this.context.save()
-    this.context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity)
-    this.context.strokeStyle = color
-    this.context.lineWidth = chartLineWidthVp(this.chartLineWidth)
-    this.context.lineJoin = 'round'
-    this.context.lineCap = 'round'
-    this.context.stroke()
-    this.context.restore()
+    context.beginPath()
+    this.traceSmoothCoordinates(context, segmentX, segmentUpper, true)
+    context.save()
+    context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity)
+    context.strokeStyle = color
+    context.lineWidth = chartLineWidthVp(this.chartLineWidth)
+    context.lineJoin = 'round'
+    context.lineCap = 'round'
+    context.stroke()
+    context.restore()
   }
 
   private coordinateSegment(coordinates: number[], start: number, end: number): number[] {
@@ -718,8 +897,8 @@ export struct AdaptiveMetricChart {
     return coordinates.slice(start, end + 1)
   }
 
-  private drawSingleStackSample(stackIndices: number[], xCoordinates: number[],
-    cumulativeCoordinates: number[][], validPoints: boolean[]): void {
+  private drawSingleStackSample(context: CanvasRenderingContext2D, stackIndices: number[],
+    xCoordinates: number[], cumulativeCoordinates: number[][], validPoints: boolean[]): void {
     let pointIndex = -1
     for (let index = 0; index < validPoints.length; index += 1) {
       if (!validPoints[index]) continue
@@ -729,14 +908,14 @@ export struct AdaptiveMetricChart {
     if (pointIndex < 0) return
     const lineWidth = chartLineWidthVp(this.chartLineWidth)
     stackIndices.forEach((seriesIndex: number, stackPosition: number) => {
-      this.context.beginPath()
-      this.context.arc(xCoordinates[pointIndex], cumulativeCoordinates[stackPosition][pointIndex],
+      context.beginPath()
+      context.arc(xCoordinates[pointIndex], cumulativeCoordinates[stackPosition][pointIndex],
         lineWidth / 2, 0, Math.PI * 2)
-      this.context.save()
-      this.context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity)
-      this.context.fillStyle = this.seriesColor(this.state.series[seriesIndex].key)
-      this.context.fill()
-      this.context.restore()
+      context.save()
+      context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity)
+      context.fillStyle = this.seriesColor(this.state.series[seriesIndex].key)
+      context.fill()
+      context.restore()
     })
   }
 
@@ -754,16 +933,25 @@ export struct AdaptiveMetricChart {
   }
 
   private drawLine(seriesIndex: number, width: number, height: number, bounds: MetricChartBounds): void {
+    this.drawLineRange(this.context, seriesIndex, 0, this.state.points.length - 1,
+      width, height, bounds, this.state.windowStartMs,
+      Math.max(1, this.state.windowEndMs - this.state.windowStartMs), true)
+  }
+
+  private drawLineRange(context: CanvasRenderingContext2D, seriesIndex: number,
+    pointStart: number, pointEnd: number, width: number, height: number, bounds: MetricChartBounds,
+    windowStartMs: number, durationMs: number, drawSingleSample: boolean): void {
+    if (pointStart < 0 || pointEnd < pointStart || pointEnd >= this.state.points.length) return
     const color = this.seriesColor(this.state.series[seriesIndex].key)
     const lineWidth = chartLineWidthVp(this.chartLineWidth)
     const gapThreshold = this.state.expectedIntervalMs * 1.5
     let segmentStart = -1
     let validCount = 0
-    this.context.beginPath()
-    for (let index = 0; index <= this.state.points.length; index += 1) {
-      const point = index < this.state.points.length ? this.state.points[index] : undefined
+    context.beginPath()
+    for (let index = pointStart; index <= pointEnd + 1; index += 1) {
+      const point = index <= pointEnd ? this.state.points[index] : undefined
       const value = point?.values[seriesIndex]
-      const previous = index > 0 ? this.state.points[index - 1] : undefined
+      const previous = index > pointStart ? this.state.points[index - 1] : undefined
       const gap = point !== undefined && previous !== undefined &&
         point.timestampMs - previous.timestampMs > gapThreshold
       const valid = point !== undefined && Number.isFinite(value)
@@ -773,30 +961,36 @@ export struct AdaptiveMetricChart {
         continue
       }
       if (segmentStart >= 0) {
-        this.traceSmoothSegment(seriesIndex, segmentStart, index - 1, width, height, bounds, true)
+        this.traceSmoothSeriesRange(context, seriesIndex, segmentStart, index - 1,
+          width, height, bounds, windowStartMs, durationMs, true)
       }
       segmentStart = valid ? index : -1
     }
-    this.context.save()
-    this.context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity)
-    this.context.strokeStyle = color
-    this.context.lineWidth = lineWidth
-    this.context.lineJoin = 'round'
-    this.context.lineCap = 'round'
-    this.context.stroke()
+    context.save()
+    context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity)
+    context.strokeStyle = color
+    context.lineWidth = lineWidth
+    context.lineJoin = 'round'
+    context.lineCap = 'round'
+    context.stroke()
 
-    if (validCount === 1) {
-      const point = this.state.points.find((candidate: MetricChartPoint) =>
-        Number.isFinite(candidate.values[seriesIndex]))
+    if (drawSingleSample && validCount === 1) {
+      let point: MetricChartPoint | undefined = undefined
+      for (let index = pointStart; index <= pointEnd; index += 1) {
+        if (Number.isFinite(this.state.points[index].values[seriesIndex])) {
+          point = this.state.points[index]
+          break
+        }
+      }
       if (point !== undefined) {
-        this.context.beginPath()
-        this.context.arc(this.xPosition(point.timestampMs, width),
+        context.beginPath()
+        context.arc(this.renderXPosition(point.timestampMs, windowStartMs, durationMs, width),
           this.yPosition(point.values[seriesIndex], height, bounds), lineWidth / 2, 0, Math.PI * 2)
-        this.context.fillStyle = color
-        this.context.fill()
+        context.fillStyle = color
+        context.fill()
       }
     }
-    this.context.restore()
+    context.restore()
   }
 
   private drawFill(seriesIndex: number, width: number, height: number, bounds: MetricChartBounds): void {
@@ -840,34 +1034,42 @@ export struct AdaptiveMetricChart {
 
   private traceSmoothSegment(seriesIndex: number, start: number, end: number, width: number,
     height: number, bounds: MetricChartBounds, moveToStart: boolean): void {
+    this.traceSmoothSeriesRange(this.context, seriesIndex, start, end, width, height, bounds,
+      this.state.windowStartMs, Math.max(1, this.state.windowEndMs - this.state.windowStartMs),
+      moveToStart)
+  }
+
+  private traceSmoothSeriesRange(context: CanvasRenderingContext2D, seriesIndex: number,
+    start: number, end: number, width: number, height: number, bounds: MetricChartBounds,
+    windowStartMs: number, durationMs: number, moveToStart: boolean): void {
     const xCoordinates: number[] = []
     const yCoordinates: number[] = []
     for (let index = start; index <= end; index += 1) {
       const point = this.state.points[index]
-      xCoordinates.push(this.xPosition(point.timestampMs, width))
+      xCoordinates.push(this.renderXPosition(point.timestampMs, windowStartMs, durationMs, width))
       yCoordinates.push(this.yPosition(point.values[seriesIndex], height, bounds))
     }
     if (xCoordinates.length === 0) return
-    this.traceSmoothCoordinates(xCoordinates, yCoordinates, moveToStart)
+    this.traceSmoothCoordinates(context, xCoordinates, yCoordinates, moveToStart)
   }
 
-  private traceSmoothCoordinates(xCoordinates: number[], yCoordinates: number[],
-    moveToStart: boolean): void {
+  private traceSmoothCoordinates(context: CanvasRenderingContext2D,
+    xCoordinates: number[], yCoordinates: number[], moveToStart: boolean): void {
     if (xCoordinates.length === 0 || xCoordinates.length !== yCoordinates.length) return
-    if (moveToStart) this.context.moveTo(xCoordinates[0], yCoordinates[0])
+    if (moveToStart) context.moveTo(xCoordinates[0], yCoordinates[0])
     if (xCoordinates.length === 1) return
     if (xCoordinates.length === 2) {
-      this.context.lineTo(xCoordinates[1], yCoordinates[1])
+      context.lineTo(xCoordinates[1], yCoordinates[1])
       return
     }
     const tangents = this.monotoneTangents(xCoordinates, yCoordinates)
     for (let index = 0; index < xCoordinates.length - 1; index += 1) {
       const interval = xCoordinates[index + 1] - xCoordinates[index]
       if (interval === 0) {
-        this.context.lineTo(xCoordinates[index + 1], yCoordinates[index + 1])
+        context.lineTo(xCoordinates[index + 1], yCoordinates[index + 1])
         continue
       }
-      this.context.bezierCurveTo(
+      context.bezierCurveTo(
         xCoordinates[index] + interval / 3,
         yCoordinates[index] + tangents[index] * interval / 3,
         xCoordinates[index + 1] - interval / 3,
@@ -922,6 +1124,12 @@ export struct AdaptiveMetricChart {
   private xPosition(timestampMs: number, width: number): number {
     const duration = Math.max(1, this.state.windowEndMs - this.state.windowStartMs)
     const ratio = Math.max(0, Math.min(1, (timestampMs - this.state.windowStartMs) / duration))
+    return PLOT_INSET + ratio * Math.max(1, width - PLOT_INSET * 2)
+  }
+
+  private renderXPosition(timestampMs: number, windowStartMs: number,
+    durationMs: number, width: number): number {
+    const ratio = (timestampMs - windowStartMs) / Math.max(1, durationMs)
     return PLOT_INSET + ratio * Math.max(1, width - PLOT_INSET * 2)
   }
 
