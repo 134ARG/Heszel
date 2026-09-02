@@ -199,6 +199,11 @@ export class DashboardController {
     this.loadMetricChartHistories()
   }
 
+  refreshMetricChartLabels(): void {
+    if (!this.metricChartsState.active) return
+    this.metricChartsState.refreshLabels(this.detailState, this.metricChartLabels())
+  }
+
   setMetricChartsVisible(visible: boolean): void {
     if (!this.metricChartsState.active) return
     this.metricChartsState.visible = visible

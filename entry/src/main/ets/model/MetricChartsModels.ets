@@ -160,6 +160,27 @@ export class MetricChartsState {
       panel.setRange(MetricChartRange.HOUR_1, nowMs))
   }
 
+  refreshLabels(detail: SystemDetailState, labels: MetricChartLabels): void {
+    this.labels = labels
+    const source = this.source
+    if (!this.active || source === null) return
+    this.panels.forEach((panel: MetricChartPanelState) => {
+      const localizedSeries = source.initialSeries(panel.kind, detail, labels)
+      const labelsByKey = new Map<string, string>()
+      localizedSeries.forEach((item: MetricChartSeries) => labelsByKey.set(item.key, item.label))
+      let changed = false
+      const next = panel.chart.series.slice()
+      next.forEach((item: MetricChartSeries) => {
+        const label = labelsByKey.get(item.key)
+        if (label !== undefined && label !== item.label) {
+          item.label = label
+          changed = true
+        }
+      })
+      if (changed) panel.chart.setSeries(next)
+    })
+  }
+
   panel(kind: MetricChartPanelKind): MetricChartPanelState | null {
     return this.panels.find((panel: MetricChartPanelState) => panel.kind === kind) ?? null
   }

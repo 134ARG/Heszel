@@ -189,6 +189,9 @@ export struct DashboardView {
           },
           onChartLineOpacityChange: (opacity: ChartLineOpacity) => {
             this.controller.updateChartLineOpacity(opacity)
+          },
+          onLanguageChange: () => {
+            this.controller.refreshMetricChartLabels()
           }
         })
       }

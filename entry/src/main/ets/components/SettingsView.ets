@@ -40,6 +40,7 @@ export struct SettingsView {
   onMetricInspectionSortChange: (sort: MetricInspectionSort) => void = () => {}
   onChartLineWidthChange: (width: ChartLineWidth) => void = () => {}
   onChartLineOpacityChange: (opacity: ChartLineOpacity) => void = () => {}
+  onLanguageChange: () => void = () => {}
 
   aboutToAppear(): void {
     try {
@@ -506,6 +507,7 @@ export struct SettingsView {
       }
       i18n.System.setAppPreferredLanguage(language)
       this.languageCode = language
+      this.onLanguageChange()
     } catch (_) {
       try {
         i18n.System.setAppPreferredLanguage(previous)
