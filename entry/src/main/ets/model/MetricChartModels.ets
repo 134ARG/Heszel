@@ -154,8 +154,14 @@ export class AdaptiveMetricChartState {
       const value = valuesByKey.get(series.key)
       values.push(value !== undefined && Number.isFinite(value) ? value : Number.NaN)
     })
+    this.appendPoints([new MetricChartPoint(timestampMs, values)])
+  }
+
+  appendPoints(points: MetricChartPoint[]): void {
+    if (points.length === 0) return
     // Points arrive in ascending time; drop the expired prefix in place instead
     // of rebuilding the array on every append.
+    const timestampMs = points[points.length - 1].timestampMs
     const windowStartMs = timestampMs - chartRangeDurationMs(this.range)
     let expired = 0
     while (expired < this.points.length && this.points[expired].timestampMs <= windowStartMs) {
@@ -164,7 +170,9 @@ export class AdaptiveMetricChartState {
     if (expired > 0) {
       this.points.splice(0, expired)
     }
-    this.points.push(new MetricChartPoint(timestampMs, values))
+    points.forEach((point: MetricChartPoint) => {
+      if (point.timestampMs > windowStartMs) this.points.push(point)
+    })
     this.windowEndMs = timestampMs
     this.windowStartMs = windowStartMs
     this.revision += 1

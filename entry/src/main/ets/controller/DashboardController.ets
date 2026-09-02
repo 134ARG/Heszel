@@ -249,7 +249,7 @@ export class DashboardController {
 
   setChartsScrolling(scrolling: boolean): void {
     this.detailScrolling = scrolling
-    this.metricChartsState.setLivePaused(scrolling)
+    this.metricChartsState.setLivePaused(scrolling && !this.updateWhileScrolling)
   }
 
   async login(request: LoginRequest): Promise<void> {
@@ -531,8 +531,8 @@ export class DashboardController {
   }
 
   private handleRealtimeMetrics(systemId: string, metrics: BeszelRealtimeMetrics): void {
-    // Charts buffer internally while their view scrolls, so live samples keep
-    // flowing (with arrival timestamps) even when the rest of the tick is gated.
+    // Charts keep receiving samples here so their scrolling gate can either
+    // apply them immediately or preserve them in a timestamped buffer.
     if (this.metricChartsState.active && this.metricChartsState.systemId === systemId) {
       this.metricChartsState.appendRealtime(metrics.stats)
     }
@@ -962,6 +962,7 @@ export class DashboardController {
   async updateScrollingPreference(enabled: boolean): Promise<void> {
     const previous = this.updateWhileScrolling
     this.updateWhileScrolling = enabled
+    this.metricChartsState.setLivePaused(this.detailScrolling && !enabled)
     if (this.sessionRepository === null) {
       return
     }
@@ -970,6 +971,7 @@ export class DashboardController {
     } catch (_) {
       if (this.updateWhileScrolling === enabled) {
         this.updateWhileScrolling = previous
+        this.metricChartsState.setLivePaused(this.detailScrolling && !previous)
       }
       this.dashboardError = this.localized(
         'error_save_settings', 'Unable to save the scrolling update preference.')

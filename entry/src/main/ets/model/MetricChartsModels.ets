@@ -230,7 +230,7 @@ export class MetricChartsState {
     }
     const buffered = this.liveBuffer
     this.liveBuffer = []
-    buffered.forEach((entry: BufferedLiveSample) => this.applyRealtime(entry.timestampMs, entry.stats))
+    this.applyRealtimeBatch(buffered)
   }
 
   private applyRealtime(nowMs: number, stats: BeszelSystemStatsWire | undefined): void {
@@ -253,6 +253,35 @@ export class MetricChartsState {
       if (panel.chart.range !== MetricChartRange.LIVE) return
       const latest = this.latestFor(panel.kind)
       if (latest.size > 0) panel.chart.append(nowMs, latest)
+    })
+  }
+
+  private applyRealtimeBatch(samples: BufferedLiveSample[]): void {
+    if (!this.active || !this.visible || !this.hasLivePanel() || samples.length === 0) return
+    const source = this.source
+    if (source === null) return
+    this.panels.forEach((panel: MetricChartPanelState) => {
+      if (panel.chart.range !== MetricChartRange.LIVE) return
+      const definitions: MetricChartDefinition[] = []
+      samples.forEach((sample: BufferedLiveSample) =>
+        source.appendDefinitions(panel.kind, definitions, sample.stats, this.labels))
+      this.mergeDefinitions(panel, definitions)
+
+      const latest = this.latestFor(panel.kind)
+      const points: MetricChartPoint[] = []
+      samples.forEach((sample: BufferedLiveSample) => {
+        panel.chart.series.forEach((item: MetricChartSeries) => {
+          const value = source.valueFor(panel.kind, sample.stats, item.key)
+          if (Number.isFinite(value)) latest.set(item.key, value)
+        })
+        if (latest.size === 0) return
+        const values = panel.chart.series.map((item: MetricChartSeries) => {
+          const value = latest.get(item.key)
+          return value !== undefined && Number.isFinite(value) ? value : Number.NaN
+        })
+        points.push(new MetricChartPoint(sample.timestampMs, values))
+      })
+      panel.chart.appendPoints(points)
     })
   }
 
