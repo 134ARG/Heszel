@@ -427,15 +427,15 @@ export struct MetricChartPanel {
     return 0
   }
 
-  private rangeLabel(range: MetricChartRange): string {
+  private rangeLabel(range: MetricChartRange): ResourceStr {
     switch (range) {
-      case MetricChartRange.LIVE: return 'Live'
-      case MetricChartRange.HOUR_1: return '1h'
-      case MetricChartRange.HOUR_12: return '12h'
-      case MetricChartRange.DAY_1: return '1d'
-      case MetricChartRange.DAY_7: return '7d'
-      case MetricChartRange.DAY_30: return '30d'
-      default: return '1h'
+      case MetricChartRange.LIVE: return $r('app.string.live')
+      case MetricChartRange.HOUR_1: return $r('app.string.chart_range_1h_label')
+      case MetricChartRange.HOUR_12: return $r('app.string.chart_range_12h_label')
+      case MetricChartRange.DAY_1: return $r('app.string.chart_range_1d_label')
+      case MetricChartRange.DAY_7: return $r('app.string.chart_range_7d_label')
+      case MetricChartRange.DAY_30: return $r('app.string.chart_range_30d_label')
+      default: return $r('app.string.chart_range_1h_label')
     }
   }
 
