@@ -5,7 +5,8 @@ import {
   ChartLineWidth,
   CpuChartHeight,
   MetricChartHeight,
-  MetricInspectionSort
+  MetricInspectionSort,
+  PAGE_CONTENT_BOTTOM_PADDING
 } from '../model/AppearanceModels'
 import { ConnectionMode } from '../model/ConnectionModels'
 import { HeszelTextInputStyle } from '../styles/HeszelTextInputStyle'
@@ -448,7 +449,7 @@ export struct SettingsView {
           left: this.expanded ? 22 : 16,
           right: this.expanded ? 22 : 16,
           top: 14,
-          bottom: 30
+          bottom: PAGE_CONTENT_BOTTOM_PADDING
         })
       }
       .layoutWeight(1)

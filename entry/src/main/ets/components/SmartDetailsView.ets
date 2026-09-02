@@ -1,3 +1,4 @@
+import { PAGE_CONTENT_BOTTOM_PADDING } from '../model/AppearanceModels'
 import { SmartAttributeMetric, SmartDeviceMetric, SmartHealthState } from '../model/SmartModels'
 import { formatCapacityBytes } from './DetailFormatting'
 import { DetailValueRow } from './DetailValueRow'
@@ -267,7 +268,7 @@ export struct SmartDetailsView {
           left: this.compact ? 16 : 22,
           right: this.compact ? 16 : 22,
           top: 14,
-          bottom: 30
+          bottom: PAGE_CONTENT_BOTTOM_PADDING
         })
       }
       .layoutWeight(1)

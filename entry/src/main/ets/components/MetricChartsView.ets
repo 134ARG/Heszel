@@ -3,7 +3,8 @@ import {
   ChartLineOpacity,
   ChartLineWidth,
   MetricChartHeight,
-  MetricInspectionSort
+  MetricInspectionSort,
+  PAGE_CONTENT_BOTTOM_PADDING
 } from '../model/AppearanceModels'
 import {
   AdaptiveMetricChartState,
@@ -135,7 +136,7 @@ export struct MetricChartsView {
         left: this.compact ? 16 : 22,
         right: this.compact ? 16 : 22,
         top: 14,
-        bottom: 30
+        bottom: PAGE_CONTENT_BOTTOM_PADDING
       })
     }
     .width('100%')

@@ -1,3 +1,5 @@
+export const PAGE_CONTENT_BOTTOM_PADDING = 10
+
 export enum AppColorMode {
   SYSTEM = 'system',
   DARK = 'dark',

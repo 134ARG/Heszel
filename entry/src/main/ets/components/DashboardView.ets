@@ -6,7 +6,8 @@ import {
   ChartLineWidth,
   CpuChartHeight,
   MetricChartHeight,
-  MetricInspectionSort
+  MetricInspectionSort,
+  PAGE_CONTENT_BOTTOM_PADDING
 } from '../model/AppearanceModels'
 import { MetricChartRange } from '../model/MetricChartModels'
 import { MetricChartKind, MetricChartPanelKind } from '../model/MetricChartSource'
@@ -359,7 +360,7 @@ export struct DashboardView {
     }
     .width('100%')
     .height('100%')
-    .padding({ left: 14, right: 14, top: 12, bottom: 12 })
+    .padding({ left: 14, right: 14, top: 12, bottom: PAGE_CONTENT_BOTTOM_PADDING })
   }
 
   private selectSystem(id: string): void {
