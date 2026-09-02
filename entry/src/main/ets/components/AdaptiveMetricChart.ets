@@ -540,27 +540,26 @@ export struct AdaptiveMetricChart {
     const color = this.seriesColor(this.state.series[seriesIndex].key)
     const lineWidth = chartLineWidthVp(this.chartLineWidth)
     const gapThreshold = this.state.expectedIntervalMs * 1.5
-    let drawing = false
+    let segmentStart = -1
     let validCount = 0
-    let lastTimestamp = 0
     this.context.beginPath()
-    this.state.points.forEach((point: MetricChartPoint) => {
-      const value = point.values[seriesIndex]
-      if (!Number.isFinite(value)) {
-        drawing = false
-        return
+    for (let index = 0; index <= this.state.points.length; index += 1) {
+      const point = index < this.state.points.length ? this.state.points[index] : undefined
+      const value = point?.values[seriesIndex]
+      const previous = index > 0 ? this.state.points[index - 1] : undefined
+      const gap = point !== undefined && previous !== undefined &&
+        point.timestampMs - previous.timestampMs > gapThreshold
+      const valid = point !== undefined && Number.isFinite(value)
+      if (valid) validCount += 1
+      if (valid && !gap) {
+        if (segmentStart < 0) segmentStart = index
+        continue
       }
-      const x = this.xPosition(point.timestampMs, width)
-      const y = this.yPosition(value, height, bounds)
-      if (!drawing || lastTimestamp === 0 || point.timestampMs - lastTimestamp > gapThreshold) {
-        this.context.moveTo(x, y)
-      } else {
-        this.context.lineTo(x, y)
+      if (segmentStart >= 0) {
+        this.traceSmoothSegment(seriesIndex, segmentStart, index - 1, width, height, bounds, true)
       }
-      drawing = true
-      validCount += 1
-      lastTimestamp = point.timestampMs
-    })
+      segmentStart = valid ? index : -1
+    }
     this.context.save()
     this.context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity)
     this.context.strokeStyle = color
@@ -610,11 +609,9 @@ export struct AdaptiveMetricChart {
     const last = this.state.points[end]
     this.context.beginPath()
     this.context.moveTo(this.xPosition(first.timestampMs, width), bottom)
-    for (let index = start; index <= end; index += 1) {
-      const point = this.state.points[index]
-      this.context.lineTo(this.xPosition(point.timestampMs, width),
-        this.yPosition(point.values[seriesIndex], this.chartHeight, bounds))
-    }
+    this.context.lineTo(this.xPosition(first.timestampMs, width),
+      this.yPosition(first.values[seriesIndex], this.chartHeight, bounds))
+    this.traceSmoothSegment(seriesIndex, start, end, width, this.chartHeight, bounds, false)
     this.context.lineTo(this.xPosition(last.timestampMs, width), bottom)
     this.context.closePath()
     this.context.save()
@@ -622,6 +619,81 @@ export struct AdaptiveMetricChart {
     this.context.fillStyle = this.seriesColor(this.state.series[seriesIndex].key)
     this.context.fill()
     this.context.restore()
+  }
+
+  private traceSmoothSegment(seriesIndex: number, start: number, end: number, width: number,
+    height: number, bounds: MetricChartBounds, moveToStart: boolean): void {
+    const xCoordinates: number[] = []
+    const yCoordinates: number[] = []
+    for (let index = start; index <= end; index += 1) {
+      const point = this.state.points[index]
+      xCoordinates.push(this.xPosition(point.timestampMs, width))
+      yCoordinates.push(this.yPosition(point.values[seriesIndex], height, bounds))
+    }
+    if (xCoordinates.length === 0) return
+    if (moveToStart) this.context.moveTo(xCoordinates[0], yCoordinates[0])
+    if (xCoordinates.length === 1) return
+    if (xCoordinates.length === 2) {
+      this.context.lineTo(xCoordinates[1], yCoordinates[1])
+      return
+    }
+    const tangents = this.monotoneTangents(xCoordinates, yCoordinates)
+    for (let index = 0; index < xCoordinates.length - 1; index += 1) {
+      const interval = xCoordinates[index + 1] - xCoordinates[index]
+      if (interval <= 0) {
+        this.context.lineTo(xCoordinates[index + 1], yCoordinates[index + 1])
+        continue
+      }
+      this.context.bezierCurveTo(
+        xCoordinates[index] + interval / 3,
+        yCoordinates[index] + tangents[index] * interval / 3,
+        xCoordinates[index + 1] - interval / 3,
+        yCoordinates[index + 1] - tangents[index + 1] * interval / 3,
+        xCoordinates[index + 1],
+        yCoordinates[index + 1]
+      )
+    }
+  }
+
+  private monotoneTangents(xCoordinates: number[], yCoordinates: number[]): number[] {
+    const slopes: number[] = []
+    for (let index = 0; index < xCoordinates.length - 1; index += 1) {
+      const interval = xCoordinates[index + 1] - xCoordinates[index]
+      slopes.push(interval > 0 ? (yCoordinates[index + 1] - yCoordinates[index]) / interval : 0)
+    }
+    const tangents: number[] = [slopes[0]]
+    for (let index = 1; index < xCoordinates.length - 1; index += 1) {
+      const previousSlope = slopes[index - 1]
+      const nextSlope = slopes[index]
+      if (previousSlope * nextSlope <= 0) {
+        tangents.push(0)
+        continue
+      }
+      const previousInterval = xCoordinates[index] - xCoordinates[index - 1]
+      const nextInterval = xCoordinates[index + 1] - xCoordinates[index]
+      const previousWeight = 2 * nextInterval + previousInterval
+      const nextWeight = nextInterval + 2 * previousInterval
+      tangents.push((previousWeight + nextWeight) /
+        (previousWeight / previousSlope + nextWeight / nextSlope))
+    }
+    tangents.push(slopes[slopes.length - 1])
+
+    for (let index = 0; index < slopes.length; index += 1) {
+      const slope = slopes[index]
+      if (slope === 0) {
+        tangents[index] = 0
+        tangents[index + 1] = 0
+        continue
+      }
+      const startRatio = tangents[index] / slope
+      const endRatio = tangents[index + 1] / slope
+      const magnitude = startRatio * startRatio + endRatio * endRatio
+      if (magnitude <= 9) continue
+      const scale = 3 / Math.sqrt(magnitude)
+      tangents[index] = scale * startRatio * slope
+      tangents[index + 1] = scale * endRatio * slope
+    }
+    return tangents
   }
 
   private xPosition(timestampMs: number, width: number): number {
