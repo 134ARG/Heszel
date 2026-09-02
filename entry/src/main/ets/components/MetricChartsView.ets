@@ -1,4 +1,8 @@
-import { AppColorMode, MetricChartHeight } from '../model/AppearanceModels'
+import {
+  AppColorMode,
+  MetricChartHeight,
+  MetricInspectionSort
+} from '../model/AppearanceModels'
 import {
   AdaptiveMetricChartState,
   MAX_SELECTED_METRIC_SERIES,
@@ -19,6 +23,7 @@ struct MetricChartPanelView {
   @Prop compact: boolean = false
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
+  @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
 
   build() {
@@ -30,6 +35,7 @@ struct MetricChartPanelView {
       compact: this.compact,
       colorMode: this.colorMode,
       metricChartHeight: this.metricChartHeight,
+      metricInspectionSort: this.metricInspectionSort,
       metricHint: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
         $r('app.string.chart_metric_hint', MAX_SELECTED_METRIC_SERIES) :
         $r('app.string.chart_metric_generic_hint', MAX_SELECTED_METRIC_SERIES),
@@ -62,6 +68,7 @@ export struct MetricChartsView {
   @Prop compact: boolean = false
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
+  @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   onBack: () => void = () => {}
   onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) => void = () => {}
   onScrollingChange: (scrolling: boolean) => void = () => {}
@@ -88,6 +95,7 @@ export struct MetricChartsView {
               compact: this.compact,
               colorMode: this.colorMode,
               metricChartHeight: this.metricChartHeight,
+              metricInspectionSort: this.metricInspectionSort,
               onRangeChange: (kind: MetricChartPanelKind, range: MetricChartRange) =>
                 this.onRangeChange(kind, range)
             })

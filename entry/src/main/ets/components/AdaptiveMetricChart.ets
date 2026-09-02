@@ -1,4 +1,4 @@
-import { AppColorMode } from '../model/AppearanceModels'
+import { AppColorMode, MetricInspectionSort } from '../model/AppearanceModels'
 import {
   AdaptiveMetricChartState,
   MetricChartAxisPolicy,
@@ -11,7 +11,13 @@ import {
 const PLOT_INSET = 6
 const Y_LABEL_WIDTH = 38
 const INSPECTION_POPUP_WIDTH = 172
+const INSPECTION_POPUP_WIDE_WIDTH = 348
+const INSPECTION_POPUP_WIDE_THRESHOLD = 520
 const INSPECTION_POPUP_MARGIN = 8
+const INSPECTION_POPUP_ROW_HEIGHT = 18
+const INSPECTION_POPUP_MAX_ROWS = 8
+const INSPECTION_POPUP_CHROME_HEIGHT = 37
+const INSPECTION_POPUP_SCROLLBAR_GUTTER = 8
 
 class MetricChartBounds {
   minimum: number = 0
@@ -25,6 +31,7 @@ export struct AdaptiveMetricChart {
   @Prop @Watch('onPaletteChanged') colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop @Watch('onPaletteChanged') primarySeriesColor: Resource = $r('app.color.chart_series_start')
   @Prop @Watch('onInspectionDismissRequested') inspectionDismissToken: number = 0
+  @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   @Prop chartHeight: number = 230
   @Prop loading: boolean = false
   @Prop showNoData: boolean = true
@@ -256,35 +263,47 @@ export struct AdaptiveMetricChart {
         .fontColor($r('app.color.text_primary'))
         .width('100%')
 
-      ForEach(this.selectedSeries(), (series: MetricChartSeries) => {
-        Row({ space: 5 }) {
-          Row()
-            .width(7)
-            .height(7)
-            .borderRadius(4)
-            .backgroundColor(this.seriesResourceColor(series.key))
-          Text(series.label)
-            .fontSize(10)
-            .fontColor($r('app.color.text_secondary'))
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(this.inspectionValueLabel(series.key))
-            .fontSize(10)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.text_primary'))
-            .maxLines(1)
-        }
-        .width('100%')
-      }, (series: MetricChartSeries) => series.key)
+      Grid() {
+        ForEach(this.inspectionSeries(), (series: MetricChartSeries) => {
+          GridItem() {
+            Row({ space: 5 }) {
+              Row()
+                .width(7)
+                .height(7)
+                .borderRadius(4)
+                .backgroundColor(this.seriesResourceColor(series.key))
+              Text(series.label)
+                .fontSize(10)
+                .fontColor($r('app.color.text_secondary'))
+                .layoutWeight(1)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+              Text(this.inspectionValueLabel(series.key))
+                .fontSize(10)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.text_primary'))
+                .maxLines(1)
+            }
+            .width('100%')
+            .height(INSPECTION_POPUP_ROW_HEIGHT)
+            .padding({ right: 4 })
+          }
+        }, (series: MetricChartSeries) => series.key)
+      }
+      .columnsTemplate(this.inspectionPopupColumns() === 2 ? '1fr 1fr' : '1fr')
+      .columnsGap(10)
+      .width('100%')
+      .height(this.inspectionPopupBodyHeight())
+      .padding({ right: this.inspectionPopupScrollable() ? INSPECTION_POPUP_SCROLLBAR_GUTTER : 0 })
+      .scrollBar(this.inspectionPopupScrollable() ? BarState.On : BarState.Off)
+      .clip(true)
     }
-    .width(INSPECTION_POPUP_WIDTH)
+    .width(this.inspectionPopupWidth())
     .padding(10)
     .backgroundColor($r('app.color.surface'))
     .border({ width: 1, color: $r('app.color.selected_border') })
     .borderRadius(9)
     .position({ x: this.inspectionPopupX(), y: this.inspectionPopupY() })
-    .hitTestBehavior(HitTestMode.None)
   }
 
   private onChartTouch(event: TouchEvent): void {
@@ -366,17 +385,65 @@ export struct AdaptiveMetricChart {
     return this.yPosition(this.inspectionSeriesValue(key), this.chartHeight, this.bounds())
   }
 
+  private inspectionSeries(): MetricChartSeries[] {
+    const selected = this.selectedSeries()
+    if (this.metricInspectionSort === MetricInspectionSort.LABEL) {
+      return selected.sort((left: MetricChartSeries, right: MetricChartSeries) =>
+        this.compareSeriesLabels(left, right))
+    }
+    const point = this.inspectionPoint()
+    if (point === null) return selected
+    const values = new Map<string, number>()
+    this.state.series.forEach((series: MetricChartSeries, index: number) => {
+      values.set(series.key, index < point.values.length ? point.values[index] : Number.NaN)
+    })
+    return selected.sort((left: MetricChartSeries, right: MetricChartSeries) => {
+      const leftValue = values.get(left.key) ?? Number.NaN
+      const rightValue = values.get(right.key) ?? Number.NaN
+      const leftFinite = Number.isFinite(leftValue)
+      const rightFinite = Number.isFinite(rightValue)
+      if (leftFinite && rightFinite && leftValue !== rightValue) return rightValue - leftValue
+      if (leftFinite !== rightFinite) return leftFinite ? -1 : 1
+      return this.compareSeriesLabels(left, right)
+    })
+  }
+
+  private compareSeriesLabels(left: MetricChartSeries, right: MetricChartSeries): number {
+    return left.label.localeCompare(right.label, undefined, { numeric: true, sensitivity: 'base' })
+  }
+
+  private inspectionPopupColumns(): number {
+    return this.effectiveChartWidth() >= INSPECTION_POPUP_WIDE_THRESHOLD ? 2 : 1
+  }
+
+  private inspectionPopupRows(): number {
+    return Math.ceil(this.selectedSeries().length / this.inspectionPopupColumns())
+  }
+
+  private inspectionPopupBodyHeight(): number {
+    return Math.min(INSPECTION_POPUP_MAX_ROWS, this.inspectionPopupRows()) * INSPECTION_POPUP_ROW_HEIGHT
+  }
+
+  private inspectionPopupScrollable(): boolean {
+    return this.inspectionPopupRows() > INSPECTION_POPUP_MAX_ROWS
+  }
+
+  private inspectionPopupWidth(): number {
+    return this.inspectionPopupColumns() === 2 ? INSPECTION_POPUP_WIDE_WIDTH : INSPECTION_POPUP_WIDTH
+  }
+
   private inspectionPopupX(): number {
     const width = this.effectiveChartWidth()
+    const popupWidth = this.inspectionPopupWidth()
     const lineX = this.inspectionLineX()
     const right = lineX + INSPECTION_POPUP_MARGIN
-    const plotX = right + INSPECTION_POPUP_WIDTH <= width ?
-      right : Math.max(0, lineX - INSPECTION_POPUP_WIDTH - INSPECTION_POPUP_MARGIN)
+    const plotX = right + popupWidth <= width ?
+      right : Math.max(0, lineX - popupWidth - INSPECTION_POPUP_MARGIN)
     return Y_LABEL_WIDTH + 6 + plotX
   }
 
   private inspectionPopupY(): number {
-    const estimatedHeight = 34 + this.selectedSeries().length * 18
+    const estimatedHeight = INSPECTION_POPUP_CHROME_HEIGHT + this.inspectionPopupBodyHeight()
     if (this.inspectionPopupAtTop) return INSPECTION_POPUP_MARGIN
     return Math.max(INSPECTION_POPUP_MARGIN,
       this.chartHeight - estimatedHeight - INSPECTION_POPUP_MARGIN)

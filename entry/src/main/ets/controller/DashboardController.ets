@@ -5,7 +5,12 @@ import {
   BeszelSystemRealtimeEvent
 } from '../api/BeszelRealtimeClient'
 import { common, ConfigurationConstant } from '@kit.AbilityKit'
-import { AppColorMode, CpuChartHeight, MetricChartHeight } from '../model/AppearanceModels'
+import {
+  AppColorMode,
+  CpuChartHeight,
+  MetricChartHeight,
+  MetricInspectionSort
+} from '../model/AppearanceModels'
 import { BeszelSession, SystemSummary } from '../model/BeszelModels'
 import { ConnectionMode, ConnectionPhase, ConnectionProfile, LoginRequest } from '../model/ConnectionModels'
 import {
@@ -72,6 +77,7 @@ export class DashboardController {
   colorMode: AppColorMode = AppColorMode.SYSTEM
   cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
+  metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   metricChartsState: MetricChartsState = new MetricChartsState()
   chartLiveActive: boolean = false
   realtimeConnected: boolean = false
@@ -875,6 +881,7 @@ export class DashboardController {
       this.colorMode = stored.colorMode
       this.cpuChartHeight = stored.cpuChartHeight
       this.metricChartHeight = stored.metricChartHeight
+      this.metricInspectionSort = stored.metricInspectionSort
       this.applyColorMode(stored.colorMode)
       this.pendingSelectedId = stored.selectedSystemId
       this.lastPersistedSelectedId = stored.selectedSystemId
@@ -992,6 +999,23 @@ export class DashboardController {
       }
       this.dashboardError = this.localized(
         'error_save_metric_chart_height', 'Unable to save the history chart height preference.')
+    }
+  }
+
+  async updateMetricInspectionSort(sort: MetricInspectionSort): Promise<void> {
+    if (sort === this.metricInspectionSort || this.sessionRepository === null) {
+      return
+    }
+    const previous = this.metricInspectionSort
+    this.metricInspectionSort = sort
+    try {
+      await this.sessionRepository.saveMetricInspectionSort(sort)
+    } catch (_) {
+      if (this.metricInspectionSort === sort) {
+        this.metricInspectionSort = previous
+      }
+      this.dashboardError = this.localized(
+        'error_save_metric_inspection_sort', 'Unable to save the sample popup sorting preference.')
     }
   }
 

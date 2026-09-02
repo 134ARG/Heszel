@@ -1,5 +1,10 @@
 import { i18n } from '@kit.LocalizationKit'
-import { AppColorMode, CpuChartHeight, MetricChartHeight } from '../model/AppearanceModels'
+import {
+  AppColorMode,
+  CpuChartHeight,
+  MetricChartHeight,
+  MetricInspectionSort
+} from '../model/AppearanceModels'
 import { ConnectionMode } from '../model/ConnectionModels'
 import { HeszelTextInputStyle } from '../styles/HeszelTextInputStyle'
 import { PageHeader } from './PageHeader'
@@ -16,6 +21,7 @@ export struct SettingsView {
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   @Prop metricChartHeight: MetricChartHeight = MetricChartHeight.DEFAULT
+  @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   @State private gatewayKeyInput: string = ''
   @State private gatewayKeyInputFocused: boolean = false
   @State private languageCode: string = 'default'
@@ -26,6 +32,7 @@ export struct SettingsView {
   onColorModeChange: (mode: AppColorMode) => void = () => {}
   onCpuChartHeightChange: (height: CpuChartHeight) => void = () => {}
   onMetricChartHeightChange: (height: MetricChartHeight) => void = () => {}
+  onMetricInspectionSortChange: (sort: MetricInspectionSort) => void = () => {}
 
   aboutToAppear(): void {
     try {
@@ -171,6 +178,30 @@ export struct SettingsView {
                 .fontColor($r('app.color.text_primary'))
                 .backgroundColor($r('app.color.surface_input'))
                 .onSelect((index: number) => this.changeMetricChartHeight(index))
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor($r('app.color.surface'))
+            .border({ width: 1, color: $r('app.color.card_border') })
+            .borderRadius(16)
+
+            Row({ space: 12 }) {
+              Text($r('app.string.metric_inspection_sort'))
+                .fontSize(14)
+                .fontColor($r('app.color.text_primary'))
+                .layoutWeight(1)
+
+              Select([
+                { value: $r('app.string.metric_inspection_sort_value') },
+                { value: $r('app.string.metric_inspection_sort_label') }
+              ])
+                .selected(this.metricInspectionSortIndex())
+                .value(this.metricInspectionSortValue())
+                .height(42)
+                .font({ size: 13 })
+                .fontColor($r('app.color.text_primary'))
+                .backgroundColor($r('app.color.surface_input'))
+                .onSelect((index: number) => this.changeMetricInspectionSort(index))
             }
             .width('100%')
             .padding(16)
@@ -497,6 +528,22 @@ export struct SettingsView {
       index === 2 ? MetricChartHeight.SPACIOUS : MetricChartHeight.DEFAULT
     if (height !== this.metricChartHeight) {
       this.onMetricChartHeightChange(height)
+    }
+  }
+
+  private metricInspectionSortIndex(): number {
+    return this.metricInspectionSort === MetricInspectionSort.LABEL ? 1 : 0
+  }
+
+  private metricInspectionSortValue(): ResourceStr {
+    return this.metricInspectionSort === MetricInspectionSort.LABEL ?
+      $r('app.string.metric_inspection_sort_label') : $r('app.string.metric_inspection_sort_value')
+  }
+
+  private changeMetricInspectionSort(index: number): void {
+    const sort = index === 1 ? MetricInspectionSort.LABEL : MetricInspectionSort.VALUE
+    if (sort !== this.metricInspectionSort) {
+      this.onMetricInspectionSortChange(sort)
     }
   }
 }

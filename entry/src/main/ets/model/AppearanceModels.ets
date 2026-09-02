@@ -15,6 +15,11 @@ export enum MetricChartHeight {
   SPACIOUS = 'spacious'
 }
 
+export enum MetricInspectionSort {
+  VALUE = 'value',
+  LABEL = 'label'
+}
+
 export function parseAppColorMode(value: string): AppColorMode {
   if (value === AppColorMode.DARK) {
     return AppColorMode.DARK
@@ -40,6 +45,10 @@ export function parseMetricChartHeight(value: string): MetricChartHeight {
     return MetricChartHeight.SPACIOUS
   }
   return MetricChartHeight.DEFAULT
+}
+
+export function parseMetricInspectionSort(value: string): MetricInspectionSort {
+  return value === MetricInspectionSort.LABEL ? MetricInspectionSort.LABEL : MetricInspectionSort.VALUE
 }
 
 export function chartHeightVp(value: CpuChartHeight | MetricChartHeight, compactLayout: boolean,
