@@ -72,6 +72,8 @@ export struct AdaptiveMetricChart {
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
   private ready: boolean = false
+  private chartVisible: boolean = true
+  private drawDirty: boolean = true
   private drawPending: boolean = false
   private canvasWidth: number = 0
   private canvasHeight: number = 0
@@ -162,6 +164,9 @@ export struct AdaptiveMetricChart {
                   this.canvasHeight = height
                   this.scheduleDraw()
                 }
+              })
+              .onVisibleAreaChange([0.01], (isExpanding: boolean, _currentRatio: number) => {
+                this.onChartVisibilityChanged(isExpanding)
               })
               .onTouch((event: TouchEvent) => this.onChartTouch(event))
 
@@ -285,17 +290,27 @@ export struct AdaptiveMetricChart {
     this.scheduleDraw()
   }
 
+  private onChartVisibilityChanged(visible: boolean): void {
+    if (this.chartVisible === visible) return
+    this.chartVisible = visible
+    if (visible && (this.drawDirty || this.drawnRevision !== this.state.revision)) {
+      this.scheduleDraw()
+    }
+  }
+
   private scheduleDraw(): void {
-    if (!this.ready || this.drawPending) return
+    this.drawDirty = true
+    if (!this.ready || !this.chartVisible || this.drawPending) return
     this.drawPending = true
     this.getUIContext().postFrameCallback(this.frameCallback)
   }
 
   private drawOnFrame(): void {
     this.drawPending = false
-    if (!this.ready) return
+    if (!this.ready || !this.chartVisible) return
     this.drawnRevision = this.state.revision
     this.draw()
+    this.drawDirty = false
   }
 
   private onInspectionDismissRequested(): void {
