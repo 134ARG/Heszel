@@ -103,6 +103,10 @@ export class DashboardController {
   private connectionResetTask: Promise<void> | null = null
   private pageVisible: boolean = false
   private detailScrolling: boolean = false
+  private latestRealtimeSystemId: string = ''
+  private latestRealtimeMetrics: BeszelRealtimeMetrics | null = null
+  private latestRealtimeVersion: number = 0
+  private appliedRealtimeVersion: number = 0
   private refreshInFlight: boolean = false
   private manualRefreshPending: boolean = false
   private sessionRefreshPending: boolean = false
@@ -241,10 +245,13 @@ export class DashboardController {
       this.detailScrolling = false
     }
     this.onDetailContextChanged()
+    if (visible) this.applyLatestRealtimeToVisibleDetail()
   }
 
   setDetailScrolling(scrolling: boolean): void {
+    const wasScrolling = this.detailScrolling
     this.detailScrolling = scrolling
+    if (wasScrolling && !scrolling) this.applyLatestRealtimeToVisibleDetail()
   }
 
   setChartsScrolling(scrolling: boolean): void {
@@ -531,6 +538,9 @@ export class DashboardController {
   }
 
   private handleRealtimeMetrics(systemId: string, metrics: BeszelRealtimeMetrics): void {
+    this.latestRealtimeSystemId = systemId
+    this.latestRealtimeMetrics = metrics
+    this.latestRealtimeVersion += 1
     // Charts keep receiving samples here so their scrolling gate can either
     // apply them immediately or preserve them in a timestamped buffer.
     if (this.metricChartsState.active && this.metricChartsState.systemId === systemId) {
@@ -543,12 +553,17 @@ export class DashboardController {
     if (system !== undefined && metrics.info !== undefined) {
       system.updateCardMetrics(metrics.info)
     }
+    this.applyLatestRealtimeToVisibleDetail()
+  }
 
-    const detail = this.detailStates.get(systemId)
-    if (detail !== undefined) {
-      detail.applyRealtime(metrics.info, metrics.stats, metrics.container)
-      detail.appendRealtimeCpu(metrics.info, metrics.stats)
-    }
+  private applyLatestRealtimeToVisibleDetail(force: boolean = false): void {
+    const metrics = this.latestRealtimeMetrics
+    const detail = this.detailState
+    if (!this.detailIsVisible() || metrics === null || detail.systemId !== this.latestRealtimeSystemId) return
+    if (!force && this.appliedRealtimeVersion === this.latestRealtimeVersion) return
+    detail.applyRealtime(metrics.info, metrics.stats, metrics.container)
+    detail.appendRealtimeCpu(metrics.info, metrics.stats)
+    this.appliedRealtimeVersion = this.latestRealtimeVersion
   }
 
   refresh(): void {
@@ -1270,6 +1285,9 @@ export class DashboardController {
         state.applyContainers(loaded.containers.stats)
       }
       state.loaded = true
+      // A Live sample may have arrived while the historical load was running.
+      // Reapply the latest raw sample after the older snapshot initializes the model.
+      this.applyLatestRealtimeToVisibleDetail(true)
     } catch (error) {
       if (!this.isDataWorkCurrent(generation) || this.detailLoadTokens.get(state.systemId) !== loadToken) {
         return
@@ -1412,6 +1430,10 @@ export class DashboardController {
     this.manualRefreshPending = false
     this.refreshing = false
     this.detailScrolling = false
+    this.latestRealtimeSystemId = ''
+    this.latestRealtimeMetrics = null
+    this.latestRealtimeVersion = 0
+    this.appliedRealtimeVersion = 0
     this.detailLoadTokens.clear()
     this.detailStates.forEach((state: SystemDetailState) => {
       state.loading = false
