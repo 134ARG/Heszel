@@ -18,7 +18,7 @@ export class SystemDetailLoader {
   async load(client: BeszelClient, token: string, systemId: string): Promise<LoadedSystemDetail> {
     const responses = await Promise.all([
       client.getSystemDetails(token, systemId),
-      client.getSystemStatsHistory(token, systemId),
+      this.getStatsHistoryWithRetry(client, token, systemId),
       this.getOptionalContainerStats(client, token, systemId),
       this.getOptionalSmartDevices(client, token, systemId)
     ])
@@ -28,6 +28,21 @@ export class SystemDetailLoader {
     result.containers = responses[2] as BeszelContainerStatsRecordWire | null
     result.smartDevices = responses[3] as BeszelSmartDeviceWire[] | null
     return result
+  }
+
+  private async getStatsHistoryWithRetry(client: BeszelClient, token: string,
+    systemId: string): Promise<BeszelSystemStatsRecordWire[]> {
+    try {
+      return await client.getSystemStatsHistory(token, systemId)
+    } catch (error) {
+      if (SessionRefreshService.isAccessRejected(error)) {
+        throw error instanceof Error ? error : new Error('System history access was rejected.')
+      }
+      await new Promise<void>((resolve: () => void): void => {
+        setTimeout(resolve, 5000)
+      })
+      return client.getSystemStatsHistory(token, systemId)
+    }
   }
 
   private async getOptionalContainerStats(client: BeszelClient, token: string,

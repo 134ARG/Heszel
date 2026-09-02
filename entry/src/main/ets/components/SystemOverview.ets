@@ -17,6 +17,7 @@ export struct SystemOverview {
   @ObjectLink cpuTrend: MetricTrendState
   @Prop compact: boolean = false
   @Prop liveSampling: boolean = false
+  @Prop cpuTrendLoading: boolean = false
   @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
@@ -44,6 +45,7 @@ export struct SystemOverview {
           .width('100%')
           AdaptiveMetricChart({
             state: this.cpuTrend.chart,
+            loading: this.cpuTrendLoading,
             colorMode: this.colorMode,
             chartLineWidth: this.chartLineWidth,
             chartLineOpacity: this.chartLineOpacity,

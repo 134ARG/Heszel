@@ -68,6 +68,7 @@ export struct SystemDetail {
             cpuTrend: this.detail.cpuTrend,
             compact: this.compactLayout(),
             liveSampling: this.liveSampling,
+            cpuTrendLoading: this.detail.loading && !this.detail.loaded,
             cpuChartHeight: this.cpuChartHeight,
             colorMode: this.colorMode,
             chartLineWidth: this.chartLineWidth,
