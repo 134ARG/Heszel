@@ -85,11 +85,14 @@ export struct SystemOverview {
         Column({ space: 18 }) {
           this.loadAverage()
           Divider().color($r('app.color.divider'))
-          this.temperature()
-          if (this.health.servicesVisible()) {
-            Divider().color($r('app.color.divider'))
-            this.services()
+          Row({ space: 12 }) {
+            Row() { this.temperature() }.layoutWeight(1)
+            if (this.health.servicesVisible()) {
+              Row() { this.services() }.layoutWeight(1)
+            }
           }
+          .alignItems(VerticalAlign.Top)
+          .width('100%')
         }
         .alignItems(HorizontalAlign.Start)
         .width('100%')
