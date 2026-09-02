@@ -77,11 +77,8 @@ export struct AdaptiveMetricChart {
   private ready: boolean = false
   private dataReady: boolean = false
   private chartVisible: boolean = true
-  private drawDirty: boolean = true
   private drawPending: boolean = false
-  private canvasWidth: number = 0
   private canvasHeight: number = 0
-  private drawnRevision: number = -1
   private frameCallback: MetricChartFrameCallback =
     new MetricChartFrameCallback(() => this.drawOnFrame())
   private cachedBoundsRevision: number = -1
@@ -144,18 +141,18 @@ export struct AdaptiveMetricChart {
                 .height(this.chartHeight)
                 .onReady(() => {
                   this.ready = true
-                  this.canvasWidth = this.context.width
                   this.canvasHeight = this.context.height
-                  this.chartWidth = this.canvasWidth
+                  this.chartWidth = this.context.width
                   this.baseLayerNeedsRedraw = true
                   this.scheduleDraw()
                 })
                 .onAreaChange((oldValue: Area, newValue: Area) => {
                   const width = this.areaLength(newValue.width, this.context.width)
                   const height = this.areaLength(newValue.height, this.context.height)
-                  const sizeChanged = Math.abs(width - this.canvasWidth) > 0.5 ||
+                  const widthChanged = Math.abs(width - this.chartWidth) > 0.5
+                  const sizeChanged = widthChanged ||
                     Math.abs(height - this.canvasHeight) > 0.5
-                  if (Math.abs(width - this.chartWidth) > 0.5) this.chartWidth = width
+                  if (widthChanged) this.chartWidth = width
                   this.onPlotAreaChange(
                     this.areaLength(newValue.globalPosition.x, 0),
                     this.areaLength(newValue.globalPosition.y, 0),
@@ -163,7 +160,6 @@ export struct AdaptiveMetricChart {
                     height
                   )
                   if (sizeChanged) {
-                    this.canvasWidth = width
                     this.canvasHeight = height
                     this.baseLayerNeedsRedraw = true
                     this.invalidateDataLayer()
@@ -305,7 +301,7 @@ export struct AdaptiveMetricChart {
 
   private onChartStateChanged(): void {
     this.validateInspection()
-    if (!this.ready || this.drawnRevision === this.state.revision) return
+    if (!this.ready || !this.dataReady || this.dataLayerRevision === this.state.revision) return
     this.scheduleDraw()
   }
 
@@ -338,22 +334,15 @@ export struct AdaptiveMetricChart {
   }
 
   private scheduleDraw(): void {
-    this.drawDirty = true
-    if (!this.ready || !this.chartVisible || this.drawPending) return
+    if (!this.ready || !this.dataReady || !this.chartVisible || this.drawPending) return
     this.drawPending = true
     this.getUIContext().postFrameCallback(this.frameCallback)
   }
 
   private drawOnFrame(): void {
     this.drawPending = false
-    if (!this.ready || !this.chartVisible) return
-    this.drawnRevision = this.state.revision
-    if (this.dataReady) {
-      this.drawRetainedData()
-    } else {
-      this.draw()
-    }
-    this.drawDirty = false
+    if (!this.ready || !this.dataReady || !this.chartVisible) return
+    this.drawRetainedData()
   }
 
   private onInspectionDismissRequested(): void {
@@ -656,19 +645,6 @@ export struct AdaptiveMetricChart {
     }
     const digits = scale === 1 ? 0 : 1
     return `${(value / scale).toFixed(digits)}${unit}${perSecond ? '/s' : ''}`
-  }
-
-  private draw(): void {
-    const width = this.context.width
-    const height = this.context.height
-    if (width <= 0 || height <= 0) return
-    this.context.clearRect(0, 0, width, height)
-    this.drawGrid(width, height)
-    const indices = this.selectedIndices()
-    const bounds = this.bounds()
-    this.drawDataRange(this.context, indices, width, height, bounds, 0,
-      this.state.points.length - 1, this.state.windowStartMs,
-      Math.max(1, this.state.windowEndMs - this.state.windowStartMs), true)
   }
 
   private drawRetainedData(): void {
