@@ -10,15 +10,16 @@ export struct DetailValueRow {
         .fontSize(12)
         .fontColor($r('app.color.text_secondary'))
         .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .wordBreak(WordBreak.BREAK_WORD)
       Text(this.value)
         .fontSize(12)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.warning ? $r('app.color.error') : $r('app.color.text_primary'))
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .constraintSize({ maxWidth: '65%' })
+        .textAlign(TextAlign.End)
+        .wordBreak(WordBreak.BREAK_WORD)
     }
+    .alignItems(VerticalAlign.Top)
     .width('100%')
   }
 }

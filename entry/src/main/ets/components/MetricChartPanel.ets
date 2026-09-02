@@ -22,6 +22,7 @@ const METRIC_CHART_RANGES: MetricChartRange[] = [
   MetricChartRange.DAY_7,
   MetricChartRange.DAY_30
 ]
+const CHART_HEADER_WRAP_BREAKPOINT_VP = 420
 
 @Component
 struct MetricChartChoice {
@@ -88,6 +89,7 @@ export struct MetricChartPanel {
   @State private selectionLimitReached: boolean = false
   @State private metricSelectionDirty: boolean = false
   @State private inspectionDismissToken: number = 0
+  @State private cardWidth: number = 0
   private cardGlobalLeft: number = 0
   private cardGlobalTop: number = 0
   private plotGlobalLeft: number = 0
@@ -103,27 +105,7 @@ export struct MetricChartPanel {
 
   build() {
     Column({ space: 12 }) {
-      Row({ space: 8 }) {
-        Column({ space: 2 }) {
-          Text(this.title)
-            .fontSize(17)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.text_primary'))
-          Text(this.rangeDescription())
-            .fontSize(11)
-            .fontColor($r('app.color.text_tertiary'))
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        Row({ space: 6 }) {
-          this.metricControl()
-          if (this.stackAvailable) this.stackControl()
-          this.rangeControl()
-        }
-      }
-      .width('100%')
-      .onClick(() => this.dismissInspection())
+      this.chartHeader()
 
       if (this.errorMessage.length > 0) {
         Text(this.errorMessage)
@@ -164,11 +146,68 @@ export struct MetricChartPanel {
     .border({ width: 1, color: $r('app.color.card_border') })
     .borderRadius(16)
     .onAreaChange((oldValue: Area, newValue: Area) => {
+      const width = this.areaLength(newValue.width)
+      if (Math.abs(width - this.cardWidth) > 0.5) this.cardWidth = width
       this.cardGlobalLeft = this.areaLength(newValue.globalPosition.x)
       this.cardGlobalTop = this.areaLength(newValue.globalPosition.y)
       this.cardAreaReady = true
     })
     .onClick((event: ClickEvent) => this.onCardClick(event))
+  }
+
+  @Builder
+  private chartHeader() {
+    if (this.shouldWrapHeader()) {
+      Column({ space: 8 }) {
+        this.chartTitle()
+        Row({ space: 6 }) {
+          this.chartControls()
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.End)
+      }
+      .alignItems(HorizontalAlign.Start)
+      .width('100%')
+      .onClick(() => this.dismissInspection())
+    } else {
+      Row({ space: 8 }) {
+        Row() {
+          this.chartTitle()
+        }
+        .layoutWeight(1)
+
+        Row({ space: 6 }) {
+          this.chartControls()
+        }
+      }
+      .width('100%')
+      .onClick(() => this.dismissInspection())
+    }
+  }
+
+  @Builder
+  private chartTitle() {
+    Column({ space: 2 }) {
+      Text(this.title)
+        .fontSize(17)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('app.color.text_primary'))
+      Text(this.rangeDescription())
+        .fontSize(11)
+        .fontColor($r('app.color.text_tertiary'))
+    }
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  private chartControls() {
+    this.metricControl()
+    if (this.stackAvailable) this.stackControl()
+    this.rangeControl()
+  }
+
+  private shouldWrapHeader(): boolean {
+    return this.cardWidth > 0 ? this.cardWidth < CHART_HEADER_WRAP_BREAKPOINT_VP : this.compact
   }
 
   @Builder

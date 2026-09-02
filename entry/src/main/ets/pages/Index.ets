@@ -8,6 +8,7 @@ import { LoginRequest } from '../model/ConnectionModels'
 struct Index {
   @State private dashboard: DashboardController = new DashboardController()
   @StorageProp('curScreenSizeString') private curScreenSizeString: string = 'sm'
+  @StorageProp('curWindowWidthVp') private curWindowWidthVp: number = 0
 
   aboutToAppear(): void {
     const context = this.getUIContext().getHostContext()
@@ -60,7 +61,8 @@ struct Index {
       } else {
         DashboardView({
           controller: this.dashboard,
-          expanded: this.curScreenSizeString === 'lg'
+          expanded: this.curScreenSizeString === 'lg',
+          windowWidthVp: this.curWindowWidthVp
         })
       }
     }

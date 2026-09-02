@@ -18,6 +18,8 @@ import { SystemOverview } from './SystemOverview'
 import { SmartCard } from './SmartCard'
 import { PageHeader, PageHeaderTone } from './PageHeader'
 
+const DETAIL_COLUMNS_BREAKPOINT_VP = 500
+
 @Component
 export struct SystemDetail {
   @ObjectLink detail: SystemDetailState
@@ -26,11 +28,13 @@ export struct SystemDetail {
   @Prop status: string = 'unknown'
   @Prop agentVersion: string = ''
   @Prop compact: boolean = false
+  @Prop showBack: boolean = false
   @Prop liveSampling: boolean = false
   @Prop cpuChartHeight: CpuChartHeight = CpuChartHeight.DEFAULT
   @Prop colorMode: AppColorMode = AppColorMode.SYSTEM
   @Prop chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
   @Prop chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
+  @State private viewWidth: number = 0
   onBack: () => void = () => {}
   onScrollingChange: (scrolling: boolean) => void = () => {}
   onOpenSmartDetails: () => void = () => {}
@@ -47,7 +51,7 @@ export struct SystemDetail {
         title: this.systemName,
         subtitle: this.host.length > 0 ? this.host : $r('app.string.no_host_label'),
         showSubtitle: true,
-        showBack: this.compact,
+        showBack: this.showBack,
         backLabel: $r('app.string.back_systems'),
         showBadge: true,
         badgeLabel: this.statusLabel(),
@@ -62,7 +66,7 @@ export struct SystemDetail {
             health: this.detail.healthMetrics,
             gpu: this.detail.gpuMetrics,
             cpuTrend: this.detail.cpuTrend,
-            compact: this.compact,
+            compact: this.compactLayout(),
             liveSampling: this.liveSampling,
             cpuChartHeight: this.cpuChartHeight,
             colorMode: this.colorMode,
@@ -98,10 +102,10 @@ export struct SystemDetail {
           }
 
           if (this.detail.hardware.hasData()) {
-            HardwareCard({ detail: this.detail, agentVersion: this.agentVersion, compact: this.compact })
+            HardwareCard({ detail: this.detail, agentVersion: this.agentVersion, compact: this.compactLayout() })
           }
 
-          if (this.detail.layoutVersion >= 0 && this.compact) {
+          if (this.detail.layoutVersion >= 0 && this.compactLayout()) {
             Column({ space: 14 }) {
               this.primaryDetailCards()
               this.secondaryDetailCards()
@@ -125,8 +129,8 @@ export struct SystemDetail {
         }
         .width('100%')
         .padding({
-          left: this.compact ? 16 : 22,
-          right: this.compact ? 16 : 22,
+          left: this.compactLayout() ? 16 : 22,
+          right: this.compactLayout() ? 16 : 22,
           top: 14,
           bottom: PAGE_CONTENT_BOTTOM_PADDING
         })
@@ -140,6 +144,23 @@ export struct SystemDetail {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.background'))
+    .onAreaChange((_oldValue: Area, newValue: Area) => {
+      const width = this.areaLength(newValue.width)
+      if (Math.abs(width - this.viewWidth) > 0.5) this.viewWidth = width
+    })
+  }
+
+  private compactLayout(): boolean {
+    return this.viewWidth > 0 ? this.viewWidth <= DETAIL_COLUMNS_BREAKPOINT_VP : this.compact
+  }
+
+  private areaLength(length: Length | undefined): number {
+    if (typeof length === 'number') return length
+    if (typeof length === 'string') {
+      const parsed = Number.parseFloat(length)
+      if (Number.isFinite(parsed)) return parsed
+    }
+    return 0
   }
 
   @Builder

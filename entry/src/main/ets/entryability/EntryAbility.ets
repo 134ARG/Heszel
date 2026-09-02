@@ -7,12 +7,14 @@ const SCREEN_SIZE_KEY = 'curScreenSizeString';
 const SCREEN_SIZE_SM = 'sm';
 const SCREEN_SIZE_LG = 'lg';
 const SCREEN_SIZE_BREAKPOINT = 600;
+const WINDOW_WIDTH_KEY = 'curWindowWidthVp';
 
 export default class EntryAbility extends UIAbility {
   private mainWindow: window.Window | null = null;
   private currentScreenSize: string = '';
+  private currentWindowWidthVp: number = 0;
   private readonly windowSizeChangeCallback = (windowSize: window.Size): void => {
-    this.updateScreenDisplay(windowSize.width);
+    this.updateWindowWidth(windowSize.width);
   };
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
@@ -42,7 +44,8 @@ export default class EntryAbility extends UIAbility {
 
     windowStage.getMainWindow().then((mainWindow: window.Window) => {
       this.mainWindow = mainWindow;
-      this.updateScreenDisplay(mainWindow.getWindowProperties().windowRect.width);
+      const windowRect = mainWindow.getWindowProperties().windowRect;
+      this.updateWindowWidth(windowRect.width);
       mainWindow.on('windowSizeChange', this.windowSizeChangeCallback);
     }).catch((err: Object) => {
       hilog.error(DOMAIN, 'testTag', 'Failed to observe window size. Cause: %{public}s', JSON.stringify(err));
@@ -58,18 +61,21 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageDestroy');
   }
 
-  private updateScreenDisplay(windowWidth: number): void {
+  private updateWindowWidth(windowWidth: number): void {
     try {
       const densityPixels = display.getDefaultDisplaySync().densityPixels;
-      const realWindowWidth = densityPixels > 0 ? windowWidth / densityPixels : windowWidth;
-      const screenSize = realWindowWidth < SCREEN_SIZE_BREAKPOINT ? SCREEN_SIZE_SM : SCREEN_SIZE_LG;
-      if (screenSize === this.currentScreenSize) {
-        return;
+      const widthVp = densityPixels > 0 ? windowWidth / densityPixels : windowWidth;
+      if (Math.abs(widthVp - this.currentWindowWidthVp) > 0.5) {
+        this.currentWindowWidthVp = widthVp;
+        AppStorage.setOrCreate(WINDOW_WIDTH_KEY, widthVp);
       }
-      this.currentScreenSize = screenSize;
-      AppStorage.setOrCreate(SCREEN_SIZE_KEY, screenSize);
+      const screenSize = widthVp < SCREEN_SIZE_BREAKPOINT ? SCREEN_SIZE_SM : SCREEN_SIZE_LG;
+      if (screenSize !== this.currentScreenSize) {
+        this.currentScreenSize = screenSize;
+        AppStorage.setOrCreate(SCREEN_SIZE_KEY, screenSize);
+      }
     } catch (err) {
-      hilog.error(DOMAIN, 'testTag', 'Failed to classify window size. Cause: %{public}s', JSON.stringify(err));
+      hilog.error(DOMAIN, 'testTag', 'Failed to read window width. Cause: %{public}s', JSON.stringify(err));
     }
   }
 

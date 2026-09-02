@@ -21,6 +21,8 @@ const DETAIL_SWITCH_OFFSET_VP = 32
 const DETAIL_SWITCH_EXIT_MS = 80
 const DETAIL_SWITCH_ENTER_MS = 140
 const DETAIL_SWITCH_SWAP_DELAY_MS = 16
+const NAVIGATION_SPLIT_BREAKPOINT_VP = 800
+const NAVIGATION_MAX_WIDTH_VP = 340
 
 class DashboardDestinationParam {
   systemId: string
@@ -35,7 +37,9 @@ export struct DashboardView {
   // The controller is passed by reference so list items reach SystemCard as the
   // live @Observed instances; @Prop would deep-copy the array and freeze cards.
   @ObjectLink @Watch('onModelChanged') controller: DashboardController
-  @Prop @Watch('onExpandedChanged') expanded: boolean = false
+  @Prop expanded: boolean = false
+  @Prop windowWidthVp: number = 0
+  @State private splitNavigation: boolean = false
   @State private detailVisible: boolean = false
   @State private detailOffsetY: number = 0
   @State private detailOpacity: number = 1
@@ -70,15 +74,12 @@ export struct DashboardView {
       Navigation(this.pathStack) {
         this.navigationRoot()
       }
-        .mode(this.expanded ? NavigationMode.Split : NavigationMode.Stack)
-        .navBarWidth(340)
+        .mode(this.windowWidthVp >= NAVIGATION_SPLIT_BREAKPOINT_VP ?
+          NavigationMode.Split : NavigationMode.Stack)
+        .navBarWidth(this.navigationBarWidth())
         .hideTitleBar(true)
         .navDestination(this.destinationBuilder)
-        .onNavigationModeChange((mode: NavigationMode) => {
-          if (mode === NavigationMode.Split) {
-            this.ensureDetailForSplit()
-          }
-        })
+        .onNavigationModeChange((mode: NavigationMode) => this.onNavigationModeChanged(mode))
         .layoutWeight(1)
         .width('100%')
     }
@@ -224,6 +225,7 @@ export struct DashboardView {
             status: this.detailSystemStatus(param),
             agentVersion: this.detailSystemAgentVersion(param),
             compact: !this.expanded,
+            showBack: !this.splitNavigation,
             liveSampling: this.controller.liveMetrics && this.controller.realtimeConnected,
             cpuChartHeight: this.controller.cpuChartHeight,
             colorMode: this.controller.colorMode,
@@ -350,7 +352,7 @@ export struct DashboardView {
           ListItem() {
             SystemCard({
               system: system,
-              selected: this.expanded && system.id === this.controller.selectedId,
+              selected: this.splitNavigation && system.id === this.controller.selectedId,
               onSelect: () => this.selectSystem(system.id)
             })
           }
@@ -370,7 +372,7 @@ export struct DashboardView {
       this.cancelDetailSwitchAnimation()
       return
     }
-    if (this.expanded) {
+    if (this.splitNavigation) {
       if (this.topDestinationName() === 'detail') {
         this.animateDetailSwitch(id)
         return
@@ -455,7 +457,7 @@ export struct DashboardView {
 
   private detailSystem(param: Object): SystemSummary | null {
     const destinationId = (param as DashboardDestinationParam).systemId
-    const requestedId = this.expanded ? this.controller.selectedId : destinationId
+    const requestedId = this.splitNavigation ? this.controller.selectedId : destinationId
     const requested = this.controller.systems.find((system: SystemSummary) => system.id === requestedId)
     if (requested !== undefined) {
       return requested
@@ -487,7 +489,7 @@ export struct DashboardView {
   }
 
   private ensureDetailForSplit(): void {
-    if (!this.expanded || this.controller.selectedId.length === 0 || this.pathStack.size() > 0) {
+    if (!this.splitNavigation || this.controller.selectedId.length === 0 || this.pathStack.size() > 0) {
       return
     }
     this.pathStack.pushPath({
@@ -515,8 +517,14 @@ export struct DashboardView {
     this.ensureDetailForSplit()
   }
 
-  private onExpandedChanged(): void {
-    if (!this.expanded && this.topDestinationName() === 'detail' && this.controller.selectedId.length > 0) {
+  private onNavigationModeChanged(mode: NavigationMode): void {
+    const split = mode === NavigationMode.Split
+    if (this.splitNavigation === split) {
+      if (split) this.ensureDetailForSplit()
+      return
+    }
+    this.splitNavigation = split
+    if (!split && this.topDestinationName() === 'detail' && this.controller.selectedId.length > 0) {
       this.pathStack.replacePath({
         name: 'detail',
         param: new DashboardDestinationParam(this.controller.selectedId)
@@ -525,4 +533,10 @@ export struct DashboardView {
     }
     this.ensureDetailForSplit()
   }
+
+  private navigationBarWidth(): number {
+    if (this.windowWidthVp <= 0) return NAVIGATION_MAX_WIDTH_VP
+    return Math.min(NAVIGATION_MAX_WIDTH_VP, this.windowWidthVp * 0.35)
+  }
+
 }

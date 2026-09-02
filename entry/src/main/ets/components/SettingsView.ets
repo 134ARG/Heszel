@@ -68,15 +68,15 @@ export struct SettingsView {
       }
 
       Scroll() {
-        Column({ space: 18 }) {
-          Column({ space: 12 }) {
+        Column({ space: 14 }) {
+          Column({ space: 10 }) {
             Text($r('app.string.language_section'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_tertiary'))
               .width('100%')
 
-            Column({ space: 10 }) {
+            Column({ space: 8 }) {
               Row({ space: 12 }) {
                 Text($r('app.string.language'))
                   .fontSize(14)
@@ -90,7 +90,7 @@ export struct SettingsView {
                 ])
                   .selected(this.languageIndex())
                   .value(this.languageValue())
-                  .height(42)
+                  .height(36)
                   .font({ size: 13 })
                   .fontColor($r('app.color.text_primary'))
                   .backgroundColor($r('app.color.surface_input'))
@@ -104,171 +104,165 @@ export struct SettingsView {
               //   .width('100%')
             }
             .width('100%')
-            .padding(16)
+            .padding({ left: 16, right: 16, top: 12, bottom: 12 })
             .backgroundColor($r('app.color.surface'))
             .border({ width: 1, color: $r('app.color.card_border') })
             .borderRadius(16)
           }
           .width('100%')
 
-          Column({ space: 12 }) {
+          Column({ space: 10 }) {
             Text($r('app.string.appearance_section'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_tertiary'))
               .width('100%')
 
-            Row({ space: 12 }) {
-              Text($r('app.string.color_mode'))
-                .fontSize(14)
-                .fontColor($r('app.color.text_primary'))
-                .layoutWeight(1)
+            Column() {
+              Row({ space: 12 }) {
+                Text($r('app.string.color_mode'))
+                  .fontSize(14)
+                  .fontColor($r('app.color.text_primary'))
+                  .layoutWeight(1)
 
-              Select([
-                { value: $r('app.string.color_mode_system') },
-                { value: $r('app.string.color_mode_dark') },
-                { value: $r('app.string.color_mode_light') }
-              ])
-                .selected(this.colorModeIndex())
-                .value(this.colorModeValue())
-                .height(42)
-                .font({ size: 13 })
-                .fontColor($r('app.color.text_primary'))
-                .backgroundColor($r('app.color.surface_input'))
-                .onSelect((index: number) => this.changeColorMode(index))
+                Select([
+                  { value: $r('app.string.color_mode_system') },
+                  { value: $r('app.string.color_mode_dark') },
+                  { value: $r('app.string.color_mode_light') }
+                ])
+                  .selected(this.colorModeIndex())
+                  .value(this.colorModeValue())
+                  .height(36)
+                  .font({ size: 13 })
+                  .fontColor($r('app.color.text_primary'))
+                  .backgroundColor($r('app.color.surface_input'))
+                  .onSelect((index: number) => this.changeColorMode(index))
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+
+              Divider()
+                .color($r('app.color.divider'))
+                .margin({ left: 16, right: 16 })
+
+              Row({ space: 12 }) {
+                this.settingLabel($r('app.string.cpu_chart_height'), $r('app.string.cpu_chart_height_hint'))
+
+                Select([
+                  { value: $r('app.string.cpu_chart_height_default') },
+                  { value: $r('app.string.cpu_chart_height_spacious') }
+                ])
+                  .selected(this.cpuChartHeightIndex())
+                  .value(this.cpuChartHeightValue())
+                  .height(36)
+                  .font({ size: 13 })
+                  .fontColor($r('app.color.text_primary'))
+                  .backgroundColor($r('app.color.surface_input'))
+                  .onSelect((index: number) => this.changeCpuChartHeight(index))
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+
+              Divider()
+                .color($r('app.color.divider'))
+                .margin({ left: 16, right: 16 })
+
+              Row({ space: 12 }) {
+                this.settingLabel($r('app.string.metric_chart_height'), $r('app.string.metric_chart_height_hint'))
+
+                Select([
+                  { value: $r('app.string.metric_chart_height_compact') },
+                  { value: $r('app.string.metric_chart_height_default') },
+                  { value: $r('app.string.metric_chart_height_spacious') }
+                ])
+                  .selected(this.metricChartHeightIndex())
+                  .value(this.metricChartHeightValue())
+                  .height(36)
+                  .font({ size: 13 })
+                  .fontColor($r('app.color.text_primary'))
+                  .backgroundColor($r('app.color.surface_input'))
+                  .onSelect((index: number) => this.changeMetricChartHeight(index))
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+
+              Divider()
+                .color($r('app.color.divider'))
+                .margin({ left: 16, right: 16 })
+
+              Row({ space: 12 }) {
+                this.settingLabel($r('app.string.chart_line_width'), $r('app.string.chart_line_width_hint'))
+
+                Select([
+                  { value: $r('app.string.chart_line_width_thin') },
+                  { value: $r('app.string.chart_line_width_default') },
+                  { value: $r('app.string.chart_line_width_thick') }
+                ])
+                  .selected(this.chartLineWidthIndex())
+                  .value(this.chartLineWidthValue())
+                  .height(36)
+                  .font({ size: 13 })
+                  .fontColor($r('app.color.text_primary'))
+                  .backgroundColor($r('app.color.surface_input'))
+                  .onSelect((index: number) => this.changeChartLineWidth(index))
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+
+              Divider()
+                .color($r('app.color.divider'))
+                .margin({ left: 16, right: 16 })
+
+              Row({ space: 12 }) {
+                this.settingLabel($r('app.string.chart_line_opacity'), $r('app.string.chart_line_opacity_hint'))
+
+                Select([
+                  { value: $r('app.string.chart_line_opacity_soft') },
+                  { value: $r('app.string.chart_line_opacity_default') },
+                  { value: $r('app.string.chart_line_opacity_solid') }
+                ])
+                  .selected(this.chartLineOpacityIndex())
+                  .value(this.chartLineOpacityValue())
+                  .height(36)
+                  .font({ size: 13 })
+                  .fontColor($r('app.color.text_primary'))
+                  .backgroundColor($r('app.color.surface_input'))
+                  .onSelect((index: number) => this.changeChartLineOpacity(index))
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+
+              Divider()
+                .color($r('app.color.divider'))
+                .margin({ left: 16, right: 16 })
+
+              Row({ space: 12 }) {
+                this.settingLabel($r('app.string.metric_inspection_sort'),
+                  $r('app.string.metric_inspection_sort_hint'))
+
+                Select([
+                  { value: $r('app.string.metric_inspection_sort_value') },
+                  { value: $r('app.string.metric_inspection_sort_label') }
+                ])
+                  .selected(this.metricInspectionSortIndex())
+                  .value(this.metricInspectionSortValue())
+                  .height(36)
+                  .font({ size: 13 })
+                  .fontColor($r('app.color.text_primary'))
+                  .backgroundColor($r('app.color.surface_input'))
+                  .onSelect((index: number) => this.changeMetricInspectionSort(index))
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
             }
             .width('100%')
-            .padding(16)
-            .backgroundColor($r('app.color.surface'))
-            .border({ width: 1, color: $r('app.color.card_border') })
-            .borderRadius(16)
-
-            Row({ space: 12 }) {
-              Text($r('app.string.cpu_chart_height'))
-                .fontSize(14)
-                .fontColor($r('app.color.text_primary'))
-                .layoutWeight(1)
-
-              Select([
-                { value: $r('app.string.cpu_chart_height_default') },
-                { value: $r('app.string.cpu_chart_height_spacious') }
-              ])
-                .selected(this.cpuChartHeightIndex())
-                .value(this.cpuChartHeightValue())
-                .height(42)
-                .font({ size: 13 })
-                .fontColor($r('app.color.text_primary'))
-                .backgroundColor($r('app.color.surface_input'))
-                .onSelect((index: number) => this.changeCpuChartHeight(index))
-            }
-            .width('100%')
-            .padding(16)
-            .backgroundColor($r('app.color.surface'))
-            .border({ width: 1, color: $r('app.color.card_border') })
-            .borderRadius(16)
-
-            Row({ space: 12 }) {
-              Text($r('app.string.metric_chart_height'))
-                .fontSize(14)
-                .fontColor($r('app.color.text_primary'))
-                .layoutWeight(1)
-
-              Select([
-                { value: $r('app.string.metric_chart_height_compact') },
-                { value: $r('app.string.metric_chart_height_default') },
-                { value: $r('app.string.metric_chart_height_spacious') }
-              ])
-                .selected(this.metricChartHeightIndex())
-                .value(this.metricChartHeightValue())
-                .height(42)
-                .font({ size: 13 })
-                .fontColor($r('app.color.text_primary'))
-                .backgroundColor($r('app.color.surface_input'))
-                .onSelect((index: number) => this.changeMetricChartHeight(index))
-            }
-            .width('100%')
-            .padding(16)
-            .backgroundColor($r('app.color.surface'))
-            .border({ width: 1, color: $r('app.color.card_border') })
-            .borderRadius(16)
-
-            Row({ space: 12 }) {
-              Text($r('app.string.chart_line_width'))
-                .fontSize(14)
-                .fontColor($r('app.color.text_primary'))
-                .layoutWeight(1)
-
-              Select([
-                { value: $r('app.string.chart_line_width_thin') },
-                { value: $r('app.string.chart_line_width_default') },
-                { value: $r('app.string.chart_line_width_thick') }
-              ])
-                .selected(this.chartLineWidthIndex())
-                .value(this.chartLineWidthValue())
-                .height(42)
-                .font({ size: 13 })
-                .fontColor($r('app.color.text_primary'))
-                .backgroundColor($r('app.color.surface_input'))
-                .onSelect((index: number) => this.changeChartLineWidth(index))
-            }
-            .width('100%')
-            .padding(16)
-            .backgroundColor($r('app.color.surface'))
-            .border({ width: 1, color: $r('app.color.card_border') })
-            .borderRadius(16)
-
-            Row({ space: 12 }) {
-              Text($r('app.string.chart_line_opacity'))
-                .fontSize(14)
-                .fontColor($r('app.color.text_primary'))
-                .layoutWeight(1)
-
-              Select([
-                { value: $r('app.string.chart_line_opacity_soft') },
-                { value: $r('app.string.chart_line_opacity_default') },
-                { value: $r('app.string.chart_line_opacity_solid') }
-              ])
-                .selected(this.chartLineOpacityIndex())
-                .value(this.chartLineOpacityValue())
-                .height(42)
-                .font({ size: 13 })
-                .fontColor($r('app.color.text_primary'))
-                .backgroundColor($r('app.color.surface_input'))
-                .onSelect((index: number) => this.changeChartLineOpacity(index))
-            }
-            .width('100%')
-            .padding(16)
-            .backgroundColor($r('app.color.surface'))
-            .border({ width: 1, color: $r('app.color.card_border') })
-            .borderRadius(16)
-
-            Row({ space: 12 }) {
-              Text($r('app.string.metric_inspection_sort'))
-                .fontSize(14)
-                .fontColor($r('app.color.text_primary'))
-                .layoutWeight(1)
-
-              Select([
-                { value: $r('app.string.metric_inspection_sort_value') },
-                { value: $r('app.string.metric_inspection_sort_label') }
-              ])
-                .selected(this.metricInspectionSortIndex())
-                .value(this.metricInspectionSortValue())
-                .height(42)
-                .font({ size: 13 })
-                .fontColor($r('app.color.text_primary'))
-                .backgroundColor($r('app.color.surface_input'))
-                .onSelect((index: number) => this.changeMetricInspectionSort(index))
-            }
-            .width('100%')
-            .padding(16)
             .backgroundColor($r('app.color.surface'))
             .border({ width: 1, color: $r('app.color.card_border') })
             .borderRadius(16)
           }
           .width('100%')
 
-          Column({ space: 12 }) {
+          Column({ space: 10 }) {
             Text($r('app.string.live_metrics_section'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
@@ -276,23 +270,14 @@ export struct SettingsView {
               .width('100%')
 
             Row({ space: 12 }) {
-              Column({ space: 4 }) {
-                Text($r('app.string.update_while_scrolling'))
-                  .fontSize(14)
-                  .fontColor($r('app.color.text_primary'))
-                Text($r('app.string.update_while_scrolling_hint'))
-                  .fontSize(11)
-                  .fontColor($r('app.color.text_tertiary'))
-                  .maxLines(2)
-              }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
+              this.settingLabel($r('app.string.update_while_scrolling'),
+                $r('app.string.update_while_scrolling_hint'))
 
               Toggle({ type: ToggleType.Switch, isOn: this.updateWhileScrolling })
                 .onChange((enabled: boolean) => this.onUpdateWhileScrollingChange(enabled))
             }
             .width('100%')
-            .padding(16)
+            .padding({ left: 16, right: 16, top: 12, bottom: 12 })
             .backgroundColor($r('app.color.surface'))
             .border({ width: 1, color: $r('app.color.card_border') })
             .borderRadius(16)
@@ -300,14 +285,14 @@ export struct SettingsView {
           .width('100%')
 
           if (this.connectionMode === ConnectionMode.HTTP) {
-            Column({ space: 12 }) {
+            Column({ space: 10 }) {
               Text($r('app.string.gateway_access'))
                 .fontSize(11)
                 .fontWeight(FontWeight.Medium)
                 .fontColor($r('app.color.text_tertiary'))
                 .width('100%')
 
-              Column({ space: 12 }) {
+              Column({ space: 10 }) {
                 Text($r('app.string.gateway_security_note'))
                   .fontSize(12)
                   .fontColor($r('app.color.text_secondary'))
@@ -316,7 +301,7 @@ export struct SettingsView {
                 TextInput({ placeholder: $r('app.string.enter_replacement_key'), text: this.gatewayKeyInput })
                   .type(InputType.Password)
                   .showPasswordIcon(false)
-                  .attributeModifier(new HeszelTextInputStyle(this.gatewayKeyInputFocused, 48, 12))
+                  .attributeModifier(new HeszelTextInputStyle(this.gatewayKeyInputFocused, 44, 12))
                   .onFocus(() => {
                     this.gatewayKeyInputFocused = true
                   })
@@ -328,7 +313,7 @@ export struct SettingsView {
                   })
 
                 Button($r('app.string.verify_and_update'))
-                  .height(44)
+                  .height(40)
                   .width('100%')
                   .fontSize(14)
                   .fontWeight(FontWeight.Medium)
@@ -343,7 +328,7 @@ export struct SettingsView {
                   })
               }
               .width('100%')
-              .padding(16)
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
               .backgroundColor($r('app.color.surface'))
               .border({ width: 1, color: $r('app.color.card_border') })
               .borderRadius(16)
@@ -351,7 +336,7 @@ export struct SettingsView {
             .width('100%')
           }
 
-          Column({ space: 12 }) {
+          Column({ space: 10 }) {
             Text($r('app.string.account'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
@@ -372,7 +357,7 @@ export struct SettingsView {
               }
               .alignItems(HorizontalAlign.Start)
               .width('100%')
-              .padding(16)
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
 
               Divider()
                 .color($r('app.color.divider'))
@@ -398,7 +383,7 @@ export struct SettingsView {
               }
               .alignItems(HorizontalAlign.Start)
               .width('100%')
-              .padding(16)
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
 
               Divider()
                 .color($r('app.color.divider'))
@@ -416,7 +401,7 @@ export struct SettingsView {
               }
               .alignItems(HorizontalAlign.Start)
               .width('100%')
-              .padding(16)
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
 
               Divider()
                 .color($r('app.color.divider'))
@@ -424,7 +409,7 @@ export struct SettingsView {
 
               Button($r('app.string.sign_out'))
                 .width('100%')
-                .height(48)
+                .height(44)
                 .fontSize(14)
                 .fontWeight(FontWeight.Medium)
                 .fontColor($r('app.color.error'))
@@ -461,6 +446,21 @@ export struct SettingsView {
     .height('100%')
     .alignItems(HorizontalAlign.Center)
     .backgroundColor($r('app.color.background'))
+  }
+
+  @Builder
+  private settingLabel(title: ResourceStr, hint: ResourceStr) {
+    Column({ space: 4 }) {
+      Text(title)
+        .fontSize(14)
+        .fontColor($r('app.color.text_primary'))
+      Text(hint)
+        .fontSize(11)
+        .fontColor($r('app.color.text_tertiary'))
+        .maxLines(2)
+    }
+    .alignItems(HorizontalAlign.Start)
+    .layoutWeight(1)
   }
 
   private normalizeLanguage(language: string): string {
