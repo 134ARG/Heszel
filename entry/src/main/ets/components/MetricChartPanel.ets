@@ -77,6 +77,10 @@ export struct MetricChartPanel {
   @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   @Prop chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
   @Prop chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
+  @Prop stackAvailable: boolean = false
+  @Prop stacked: boolean = false
+  @Prop stackNormalize: boolean = false
+  @Prop stackOutlineKey: string = ''
   @Prop metricHint: ResourceStr = ''
   @Prop searchPlaceholder: ResourceStr = ''
   @State private metricSheetVisible: boolean = false
@@ -93,6 +97,7 @@ export struct MetricChartPanel {
   private cardAreaReady: boolean = false
   private plotAreaReady: boolean = false
   onRangeChange: (range: MetricChartRange) => void = () => {}
+  onStackedChange: (stacked: boolean) => void = (_stacked: boolean) => {}
   onSelectionChange: (selectedKeys: string[]) => void = (_selectedKeys: string[]) => {}
   onSelectionCommit: (selectedKeys: string[]) => void = (_selectedKeys: string[]) => {}
 
@@ -113,6 +118,7 @@ export struct MetricChartPanel {
 
         Row({ space: 6 }) {
           this.metricControl()
+          if (this.stackAvailable) this.stackControl()
           this.rangeControl()
         }
       }
@@ -135,6 +141,9 @@ export struct MetricChartPanel {
         colorMode: this.colorMode,
         chartLineWidth: this.chartLineWidth,
         chartLineOpacity: this.chartLineOpacity,
+        stacked: this.stacked,
+        stackNormalize: this.stackNormalize,
+        stackOutlineKey: this.stackOutlineKey,
         metricInspectionSort: this.metricInspectionSort,
         chartHeight: chartHeightVp(this.metricChartHeight, this.compact),
         loading: this.loading,
@@ -281,6 +290,33 @@ export struct MetricChartPanel {
     .width('100%')
     .height('100%')
     .padding({ left: 18, right: 18, top: 8, bottom: 14 })
+  }
+
+  @Builder
+  private stackControl() {
+    Select([
+      { value: $r('app.string.chart_mode_line') },
+      { value: $r('app.string.chart_mode_stacked') }
+    ])
+      .selected(this.stacked ? 1 : 0)
+      .value(this.stacked ? $r('app.string.chart_mode_stacked') : $r('app.string.chart_mode_line'))
+      .height(32)
+      .constraintSize({ minHeight: 32, maxHeight: 32 })
+      .font({ size: 12, weight: FontWeight.Medium })
+      .fontColor($r('app.color.action'))
+      .selectedOptionBgColor($r('app.color.action_surface'))
+      .selectedOptionFontColor($r('app.color.action'))
+      .optionBgColor($r('app.color.surface'))
+      .optionFontColor($r('app.color.text_primary'))
+      .menuBackgroundColor($r('app.color.surface'))
+      .menuBackgroundBlurStyle(BlurStyle.NONE)
+      .backgroundColor($r('app.color.action_surface'))
+      .borderRadius(9)
+      .onSelect((index: number) => {
+        this.dismissInspection()
+        const stacked = index === 1
+        if (this.stacked !== stacked) this.onStackedChange(stacked)
+      })
   }
 
   @Builder

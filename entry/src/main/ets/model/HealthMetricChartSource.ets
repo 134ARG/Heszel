@@ -15,7 +15,8 @@ export class HealthMetricChartSource implements MetricChartSource {
       MetricChartAxisPolicy.AUTO, MetricChartValueFormat.NUMBER, '°C')]
   }
 
-  initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
+  initialSeries(_kind: MetricChartPanelKind, detail: SystemDetailState,
+    _labels: MetricChartLabels): MetricChartSeries[] {
     const ranked = detail.healthMetrics.sensors.slice().sort((left: SensorMetric, right: SensorMetric) =>
       right.temperatureCelsius - left.temperatureCelsius)
     return ranked.map((sensor: SensorMetric) => new MetricChartSeries(sensor.name, sensor.name))
@@ -27,8 +28,8 @@ export class HealthMetricChartSource implements MetricChartSource {
     return sensor !== undefined ? sensor.temperatureCelsius : Number.NaN
   }
 
-  appendDefinitions(definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
-    labels: MetricChartLabels): void {
+  appendDefinitions(_kind: MetricChartPanelKind, definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
+    _labels: MetricChartLabels): void {
     if (stats.t === undefined || stats.t === null) return
     Object.keys(stats.t).sort().forEach((name: string) => pushChartDefinition(definitions, name, name))
   }

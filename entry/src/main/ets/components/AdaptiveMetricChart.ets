@@ -38,6 +38,9 @@ export struct AdaptiveMetricChart {
   @Prop @Watch('onPaletteChanged') primarySeriesColor: Resource = $r('app.color.chart_series_start')
   @Prop @Watch('onLineStyleChanged') chartLineWidth: ChartLineWidth = ChartLineWidth.DEFAULT
   @Prop @Watch('onLineStyleChanged') chartLineOpacity: ChartLineOpacity = ChartLineOpacity.DEFAULT
+  @Prop @Watch('onStackModeChanged') stacked: boolean = false
+  @Prop stackNormalize: boolean = false
+  @Prop stackOutlineKey: string = ''
   @Prop @Watch('onInspectionDismissRequested') inspectionDismissToken: number = 0
   @Prop metricInspectionSort: MetricInspectionSort = MetricInspectionSort.VALUE
   @Prop chartHeight: number = 230
@@ -143,7 +146,7 @@ export struct AdaptiveMetricChart {
                 .hitTestBehavior(HitTestMode.None)
 
               ForEach(this.selectedSeries(), (series: MetricChartSeries) => {
-                if (Number.isFinite(this.inspectionSeriesValue(series.key))) {
+                if (Number.isFinite(this.inspectionPlotValue(series.key))) {
                   Row()
                     .width(7)
                     .height(7)
@@ -247,6 +250,10 @@ export struct AdaptiveMetricChart {
   }
 
   private onLineStyleChanged(): void {
+    if (this.ready) this.draw()
+  }
+
+  private onStackModeChanged(): void {
     if (this.ready) this.draw()
   }
 
@@ -394,7 +401,24 @@ export struct AdaptiveMetricChart {
   }
 
   private inspectionMarkerY(key: string): number {
-    return this.yPosition(this.inspectionSeriesValue(key), this.chartHeight, this.bounds())
+    return this.yPosition(this.inspectionPlotValue(key), this.chartHeight, this.bounds())
+  }
+
+  private inspectionPlotValue(key: string): number {
+    const rawValue = this.inspectionSeriesValue(key)
+    if (!this.stacked || key === this.stackOutlineKey) return rawValue
+    const seriesIndex = this.state.series.findIndex((series: MetricChartSeries) => series.key === key)
+    const stackIndices = this.stackSeriesIndices()
+    const stackPosition = stackIndices.indexOf(seriesIndex)
+    const point = this.inspectionPoint()
+    if (point === null || stackPosition < 0) return rawValue
+    let cumulative = 0
+    for (let index = 0; index <= stackPosition; index += 1) {
+      const value = point.values[stackIndices[index]]
+      if (!Number.isFinite(value)) return Number.NaN
+      cumulative += value
+    }
+    return cumulative / this.stackDivisor(stackIndices)
   }
 
   private inspectionSeries(): MetricChartSeries[] {
@@ -519,8 +543,121 @@ export struct AdaptiveMetricChart {
     this.drawGrid(width, height)
     const indices = this.selectedIndices()
     const bounds = this.bounds()
+    if (this.stacked) {
+      this.drawStacked(indices, width, height, bounds)
+      return
+    }
     if (indices.length === 1) this.drawFill(indices[0], width, height, bounds)
     indices.forEach((seriesIndex: number) => this.drawLine(seriesIndex, width, height, bounds))
+  }
+
+  private drawStacked(selectedIndices: number[], width: number, height: number,
+    bounds: MetricChartBounds): void {
+    const stackIndices = selectedIndices.filter((seriesIndex: number) =>
+      this.state.series[seriesIndex].key !== this.stackOutlineKey)
+    stackIndices.forEach((seriesIndex: number, stackPosition: number) =>
+      this.drawStackBand(seriesIndex, stackIndices, stackPosition, width, height, bounds))
+    const outlineIndex = selectedIndices.find((seriesIndex: number) =>
+      this.state.series[seriesIndex].key === this.stackOutlineKey)
+    if (outlineIndex !== undefined) this.drawLine(outlineIndex, width, height, bounds)
+    this.drawSingleStackSample(stackIndices, width, height, bounds)
+  }
+
+  private stackSeriesIndices(): number[] {
+    return this.selectedIndices().filter((seriesIndex: number) =>
+      this.state.series[seriesIndex].key !== this.stackOutlineKey)
+  }
+
+  private stackDivisor(stackIndices: number[]): number {
+    return this.stackNormalize ? Math.max(1, stackIndices.length) : 1
+  }
+
+  private drawStackBand(seriesIndex: number, stackIndices: number[], stackPosition: number,
+    width: number, height: number, bounds: MetricChartBounds): void {
+    const gapThreshold = this.state.expectedIntervalMs * 1.5
+    let segmentStart = -1
+    for (let index = 0; index <= this.state.points.length; index += 1) {
+      const point = index < this.state.points.length ? this.state.points[index] : undefined
+      const previous = index > 0 ? this.state.points[index - 1] : undefined
+      const gap = point !== undefined && previous !== undefined &&
+        point.timestampMs - previous.timestampMs > gapThreshold
+      const valid = point !== undefined && stackIndices.every((candidate: number) =>
+        Number.isFinite(point.values[candidate]))
+      if (valid && !gap) {
+        if (segmentStart < 0) segmentStart = index
+        continue
+      }
+      if (segmentStart >= 0 && index - segmentStart > 1) {
+        this.fillStackSegment(seriesIndex, stackIndices, stackPosition,
+          segmentStart, index - 1, width, height, bounds)
+      }
+      segmentStart = valid ? index : -1
+    }
+  }
+
+  private fillStackSegment(seriesIndex: number, stackIndices: number[], stackPosition: number,
+    start: number, end: number, width: number, height: number, bounds: MetricChartBounds): void {
+    const xCoordinates: number[] = []
+    const lowerCoordinates: number[] = []
+    const upperCoordinates: number[] = []
+    const divisor = this.stackDivisor(stackIndices)
+    for (let pointIndex = start; pointIndex <= end; pointIndex += 1) {
+      const point = this.state.points[pointIndex]
+      let lowerValue = 0
+      for (let seriesPosition = 0; seriesPosition < stackPosition; seriesPosition += 1) {
+        lowerValue += point.values[stackIndices[seriesPosition]]
+      }
+      const upperValue = lowerValue + point.values[seriesIndex]
+      xCoordinates.push(this.xPosition(point.timestampMs, width))
+      lowerCoordinates.push(this.yPosition(lowerValue / divisor, height, bounds))
+      upperCoordinates.push(this.yPosition(upperValue / divisor, height, bounds))
+    }
+
+    this.context.beginPath()
+    this.traceSmoothCoordinates(xCoordinates, upperCoordinates, true)
+    this.context.lineTo(xCoordinates[xCoordinates.length - 1],
+      lowerCoordinates[lowerCoordinates.length - 1])
+    this.traceSmoothCoordinates(xCoordinates.slice().reverse(), lowerCoordinates.slice().reverse(), false)
+    this.context.closePath()
+    const color = this.seriesColor(this.state.series[seriesIndex].key)
+    this.context.save()
+    this.context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity) * 0.55
+    this.context.fillStyle = color
+    this.context.fill()
+    this.context.restore()
+
+    this.context.beginPath()
+    this.traceSmoothCoordinates(xCoordinates, upperCoordinates, true)
+    this.context.save()
+    this.context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity)
+    this.context.strokeStyle = color
+    this.context.lineWidth = chartLineWidthVp(this.chartLineWidth)
+    this.context.lineJoin = 'round'
+    this.context.lineCap = 'round'
+    this.context.stroke()
+    this.context.restore()
+  }
+
+  private drawSingleStackSample(stackIndices: number[], width: number, height: number,
+    bounds: MetricChartBounds): void {
+    const validPoints = this.state.points.filter((point: MetricChartPoint) =>
+      stackIndices.every((seriesIndex: number) => Number.isFinite(point.values[seriesIndex])))
+    if (validPoints.length !== 1) return
+    const point = validPoints[0]
+    const divisor = this.stackDivisor(stackIndices)
+    const lineWidth = chartLineWidthVp(this.chartLineWidth)
+    let cumulative = 0
+    stackIndices.forEach((seriesIndex: number) => {
+      cumulative += point.values[seriesIndex]
+      this.context.beginPath()
+      this.context.arc(this.xPosition(point.timestampMs, width),
+        this.yPosition(cumulative / divisor, height, bounds), lineWidth / 2, 0, Math.PI * 2)
+      this.context.save()
+      this.context.globalAlpha = chartLineOpacityValue(this.chartLineOpacity)
+      this.context.fillStyle = this.seriesColor(this.state.series[seriesIndex].key)
+      this.context.fill()
+      this.context.restore()
+    })
   }
 
   private drawGrid(width: number, height: number): void {
@@ -631,6 +768,12 @@ export struct AdaptiveMetricChart {
       yCoordinates.push(this.yPosition(point.values[seriesIndex], height, bounds))
     }
     if (xCoordinates.length === 0) return
+    this.traceSmoothCoordinates(xCoordinates, yCoordinates, moveToStart)
+  }
+
+  private traceSmoothCoordinates(xCoordinates: number[], yCoordinates: number[],
+    moveToStart: boolean): void {
+    if (xCoordinates.length === 0 || xCoordinates.length !== yCoordinates.length) return
     if (moveToStart) this.context.moveTo(xCoordinates[0], yCoordinates[0])
     if (xCoordinates.length === 1) return
     if (xCoordinates.length === 2) {
@@ -640,7 +783,7 @@ export struct AdaptiveMetricChart {
     const tangents = this.monotoneTangents(xCoordinates, yCoordinates)
     for (let index = 0; index < xCoordinates.length - 1; index += 1) {
       const interval = xCoordinates[index + 1] - xCoordinates[index]
-      if (interval <= 0) {
+      if (interval === 0) {
         this.context.lineTo(xCoordinates[index + 1], yCoordinates[index + 1])
         continue
       }
@@ -659,7 +802,7 @@ export struct AdaptiveMetricChart {
     const slopes: number[] = []
     for (let index = 0; index < xCoordinates.length - 1; index += 1) {
       const interval = xCoordinates[index + 1] - xCoordinates[index]
-      slopes.push(interval > 0 ? (yCoordinates[index + 1] - yCoordinates[index]) / interval : 0)
+      slopes.push(interval !== 0 ? (yCoordinates[index + 1] - yCoordinates[index]) / interval : 0)
     }
     const tangents: number[] = [slopes[0]]
     for (let index = 1; index < xCoordinates.length - 1; index += 1) {
@@ -669,8 +812,8 @@ export struct AdaptiveMetricChart {
         tangents.push(0)
         continue
       }
-      const previousInterval = xCoordinates[index] - xCoordinates[index - 1]
-      const nextInterval = xCoordinates[index + 1] - xCoordinates[index]
+      const previousInterval = Math.abs(xCoordinates[index] - xCoordinates[index - 1])
+      const nextInterval = Math.abs(xCoordinates[index + 1] - xCoordinates[index])
       const previousWeight = 2 * nextInterval + previousInterval
       const nextWeight = nextInterval + 2 * previousInterval
       tangents.push((previousWeight + nextWeight) /

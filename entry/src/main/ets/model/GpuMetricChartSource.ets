@@ -24,7 +24,8 @@ export class GpuMetricChartSource implements MetricChartSource {
     ]
   }
 
-  initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
+  initialSeries(_kind: MetricChartPanelKind, detail: SystemDetailState,
+    _labels: MetricChartLabels): MetricChartSeries[] {
     return detail.gpuMetrics.gpus.map((gpu) => new MetricChartSeries(gpu.id, gpu.name))
   }
 
@@ -39,7 +40,7 @@ export class GpuMetricChartSource implements MetricChartSource {
     return Number.NaN
   }
 
-  appendDefinitions(definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
+  appendDefinitions(_kind: MetricChartPanelKind, definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
     labels: MetricChartLabels): void {
     if (stats.g === undefined || stats.g === null) return
     Object.keys(stats.g).forEach((id: string) => {

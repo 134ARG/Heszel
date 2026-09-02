@@ -33,7 +33,8 @@ export class StorageMetricChartSource implements MetricChartSource {
     ]
   }
 
-  initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
+  initialSeries(_kind: MetricChartPanelKind, detail: SystemDetailState,
+    labels: MetricChartLabels): MetricChartSeries[] {
     const series: MetricChartSeries[] = [
       new MetricChartSeries(STORAGE_ROOT_KEY, labels.rootFilesystem)
     ]
@@ -62,7 +63,7 @@ export class StorageMetricChartSource implements MetricChartSource {
     return Number.NaN
   }
 
-  appendDefinitions(definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
+  appendDefinitions(_kind: MetricChartPanelKind, definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
     labels: MetricChartLabels): void {
     if (this.hasRootStats(stats)) {
       pushChartDefinition(definitions, STORAGE_ROOT_KEY, labels.rootFilesystem)

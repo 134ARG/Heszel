@@ -24,7 +24,8 @@ export class NetworkMetricChartSource implements MetricChartSource {
     ]
   }
 
-  initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
+  initialSeries(_kind: MetricChartPanelKind, detail: SystemDetailState,
+    labels: MetricChartLabels): MetricChartSeries[] {
     if (detail.networkMetrics.interfaces.length === 0) {
       return [new MetricChartSeries(NETWORK_TOTAL_KEY, labels.total)]
     }
@@ -44,7 +45,7 @@ export class NetworkMetricChartSource implements MetricChartSource {
     return upload ? networkInterface.uploadBytesPerSecond : networkInterface.downloadBytesPerSecond
   }
 
-  appendDefinitions(definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
+  appendDefinitions(_kind: MetricChartPanelKind, definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
     labels: MetricChartLabels): void {
     if (stats.ni !== undefined && stats.ni !== null && Object.keys(stats.ni).length > 0) {
       Object.keys(stats.ni).forEach((name: string) => pushChartDefinition(definitions, name, name))

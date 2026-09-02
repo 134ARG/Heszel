@@ -44,12 +44,17 @@ struct MetricChartPanelView {
       metricInspectionSort: this.metricInspectionSort,
       chartLineWidth: this.chartLineWidth,
       chartLineOpacity: this.chartLineOpacity,
+      stackAvailable: this.panel.stackAvailable,
+      stacked: this.panel.stacked,
+      stackNormalize: this.panel.stackNormalize,
+      stackOutlineKey: this.panel.stackOutlineKey,
       metricHint: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
         $r('app.string.chart_metric_hint', MAX_SELECTED_METRIC_SERIES) :
         $r('app.string.chart_metric_generic_hint', MAX_SELECTED_METRIC_SERIES),
       searchPlaceholder: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
         $r('app.string.chart_search_metrics') : $r('app.string.chart_search_metrics_generic'),
       onRangeChange: (range: MetricChartRange) => this.onRangeChange(this.panel.kind, range),
+      onStackedChange: (stacked: boolean) => this.panel.setStacked(stacked),
       onSelectionChange: (selectedKeys: string[]) => this.panel.rememberSelection(selectedKeys),
       onSelectionCommit: (selectedKeys: string[]) => this.onSelectionCommit(this.panel.kind, selectedKeys)
     })
@@ -60,6 +65,7 @@ struct MetricChartPanelView {
       return $r('app.string.temperature_history')
     }
     if (this.panel.kind === MetricChartPanelKind.CPU_USAGE) return $r('app.string.chart_cpu_usage')
+    if (this.panel.kind === MetricChartPanelKind.CPU_CORES) return $r('app.string.chart_cpu_cores')
     if (this.panel.kind === MetricChartPanelKind.MEMORY_USAGE) return $r('app.string.chart_memory_usage')
     if (this.panel.kind === MetricChartPanelKind.NETWORK_UPLOAD) return $r('app.string.upload')
     if (this.panel.kind === MetricChartPanelKind.NETWORK_DOWNLOAD) return $r('app.string.download')

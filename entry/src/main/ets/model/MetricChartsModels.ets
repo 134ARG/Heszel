@@ -40,6 +40,10 @@ export class MetricChartPanelState {
   axisPolicy: MetricChartAxisPolicy = MetricChartAxisPolicy.AUTO
   valueFormat: MetricChartValueFormat = MetricChartValueFormat.NUMBER
   unit: string = ''
+  stackAvailable: boolean = false
+  stackNormalize: boolean = false
+  stackOutlineKey: string = ''
+  stacked: boolean = false
   chart: AdaptiveMetricChartState = new AdaptiveMetricChartState()
   lastHistoricalRange: MetricChartRange = MetricChartRange.HOUR_1
   loading: boolean = false
@@ -52,6 +56,9 @@ export class MetricChartPanelState {
     this.axisPolicy = definition.axisPolicy
     this.valueFormat = definition.valueFormat
     this.unit = definition.unit
+    this.stackAvailable = definition.stackAvailable
+    this.stackNormalize = definition.stackNormalize
+    this.stackOutlineKey = definition.stackOutlineKey
   }
 
   setRange(range: MetricChartRange, nowMs: number): number {
@@ -80,6 +87,11 @@ export class MetricChartPanelState {
 
   rememberSelection(selectedKeys: string[]): void {
     this.explicitSelectionKeys = selectedKeys.slice(0, MAX_SELECTED_METRIC_SERIES)
+  }
+
+  setStacked(stacked: boolean): void {
+    if (!this.stackAvailable || this.stacked === stacked) return
+    this.stacked = stacked
   }
 
   applySelection(series: MetricChartSeries[]): void {
@@ -129,10 +141,10 @@ export class MetricChartsState {
     this.entryLiveEnabled = entryLiveEnabled
     this.labels = labels
     this.source = this.sourceFor(kind)
-    const initialSeries = this.source.initialSeries(detail, labels)
     this.panels = this.source.panelDefinitions().map((definition: MetricChartPanelDefinition) =>
       new MetricChartPanelState(definition))
-    this.panels.forEach((panel: MetricChartPanelState) => panel.setInitialSeries(initialSeries))
+    this.panels.forEach((panel: MetricChartPanelState) =>
+      panel.setInitialSeries(this.source?.initialSeries(panel.kind, detail, labels) ?? []))
     this.latestValues.clear()
     this.panels.forEach((panel: MetricChartPanelState) => {
       const latest = new Map<string, number>()
@@ -166,7 +178,7 @@ export class MetricChartsState {
     const panel = this.panel(kind)
     if (!this.active || panel === null || panel.chart.range !== range ||
       panel.loadSequence !== sequence || this.source === null) return
-    const definitions = this.definitionsFromRecords(records)
+    const definitions = this.definitionsFromRecords(kind, records)
     const source = this.source
     this.mergeDefinitions(panel, definitions)
     const points: MetricChartPoint[] = []
@@ -225,10 +237,10 @@ export class MetricChartsState {
     if (!this.active || !this.visible || !this.hasLivePanel()) return
     const source = this.source
     if (stats !== undefined && source !== null) {
-      const definitions: MetricChartDefinition[] = []
-      source.appendDefinitions(definitions, stats, this.labels)
       this.panels.forEach((panel: MetricChartPanelState) => {
         if (panel.chart.range !== MetricChartRange.LIVE) return
+        const definitions: MetricChartDefinition[] = []
+        source.appendDefinitions(panel.kind, definitions, stats, this.labels)
         this.mergeDefinitions(panel, definitions)
         const latest = this.latestFor(panel.kind)
         panel.chart.series.forEach((item: MetricChartSeries) => {
@@ -279,13 +291,14 @@ export class MetricChartsState {
     return latest
   }
 
-  private definitionsFromRecords(records: BeszelSystemStatsRecordWire[]): MetricChartDefinition[] {
+  private definitionsFromRecords(kind: MetricChartPanelKind,
+    records: BeszelSystemStatsRecordWire[]): MetricChartDefinition[] {
     const definitions: MetricChartDefinition[] = []
     const source = this.source
     if (source === null) return definitions
     records.forEach((record: BeszelSystemStatsRecordWire) => {
       if (record.stats !== undefined && record.stats !== null) {
-        source.appendDefinitions(definitions, record.stats, this.labels)
+        source.appendDefinitions(kind, definitions, record.stats, this.labels)
       }
     })
     return definitions

@@ -22,7 +22,8 @@ export class MemoryMetricChartSource implements MetricChartSource {
       MetricChartAxisPolicy.ZERO_BASED, MetricChartValueFormat.BYTES)]
   }
 
-  initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[] {
+  initialSeries(_kind: MetricChartPanelKind, detail: SystemDetailState,
+    labels: MetricChartLabels): MetricChartSeries[] {
     const series: MetricChartSeries[] = [new MetricChartSeries(MEMORY_USED_KEY, labels.memoryUsed)]
     if (detail.memoryMetrics.cacheGb > 0) {
       series.push(new MetricChartSeries(MEMORY_CACHE_KEY, labels.memoryCache))
@@ -45,7 +46,7 @@ export class MemoryMetricChartSource implements MetricChartSource {
     return Number.NaN
   }
 
-  appendDefinitions(definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
+  appendDefinitions(_kind: MetricChartPanelKind, definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
     labels: MetricChartLabels): void {
     if (stats.mu !== undefined) pushChartDefinition(definitions, MEMORY_USED_KEY, labels.memoryUsed)
     if (stats.mb !== undefined) pushChartDefinition(definitions, MEMORY_CACHE_KEY, labels.memoryCache)

@@ -20,6 +20,7 @@ export enum MetricChartKind {
 export enum MetricChartPanelKind {
   HEALTH_TEMPERATURE,
   CPU_USAGE,
+  CPU_CORES,
   MEMORY_USAGE,
   NETWORK_UPLOAD,
   NETWORK_DOWNLOAD,
@@ -60,21 +61,29 @@ export class MetricChartPanelDefinition {
   axisPolicy: MetricChartAxisPolicy = MetricChartAxisPolicy.AUTO
   valueFormat: MetricChartValueFormat = MetricChartValueFormat.NUMBER
   unit: string = ''
+  stackAvailable: boolean = false
+  stackNormalize: boolean = false
+  stackOutlineKey: string = ''
 
   constructor(kind: MetricChartPanelKind, axisPolicy: MetricChartAxisPolicy,
-    valueFormat: MetricChartValueFormat, unit: string = '') {
+    valueFormat: MetricChartValueFormat, unit: string = '', stackAvailable: boolean = false,
+    stackNormalize: boolean = false, stackOutlineKey: string = '') {
     this.kind = kind
     this.axisPolicy = axisPolicy
     this.valueFormat = valueFormat
     this.unit = unit
+    this.stackAvailable = stackAvailable
+    this.stackNormalize = stackNormalize
+    this.stackOutlineKey = stackOutlineKey
   }
 }
 
 export interface MetricChartSource {
   panelDefinitions(): MetricChartPanelDefinition[]
-  initialSeries(detail: SystemDetailState, labels: MetricChartLabels): MetricChartSeries[]
+  initialSeries(kind: MetricChartPanelKind, detail: SystemDetailState,
+    labels: MetricChartLabels): MetricChartSeries[]
   initialValue(kind: MetricChartPanelKind, detail: SystemDetailState, key: string): number
-  appendDefinitions(definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
+  appendDefinitions(kind: MetricChartPanelKind, definitions: MetricChartDefinition[], stats: BeszelSystemStatsWire,
     labels: MetricChartLabels): void
   valueFor(kind: MetricChartPanelKind, stats: BeszelSystemStatsWire, key: string): number
 }
