@@ -64,6 +64,7 @@ export struct AdaptiveMetricChart {
   @Prop loading: boolean = false
   @Prop showNoData: boolean = true
   @Prop showLegend: boolean = true
+  @Prop sparseYAxisLabels: boolean = false
   onPlotAreaChange: (left: number, top: number, width: number, height: number) => void =
     (_left: number, _top: number, _width: number, _height: number) => {}
   @State private chartWidth: number = 0
@@ -114,6 +115,16 @@ export struct AdaptiveMetricChart {
             .textAlign(TextAlign.End)
             .position({ x: 0, y: PLOT_INSET })
             .markAnchor({ x: 0, y: '50%' })
+          if (!this.sparseYAxisLabels) {
+            Text(this.yLabel(this.bounds().minimum +
+              (this.bounds().maximum - this.bounds().minimum) * 0.75))
+              .fontSize(9)
+              .fontColor($r('app.color.text_tertiary'))
+              .width(Y_LABEL_WIDTH - 4)
+              .textAlign(TextAlign.End)
+              .position({ x: 0, y: PLOT_INSET + (this.chartHeight - PLOT_INSET * 2) / 4 })
+              .markAnchor({ x: 0, y: '50%' })
+          }
           Text(this.yLabel((this.bounds().minimum + this.bounds().maximum) / 2))
             .fontSize(9)
             .fontColor($r('app.color.text_tertiary'))
@@ -121,6 +132,16 @@ export struct AdaptiveMetricChart {
             .textAlign(TextAlign.End)
             .position({ x: 0, y: this.chartHeight / 2 })
             .markAnchor({ x: 0, y: '50%' })
+          if (!this.sparseYAxisLabels) {
+            Text(this.yLabel(this.bounds().minimum +
+              (this.bounds().maximum - this.bounds().minimum) * 0.25))
+              .fontSize(9)
+              .fontColor($r('app.color.text_tertiary'))
+              .width(Y_LABEL_WIDTH - 4)
+              .textAlign(TextAlign.End)
+              .position({ x: 0, y: PLOT_INSET + (this.chartHeight - PLOT_INSET * 2) * 3 / 4 })
+              .markAnchor({ x: 0, y: '50%' })
+          }
           Text(this.yLabel(this.bounds().minimum))
             .fontSize(9)
             .fontColor($r('app.color.text_tertiary'))

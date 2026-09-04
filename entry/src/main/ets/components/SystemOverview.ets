@@ -51,7 +51,8 @@ export struct SystemOverview {
             chartLineOpacity: this.chartLineOpacity,
             primarySeriesColor: $r('app.color.metric_cpu'),
             chartHeight: chartHeightVp(this.cpuChartHeight, this.compact, 67.2, 75.6),
-            showLegend: false
+            showLegend: false,
+            sparseYAxisLabels: true
           })
           Row() {
             Text($r('app.string.latest_cpu_samples'))
