@@ -1032,23 +1032,24 @@ export class DashboardController {
     const previous = this.updateWhileScrolling
     this.updateWhileScrolling = enabled
     this.metricChartsState.setLivePaused(this.detailScrolling && !enabled)
-    if (this.sessionRepository === null) {
+    const repository = this.sessionRepository
+    if (repository === null) {
       return
     }
-    try {
-      await this.sessionRepository.saveUpdateWhileScrolling(enabled)
-    } catch (_) {
-      if (this.updateWhileScrolling === enabled) {
+    await this.savePreference(
+      () => repository.saveUpdateWhileScrolling(enabled),
+      () => {
+        if (this.updateWhileScrolling !== enabled) return
         this.updateWhileScrolling = previous
         this.metricChartsState.setLivePaused(this.detailScrolling && !previous)
-      }
-      this.dashboardError = this.localized(
-        'error_save_settings', 'Unable to save the scrolling update preference.')
-    }
+      },
+      'error_save_settings',
+      'Unable to save the scrolling update preference.')
   }
 
   async updateColorMode(mode: AppColorMode): Promise<void> {
-    if (mode === this.colorMode || this.sessionRepository === null) {
+    const repository = this.sessionRepository
+    if (mode === this.colorMode || repository === null) {
       return
     }
     const previous = this.colorMode
@@ -1058,89 +1059,100 @@ export class DashboardController {
       this.dashboardError = this.localized('error_save_color_mode', 'Unable to save the color mode.')
       return
     }
-    try {
-      await this.sessionRepository.saveColorMode(mode)
-    } catch (_) {
-      this.colorMode = previous
-      this.applyColorMode(previous)
-      this.dashboardError = this.localized('error_save_color_mode', 'Unable to save the color mode.')
-    }
+    await this.savePreference(
+      () => repository.saveColorMode(mode),
+      () => {
+        if (this.colorMode !== mode) return
+        this.colorMode = previous
+        this.applyColorMode(previous)
+      },
+      'error_save_color_mode',
+      'Unable to save the color mode.')
   }
 
   async updateCpuChartHeight(height: CpuChartHeight): Promise<void> {
-    if (height === this.cpuChartHeight || this.sessionRepository === null) {
+    const repository = this.sessionRepository
+    if (height === this.cpuChartHeight || repository === null) {
       return
     }
     const previous = this.cpuChartHeight
     this.cpuChartHeight = height
-    try {
-      await this.sessionRepository.saveCpuChartHeight(height)
-    } catch (_) {
-      if (this.cpuChartHeight === height) {
-        this.cpuChartHeight = previous
-      }
-      this.dashboardError = this.localized(
-        'error_save_cpu_chart_height', 'Unable to save the CPU chart height preference.')
-    }
+    await this.savePreference(
+      () => repository.saveCpuChartHeight(height),
+      () => {
+        if (this.cpuChartHeight === height) this.cpuChartHeight = previous
+      },
+      'error_save_cpu_chart_height',
+      'Unable to save the CPU chart height preference.')
   }
 
   async updateMetricChartHeight(height: MetricChartHeight): Promise<void> {
-    if (height === this.metricChartHeight || this.sessionRepository === null) {
+    const repository = this.sessionRepository
+    if (height === this.metricChartHeight || repository === null) {
       return
     }
     const previous = this.metricChartHeight
     this.metricChartHeight = height
-    try {
-      await this.sessionRepository.saveMetricChartHeight(height)
-    } catch (_) {
-      if (this.metricChartHeight === height) {
-        this.metricChartHeight = previous
-      }
-      this.dashboardError = this.localized(
-        'error_save_metric_chart_height', 'Unable to save the history chart height preference.')
-    }
+    await this.savePreference(
+      () => repository.saveMetricChartHeight(height),
+      () => {
+        if (this.metricChartHeight === height) this.metricChartHeight = previous
+      },
+      'error_save_metric_chart_height',
+      'Unable to save the history chart height preference.')
   }
 
   async updateMetricInspectionSort(sort: MetricInspectionSort): Promise<void> {
-    if (sort === this.metricInspectionSort || this.sessionRepository === null) {
+    const repository = this.sessionRepository
+    if (sort === this.metricInspectionSort || repository === null) {
       return
     }
     const previous = this.metricInspectionSort
     this.metricInspectionSort = sort
-    try {
-      await this.sessionRepository.saveMetricInspectionSort(sort)
-    } catch (_) {
-      if (this.metricInspectionSort === sort) {
-        this.metricInspectionSort = previous
-      }
-      this.dashboardError = this.localized(
-        'error_save_metric_inspection_sort', 'Unable to save the sample popup sorting preference.')
-    }
+    await this.savePreference(
+      () => repository.saveMetricInspectionSort(sort),
+      () => {
+        if (this.metricInspectionSort === sort) this.metricInspectionSort = previous
+      },
+      'error_save_metric_inspection_sort',
+      'Unable to save the sample popup sorting preference.')
   }
 
   async updateChartLineWidth(width: ChartLineWidth): Promise<void> {
-    if (width === this.chartLineWidth || this.sessionRepository === null) return
+    const repository = this.sessionRepository
+    if (width === this.chartLineWidth || repository === null) return
     const previous = this.chartLineWidth
     this.chartLineWidth = width
-    try {
-      await this.sessionRepository.saveChartLineWidth(width)
-    } catch (_) {
-      if (this.chartLineWidth === width) this.chartLineWidth = previous
-      this.dashboardError = this.localized(
-        'error_save_chart_line_width', 'Unable to save the chart line width preference.')
-    }
+    await this.savePreference(
+      () => repository.saveChartLineWidth(width),
+      () => {
+        if (this.chartLineWidth === width) this.chartLineWidth = previous
+      },
+      'error_save_chart_line_width',
+      'Unable to save the chart line width preference.')
   }
 
   async updateChartLineOpacity(opacity: ChartLineOpacity): Promise<void> {
-    if (opacity === this.chartLineOpacity || this.sessionRepository === null) return
+    const repository = this.sessionRepository
+    if (opacity === this.chartLineOpacity || repository === null) return
     const previous = this.chartLineOpacity
     this.chartLineOpacity = opacity
+    await this.savePreference(
+      () => repository.saveChartLineOpacity(opacity),
+      () => {
+        if (this.chartLineOpacity === opacity) this.chartLineOpacity = previous
+      },
+      'error_save_chart_line_opacity',
+      'Unable to save the chart line opacity preference.')
+  }
+
+  private async savePreference(save: () => Promise<void>, rollback: () => void,
+    errorKey: string, fallback: string): Promise<void> {
     try {
-      await this.sessionRepository.saveChartLineOpacity(opacity)
+      await save()
     } catch (_) {
-      if (this.chartLineOpacity === opacity) this.chartLineOpacity = previous
-      this.dashboardError = this.localized(
-        'error_save_chart_line_opacity', 'Unable to save the chart line opacity preference.')
+      rollback()
+      this.dashboardError = this.localized(errorKey, fallback)
     }
   }
 

@@ -140,13 +140,7 @@ export class SessionRepository {
   }
 
   async saveSelectedSystem(id: string): Promise<void> {
-    try {
-      const store = await this.getStore()
-      await store.put(KEY_SELECTED_SYSTEM, id)
-      await store.flush()
-    } catch (error) {
-      throw this.storageError(error, 'Unable to save the selected system.')
-    }
+    await this.savePreference(KEY_SELECTED_SYSTEM, id, 'Unable to save the selected system.')
   }
 
   async saveGatewayKey(gatewayKey: string): Promise<void> {
@@ -154,72 +148,46 @@ export class SessionRepository {
   }
 
   async saveUpdateWhileScrolling(enabled: boolean): Promise<void> {
-    try {
-      const store = await this.getStore()
-      await store.put(KEY_UPDATE_WHILE_SCROLLING, enabled)
-      await store.flush()
-    } catch (error) {
-      throw this.storageError(error, 'Unable to save the scrolling update preference.')
-    }
+    await this.savePreference(
+      KEY_UPDATE_WHILE_SCROLLING, enabled, 'Unable to save the scrolling update preference.')
   }
 
   async saveColorMode(mode: AppColorMode): Promise<void> {
-    try {
-      const store = await this.getStore()
-      await store.put(KEY_COLOR_MODE, mode)
-      await store.flush()
-    } catch (error) {
-      throw this.storageError(error, 'Unable to save the color mode preference.')
-    }
+    await this.savePreference(KEY_COLOR_MODE, mode, 'Unable to save the color mode preference.')
   }
 
   async saveCpuChartHeight(height: CpuChartHeight): Promise<void> {
-    try {
-      const store = await this.getStore()
-      await store.put(KEY_CPU_CHART_HEIGHT, height)
-      await store.flush()
-    } catch (error) {
-      throw this.storageError(error, 'Unable to save the CPU chart height preference.')
-    }
+    await this.savePreference(
+      KEY_CPU_CHART_HEIGHT, height, 'Unable to save the CPU chart height preference.')
   }
 
   async saveMetricChartHeight(height: MetricChartHeight): Promise<void> {
-    try {
-      const store = await this.getStore()
-      await store.put(KEY_METRIC_CHART_HEIGHT, height)
-      await store.flush()
-    } catch (error) {
-      throw this.storageError(error, 'Unable to save the history chart height preference.')
-    }
+    await this.savePreference(
+      KEY_METRIC_CHART_HEIGHT, height, 'Unable to save the history chart height preference.')
   }
 
   async saveMetricInspectionSort(sort: MetricInspectionSort): Promise<void> {
-    try {
-      const store = await this.getStore()
-      await store.put(KEY_METRIC_INSPECTION_SORT, sort)
-      await store.flush()
-    } catch (error) {
-      throw this.storageError(error, 'Unable to save the sample popup sorting preference.')
-    }
+    await this.savePreference(
+      KEY_METRIC_INSPECTION_SORT, sort, 'Unable to save the sample popup sorting preference.')
   }
 
   async saveChartLineWidth(width: ChartLineWidth): Promise<void> {
-    try {
-      const store = await this.getStore()
-      await store.put(KEY_CHART_LINE_WIDTH, width)
-      await store.flush()
-    } catch (error) {
-      throw this.storageError(error, 'Unable to save the chart line width preference.')
-    }
+    await this.savePreference(
+      KEY_CHART_LINE_WIDTH, width, 'Unable to save the chart line width preference.')
   }
 
   async saveChartLineOpacity(opacity: ChartLineOpacity): Promise<void> {
+    await this.savePreference(
+      KEY_CHART_LINE_OPACITY, opacity, 'Unable to save the chart line opacity preference.')
+  }
+
+  private async savePreference(key: string, value: preferences.ValueType, fallback: string): Promise<void> {
     try {
       const store = await this.getStore()
-      await store.put(KEY_CHART_LINE_OPACITY, opacity)
+      await store.put(key, value)
       await store.flush()
     } catch (error) {
-      throw this.storageError(error, 'Unable to save the chart line opacity preference.')
+      throw this.storageError(error, fallback)
     }
   }
 
