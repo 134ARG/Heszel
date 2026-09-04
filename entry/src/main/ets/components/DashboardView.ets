@@ -82,6 +82,9 @@ export struct DashboardView {
         .onNavigationModeChange((mode: NavigationMode) => this.onNavigationModeChanged(mode))
         .layoutWeight(1)
         .width('100%')
+        .background($r('app.color.background'), {
+          ignoresLayoutSafeAreaEdges: [LayoutSafeAreaEdge.BOTTOM]
+        })
     }
     .width('100%')
     .height('100%')
