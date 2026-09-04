@@ -119,6 +119,39 @@ function numberArraysEqual(left: number[], right: number[]): boolean {
   return true
 }
 
+// Updates keyed metric objects in place while their order is stable. When keys
+// are added, removed, or reordered, returns a rebuilt array that reuses every
+// existing item with the same key. A null result means the caller must keep its
+// current array reference so @Observed consumers avoid a structural refresh.
+function syncKeyedList<TItem, TWire>(current: TItem[], wire: Record<string, TWire>,
+  keyOf: (item: TItem) => string, create: () => TItem,
+  update: (item: TItem, key: string, value: TWire) => void): TItem[] | null {
+  const keys = Object.keys(wire)
+  let structureChanged = keys.length !== current.length
+  if (!structureChanged) {
+    for (let index = 0; index < keys.length; index += 1) {
+      if (keyOf(current[index]) !== keys[index]) {
+        structureChanged = true
+        break
+      }
+    }
+  }
+  if (!structureChanged) {
+    keys.forEach((key: string, index: number) => update(current[index], key, wire[key]))
+    return null
+  }
+
+  const existing = new Map<string, TItem>()
+  current.forEach((item: TItem) => existing.set(keyOf(item), item))
+  const next: TItem[] = []
+  keys.forEach((key: string) => {
+    const item = existing.get(key) ?? create()
+    update(item, key, wire[key])
+    next.push(item)
+  })
+  return next
+}
+
 export class SystemHardwareDetails {
   hostname: string = ''
   kernel: string = ''
@@ -546,29 +579,14 @@ export class StorageMetricsState {
   }
 
   private updateFilesystems(wire: Record<string, BeszelFilesystemStatsWire>): void {
-    const names = Object.keys(wire)
-    let structureChanged = names.length !== this.filesystems.length
-    if (!structureChanged) {
-      for (let index = 0; index < names.length; index += 1) {
-        if (this.filesystems[index].name !== names[index]) {
-          structureChanged = true
-          break
-        }
-      }
-    }
-    if (structureChanged) {
-      const existing = new Map<string, FilesystemMetric>()
-      this.filesystems.forEach((item: FilesystemMetric) => existing.set(item.name, item))
-      const next: FilesystemMetric[] = []
-      names.forEach((name: string) => {
-        const filesystem = existing.get(name) ?? new FilesystemMetric()
-        filesystem.update(name, wire[name])
-        next.push(filesystem)
-      })
+    const next = syncKeyedList(this.filesystems, wire,
+      (item: FilesystemMetric): string => item.name,
+      (): FilesystemMetric => new FilesystemMetric(),
+      (item: FilesystemMetric, name: string, value: BeszelFilesystemStatsWire): void =>
+        item.update(name, value))
+    if (next !== null) {
       this.filesystems = next
-      return
     }
-    names.forEach((name: string, index: number) => this.filesystems[index].update(name, wire[name]))
   }
 }
 
@@ -612,29 +630,13 @@ export class NetworkMetricsState {
   isVisible(): boolean { return this.available }
 
   private updateInterfaces(wire: Record<string, number[]>): void {
-    const names = Object.keys(wire)
-    let structureChanged = names.length !== this.interfaces.length
-    if (!structureChanged) {
-      for (let index = 0; index < names.length; index += 1) {
-        if (this.interfaces[index].name !== names[index]) {
-          structureChanged = true
-          break
-        }
-      }
-    }
-    if (structureChanged) {
-      const existing = new Map<string, NetworkInterfaceMetric>()
-      this.interfaces.forEach((item: NetworkInterfaceMetric) => existing.set(item.name, item))
-      const next: NetworkInterfaceMetric[] = []
-      names.forEach((name: string) => {
-        const networkInterface = existing.get(name) ?? new NetworkInterfaceMetric()
-        networkInterface.update(name, wire[name])
-        next.push(networkInterface)
-      })
+    const next = syncKeyedList(this.interfaces, wire,
+      (item: NetworkInterfaceMetric): string => item.name,
+      (): NetworkInterfaceMetric => new NetworkInterfaceMetric(),
+      (item: NetworkInterfaceMetric, name: string, value: number[]): void => item.update(name, value))
+    if (next !== null) {
       this.interfaces = next
-      return
     }
-    names.forEach((name: string, index: number) => this.interfaces[index].update(name, wire[name]))
   }
 }
 
@@ -659,29 +661,13 @@ export class GpuMetricsState {
   isVisible(): boolean { return this.available }
 
   private updateGpus(wire: Record<string, BeszelGpuStatsWire>): void {
-    const ids = Object.keys(wire)
-    let structureChanged = ids.length !== this.gpus.length
-    if (!structureChanged) {
-      for (let index = 0; index < ids.length; index += 1) {
-        if (this.gpus[index].id !== ids[index]) {
-          structureChanged = true
-          break
-        }
-      }
-    }
-    if (structureChanged) {
-      const existing = new Map<string, GpuMetric>()
-      this.gpus.forEach((item: GpuMetric) => existing.set(item.id, item))
-      const next: GpuMetric[] = []
-      ids.forEach((id: string) => {
-        const gpu = existing.get(id) ?? new GpuMetric()
-        gpu.update(id, wire[id])
-        next.push(gpu)
-      })
+    const next = syncKeyedList(this.gpus, wire,
+      (item: GpuMetric): string => item.id,
+      (): GpuMetric => new GpuMetric(),
+      (item: GpuMetric, id: string, value: BeszelGpuStatsWire): void => item.update(id, value))
+    if (next !== null) {
       this.gpus = next
-      return
     }
-    ids.forEach((id: string, index: number) => this.gpus[index].update(id, wire[id]))
   }
 }
 
@@ -762,29 +748,13 @@ export class HealthMetricsState {
   servicesVisible(): boolean { return this.servicesAvailable }
 
   private updateSensors(wire: Record<string, number>): void {
-    const names = Object.keys(wire)
-    let structureChanged = names.length !== this.sensors.length
-    if (!structureChanged) {
-      for (let index = 0; index < names.length; index += 1) {
-        if (this.sensors[index].name !== names[index]) {
-          structureChanged = true
-          break
-        }
-      }
-    }
-    if (structureChanged) {
-      const existing = new Map<string, SensorMetric>()
-      this.sensors.forEach((item: SensorMetric) => existing.set(item.name, item))
-      const next: SensorMetric[] = []
-      names.forEach((name: string) => {
-        const sensor = existing.get(name) ?? new SensorMetric()
-        sensor.update(name, safeNumber(wire[name]))
-        next.push(sensor)
-      })
+    const next = syncKeyedList(this.sensors, wire,
+      (item: SensorMetric): string => item.name,
+      (): SensorMetric => new SensorMetric(),
+      (item: SensorMetric, name: string, value: number): void => item.update(name, safeNumber(value)))
+    if (next !== null) {
       this.sensors = next
-      return
     }
-    names.forEach((name: string, index: number) => this.sensors[index].update(name, safeNumber(wire[name])))
   }
 }
 
