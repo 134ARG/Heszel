@@ -11,6 +11,7 @@ export struct PageHeader {
   @Prop subtitle: ResourceStr = ''
   @Prop showSubtitle: boolean = false
   @Prop showBack: boolean = false
+  @Prop compactBack: boolean = false
   @Prop backLabel: ResourceStr = ''
   @Prop showBadge: boolean = false
   @Prop badgeLabel: ResourceStr = ''
@@ -20,14 +21,28 @@ export struct PageHeader {
   build() {
     Row({ space: 12 }) {
       if (this.showBack) {
-        Button(this.backLabel)
+        if (this.compactBack) {
+          Button() {
+            SymbolGlyph($r('sys.symbol.chevron_backward'))
+              .fontSize(18)
+              .fontColor([$r('app.color.action')])
+          }
+          .width(38)
           .height(38)
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.action'))
           .backgroundColor($r('app.color.action_surface'))
           .borderRadius(10)
+          .accessibilityText($r('app.string.back'))
           .onClick(() => this.onBack())
+        } else {
+          Button(this.backLabel)
+            .height(38)
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.action'))
+            .backgroundColor($r('app.color.action_surface'))
+            .borderRadius(10)
+            .onClick(() => this.onBack())
+        }
       }
 
       Column({ space: 2 }) {

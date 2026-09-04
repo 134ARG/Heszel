@@ -14,6 +14,7 @@ import { PageHeader } from './PageHeader'
 
 @Component
 export struct SettingsView {
+  @Prop signedIn: boolean = true
   @Prop connectionMode: ConnectionMode = ConnectionMode.HTTP
   @Prop connectionLabel: string = ''
   @Prop connectionDetail: string = ''
@@ -285,7 +286,7 @@ export struct SettingsView {
           }
           .width('100%')
 
-          if (this.connectionMode === ConnectionMode.HTTP) {
+          if (this.signedIn && this.connectionMode === ConnectionMode.HTTP) {
             Column({ space: 10 }) {
               Text($r('app.string.gateway_access'))
                 .fontSize(11)
@@ -337,92 +338,94 @@ export struct SettingsView {
             .width('100%')
           }
 
-          Column({ space: 10 }) {
-            Text($r('app.string.account'))
-              .fontSize(11)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.text_tertiary'))
-              .width('100%')
+          if (this.signedIn) {
+            Column({ space: 10 }) {
+              Text($r('app.string.account'))
+                .fontSize(11)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.text_tertiary'))
+                .width('100%')
 
-            Column() {
-              Column({ space: 4 }) {
-                Text($r('app.string.connection'))
-                  .fontSize(11)
-                  .fontColor($r('app.color.text_tertiary'))
-                Text(this.connectionMode === ConnectionMode.IROH ?
-                  $r('app.string.connection_iroh') : $r('app.string.connection_http'))
-                  .fontSize(14)
-                  .fontColor($r('app.color.text_primary'))
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-              }
-              .alignItems(HorizontalAlign.Start)
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-
-              Divider()
-                .color($r('app.color.divider'))
-                .margin({ left: 16, right: 16 })
-
-              Column({ space: 4 }) {
-                Text(this.connectionMode === ConnectionMode.IROH ?
-                  $r('app.string.iroh_gateway') : $r('app.string.beszel_hub'))
-                  .fontSize(11)
-                  .fontColor($r('app.color.text_tertiary'))
-                Text(this.connectionLabel)
-                  .fontSize(14)
-                  .fontColor($r('app.color.text_primary'))
-                  .maxLines(2)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                if (this.connectionDetail.length > 0) {
-                  Text(this.connectionDetail)
+              Column() {
+                Column({ space: 4 }) {
+                  Text($r('app.string.connection'))
                     .fontSize(11)
                     .fontColor($r('app.color.text_tertiary'))
-                    .width('100%')
-                    .wordBreak(WordBreak.BREAK_ALL)
+                  Text(this.connectionMode === ConnectionMode.IROH ?
+                    $r('app.string.connection_iroh') : $r('app.string.connection_http'))
+                    .fontSize(14)
+                    .fontColor($r('app.color.text_primary'))
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
                 }
-              }
-              .alignItems(HorizontalAlign.Start)
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-
-              Divider()
-                .color($r('app.color.divider'))
-                .margin({ left: 16, right: 16 })
-
-              Column({ space: 4 }) {
-                Text($r('app.string.signed_in_as'))
-                  .fontSize(11)
-                  .fontColor($r('app.color.text_tertiary'))
-                Text(this.email)
-                  .fontSize(14)
-                  .fontColor($r('app.color.text_primary'))
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-              }
-              .alignItems(HorizontalAlign.Start)
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-
-              Divider()
-                .color($r('app.color.divider'))
-                .margin({ left: 16, right: 16 })
-
-              Button($r('app.string.sign_out'))
+                .alignItems(HorizontalAlign.Start)
                 .width('100%')
-                .height(44)
-                .fontSize(14)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.error'))
-                .backgroundColor(Color.Transparent)
-                .onClick(() => this.onSignOut())
+                .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+
+                Divider()
+                  .color($r('app.color.divider'))
+                  .margin({ left: 16, right: 16 })
+
+                Column({ space: 4 }) {
+                  Text(this.connectionMode === ConnectionMode.IROH ?
+                    $r('app.string.iroh_gateway') : $r('app.string.beszel_hub'))
+                    .fontSize(11)
+                    .fontColor($r('app.color.text_tertiary'))
+                  Text(this.connectionLabel)
+                    .fontSize(14)
+                    .fontColor($r('app.color.text_primary'))
+                    .maxLines(2)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  if (this.connectionDetail.length > 0) {
+                    Text(this.connectionDetail)
+                      .fontSize(11)
+                      .fontColor($r('app.color.text_tertiary'))
+                      .width('100%')
+                      .wordBreak(WordBreak.BREAK_ALL)
+                  }
+                }
+                .alignItems(HorizontalAlign.Start)
+                .width('100%')
+                .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+
+                Divider()
+                  .color($r('app.color.divider'))
+                  .margin({ left: 16, right: 16 })
+
+                Column({ space: 4 }) {
+                  Text($r('app.string.signed_in_as'))
+                    .fontSize(11)
+                    .fontColor($r('app.color.text_tertiary'))
+                  Text(this.email)
+                    .fontSize(14)
+                    .fontColor($r('app.color.text_primary'))
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
+                .alignItems(HorizontalAlign.Start)
+                .width('100%')
+                .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+
+                Divider()
+                  .color($r('app.color.divider'))
+                  .margin({ left: 16, right: 16 })
+
+                Button($r('app.string.disconnect_hub'))
+                  .width('100%')
+                  .height(44)
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.error'))
+                  .backgroundColor(Color.Transparent)
+                  .onClick(() => this.onSignOut())
+              }
+              .width('100%')
+              .backgroundColor($r('app.color.surface'))
+              .border({ width: 1, color: $r('app.color.card_border') })
+              .borderRadius(16)
             }
             .width('100%')
-            .backgroundColor($r('app.color.surface'))
-            .border({ width: 1, color: $r('app.color.card_border') })
-            .borderRadius(16)
           }
-          .width('100%')
 
           Text($r('app.string.app_version'))
             .fontSize(11)

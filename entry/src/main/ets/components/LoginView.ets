@@ -3,6 +3,7 @@ import { ConnectionMode, IrohPairing, LoginRequest } from '../model/ConnectionMo
 import { IrohPairingCodec } from '../service/IrohPairingCodec'
 import { IrohPairingService } from '../service/IrohPairingService'
 import { HeszelTextInputStyle } from '../styles/HeszelTextInputStyle'
+import { PageHeader } from './PageHeader'
 
 enum LoginInputField {
   NONE,
@@ -21,6 +22,7 @@ export struct LoginView {
   @Prop initialEmail: string = ''
   @Prop initialGatewayKey: string = ''
   @Prop initialIrohPairingJson: string = ''
+  @Prop showBack: boolean = false
   @State private connectionMode: ConnectionMode = ConnectionMode.HTTP
   @State private serverUrl: string = ''
   @State private email: string = ''
@@ -31,6 +33,7 @@ export struct LoginView {
   @State private scanError: string = ''
   @State private focusedInput: LoginInputField = LoginInputField.NONE
   onLogin: (request: LoginRequest) => void = () => {}
+  onBack: () => void = () => {}
 
   aboutToAppear(): void {
     this.connectionMode = this.initialConnectionMode
@@ -47,76 +50,92 @@ export struct LoginView {
   }
 
   build() {
-    Scroll() {
-      Column({ space: 18 }) {
-        Column({ space: 6 }) {
-          Text($r('app.string.app_name'))
-            .fontSize(38)
-            .fontWeight(FontWeight.Bold)
-            .fontColor($r('app.color.text_primary'))
+    Column() {
+      if (this.showBack) {
+        PageHeader({
+          title: $r('app.string.connect_beszel_hub'),
+          showBack: true,
+          compactBack: true,
+          backLabel: $r('app.string.back'),
+          onBack: () => this.onBack()
+        })
+      }
 
-          Text($r('app.string.login_tagline'))
-            .fontSize(15)
-            .fontColor($r('app.color.text_secondary'))
+      Scroll() {
+        Column({ space: 18 }) {
+          Column({ space: 6 }) {
+            if (!this.showBack) {
+              Text($r('app.string.app_name'))
+                .fontSize(38)
+                .fontWeight(FontWeight.Bold)
+                .fontColor($r('app.color.text_primary'))
+            }
+
+            Text($r('app.string.login_tagline'))
+              .fontSize(15)
+              .fontColor($r('app.color.text_secondary'))
+              .textAlign(TextAlign.Center)
+          }
+          .alignItems(HorizontalAlign.Center)
+          .margin({ bottom: 10 })
+
+          Row({ space: 6 }) {
+            this.modeButton($r('app.string.login_mode_http'), ConnectionMode.HTTP)
+            this.modeButton($r('app.string.login_mode_iroh'), ConnectionMode.IROH)
+          }
+          .width('100%')
+          .padding(4)
+          .backgroundColor($r('app.color.surface_input'))
+          .borderRadius(14)
+
+          if (this.connectionMode === ConnectionMode.HTTP) {
+            this.httpConnectionFields()
+          } else {
+            this.irohConnectionFields()
+          }
+
+          this.credentialsFields()
+
+          if (this.scanError.length > 0 || this.errorMessage.length > 0) {
+            Text(this.scanError.length > 0 ? this.scanError : this.errorMessage)
+              .fontSize(14)
+              .fontColor($r('app.color.error'))
+              .width('100%')
+              .padding(12)
+              .backgroundColor($r('app.color.error_surface'))
+              .borderRadius(12)
+          }
+
+          Button(this.loading ? $r('app.string.connecting') : $r('app.string.connect_to_beszel'))
+            .width('100%')
+            .height(52)
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.text_on_action'))
+            .backgroundColor($r('app.color.action'))
+            .borderRadius(14)
+            .enabled(!this.loading && !this.scanning)
+            .onClick(() => this.submit())
+
+          Text($r('app.string.credentials_security_note'))
+            .fontSize(12)
+            .fontColor($r('app.color.text_tertiary'))
             .textAlign(TextAlign.Center)
-        }
-        .alignItems(HorizontalAlign.Center)
-        .margin({ bottom: 10 })
-
-        Row({ space: 6 }) {
-          this.modeButton($r('app.string.login_mode_http'), ConnectionMode.HTTP)
-          this.modeButton($r('app.string.login_mode_iroh'), ConnectionMode.IROH)
+            .lineHeight(18)
+            .margin({ top: 2 })
         }
         .width('100%')
-        .padding(4)
-        .backgroundColor($r('app.color.surface_input'))
-        .borderRadius(14)
-
-        if (this.connectionMode === ConnectionMode.HTTP) {
-          this.httpConnectionFields()
-        } else {
-          this.irohConnectionFields()
-        }
-
-        this.credentialsFields()
-
-        if (this.scanError.length > 0 || this.errorMessage.length > 0) {
-          Text(this.scanError.length > 0 ? this.scanError : this.errorMessage)
-            .fontSize(14)
-            .fontColor($r('app.color.error'))
-            .width('100%')
-            .padding(12)
-            .backgroundColor($r('app.color.error_surface'))
-            .borderRadius(12)
-        }
-
-        Button(this.loading ? $r('app.string.connecting') : $r('app.string.connect_to_beszel'))
-          .width('100%')
-          .height(52)
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.text_on_action'))
-          .backgroundColor($r('app.color.action'))
-          .borderRadius(14)
-          .enabled(!this.loading && !this.scanning)
-          .onClick(() => this.submit())
-
-        Text($r('app.string.credentials_security_note'))
-          .fontSize(12)
-          .fontColor($r('app.color.text_tertiary'))
-          .textAlign(TextAlign.Center)
-          .lineHeight(18)
-          .margin({ top: 2 })
+        .constraintSize({ maxWidth: 440 })
+        .padding({ left: 24, right: 24, top: this.showBack ? 24 : 48, bottom: 40 })
       }
       .width('100%')
-      .constraintSize({ maxWidth: 440 })
-      .padding({ left: 24, right: 24, top: 48, bottom: 40 })
+      .layoutWeight(1)
+      .align(Alignment.Top)
+      .scrollBar(BarState.Off)
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.surface_header'))
-    .align(Alignment.Top)
-    .scrollBar(BarState.Off)
   }
 
   @Builder

@@ -9,8 +9,10 @@ import {
   MetricInspectionSort,
   PAGE_CONTENT_BOTTOM_PADDING
 } from '../model/AppearanceModels'
+import { LoginRequest } from '../model/ConnectionModels'
 import { MetricChartRange } from '../model/MetricChartModels'
 import { MetricChartKind, MetricChartPanelKind } from '../model/MetricChartSource'
+import { LoginView } from './LoginView'
 import { SettingsView } from './SettingsView'
 import { SmartDetailsView } from './SmartDetailsView'
 import { SystemCard } from './SystemCard'
@@ -43,8 +45,14 @@ export struct DashboardView {
   @State private detailVisible: boolean = false
   @State private detailOffsetY: number = 0
   @State private detailOpacity: number = 1
+  @State private loginVisible: boolean = false
   private pathStack: NavPathStack = new NavPathStack()
   private detailSwitchSequence: number = 0
+  private previouslySignedIn: boolean = false
+
+  aboutToAppear(): void {
+    this.previouslySignedIn = this.isSignedIn()
+  }
 
   private onlineCount(): number {
     return this.controller.systems.filter((system: SystemSummary) => system.isUp()).length
@@ -52,29 +60,32 @@ export struct DashboardView {
 
   build() {
     Column() {
-      this.header()
+      if (!this.loginVisible) {
+        this.header()
 
-      if (this.controller.dashboardError.length > 0) {
-        Row({ space: 10 }) {
-          Text(this.controller.dashboardError)
-            .fontSize(13)
-            .fontColor($r('app.color.error_text'))
-            .layoutWeight(1)
-          Text($r('app.string.retry'))
-            .fontSize(13)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.action'))
-            .onClick(() => this.controller.refresh())
+        if (this.controller.dashboardError.length > 0) {
+          Row({ space: 10 }) {
+            Text(this.controller.dashboardError)
+              .fontSize(13)
+              .fontColor($r('app.color.error_text'))
+              .layoutWeight(1)
+            Text($r('app.string.retry'))
+              .fontSize(13)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.action'))
+              .onClick(() => this.controller.refresh())
+          }
+          .width('100%')
+          .padding({ left: 18, right: 18, top: 10, bottom: 10 })
+          .backgroundColor($r('app.color.error_surface'))
         }
-        .width('100%')
-        .padding({ left: 18, right: 18, top: 10, bottom: 10 })
-        .backgroundColor($r('app.color.error_surface'))
       }
 
       Navigation(this.pathStack) {
         this.navigationRoot()
       }
-        .mode(this.windowWidthVp >= NAVIGATION_SPLIT_BREAKPOINT_VP ?
+        .mode(this.isSignedIn() && !this.loginVisible &&
+          this.windowWidthVp >= NAVIGATION_SPLIT_BREAKPOINT_VP ?
           NavigationMode.Split : NavigationMode.Stack)
         .navBarWidth(this.navigationBarWidth())
         .hideTitleBar(true)
@@ -93,7 +104,9 @@ export struct DashboardView {
 
   @Builder
   private navigationRoot() {
-    if (this.controller.systems.length === 0) {
+    if (!this.isSignedIn()) {
+      this.connectHubList()
+    } else if (this.controller.systems.length === 0) {
       Column({ space: 12 }) {
         Text(this.controller.refreshing ? $r('app.string.loading_systems') : $r('app.string.no_shared_systems'))
           .fontSize(20)
@@ -116,7 +129,20 @@ export struct DashboardView {
   @Builder
   private destinationBuilder(name: string, param: Object) {
     NavDestination() {
-      if (name === 'detail') {
+      if (name === 'login') {
+        LoginView({
+          loading: this.controller.signingIn,
+          errorMessage: this.controller.loginError,
+          initialConnectionMode: this.controller.savedConnectionMode,
+          initialServerUrl: this.controller.savedServerUrl,
+          initialEmail: this.controller.savedEmail,
+          initialGatewayKey: this.controller.savedGatewayKey,
+          initialIrohPairingJson: this.controller.savedIrohPairingJson,
+          showBack: true,
+          onBack: () => this.closeLogin(),
+          onLogin: (request: LoginRequest) => this.connectToHub(request)
+        })
+      } else if (name === 'detail') {
         this.detailDestination(param)
       } else if (name === 'smart') {
         SmartDetailsView({
@@ -150,6 +176,7 @@ export struct DashboardView {
         })
       } else if (name === 'settings') {
         SettingsView({
+          signedIn: this.isSignedIn(),
           connectionMode: this.controller.savedConnectionMode,
           connectionLabel: this.controller.connectionLabel(),
           connectionDetail: this.controller.connectionDetail(),
@@ -202,10 +229,12 @@ export struct DashboardView {
       .hideTitleBar(true)
       .backgroundColor($r('app.color.background'))
       .onShown(() => {
+        if (name === 'login') this.loginVisible = true
         this.syncDetailVisibility()
         if (name === 'metricCharts') this.controller.setMetricChartsVisible(true)
       })
       .onHidden(() => {
+        if (name === 'login') this.loginVisible = false
         if (name === 'metricCharts') {
           this.controller.setMetricChartsVisible(false)
           if (!this.pathStack.getAllPathName().includes('metricCharts')) {
@@ -213,7 +242,7 @@ export struct DashboardView {
           }
         }
         this.syncDetailVisibility()
-        if (name === 'settings') {
+        if (name === 'settings' || name === 'login') {
           this.ensureDetailForSplit()
         }
       })
@@ -264,8 +293,10 @@ export struct DashboardView {
   private header() {
     Row({ space: 8 }) {
       this.titleBlock()
-      this.liveControl()
-      this.refreshButton()
+      if (this.isSignedIn()) {
+        this.liveControl()
+        this.refreshButton()
+      }
       this.settingsButton()
     }
     .width('100%')
@@ -280,7 +311,9 @@ export struct DashboardView {
         .fontSize(24)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
-      Text($r('app.string.systems_online', this.onlineCount(), this.controller.systems.length))
+      Text(this.isSignedIn() ?
+        $r('app.string.systems_online', this.onlineCount(), this.controller.systems.length) :
+        $r('app.string.not_connected'))
         .fontSize(12)
         .fontColor($r('app.color.text_secondary'))
     }
@@ -373,6 +406,34 @@ export struct DashboardView {
     .padding({ left: 14, right: 14, top: 12, bottom: PAGE_CONTENT_BOTTOM_PADDING })
   }
 
+  @Builder
+  private connectHubList() {
+    List() {
+      ListItem() {
+        Column({ space: 10 }) {
+          SymbolGlyph($r('sys.symbol.plus'))
+            .fontSize(28)
+            .fontColor([$r('app.color.action')])
+          Text($r('app.string.connect_beszel_hub'))
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.action'))
+        }
+        .width('100%')
+        .height(120)
+        .justifyContent(FlexAlign.Center)
+        .borderRadius(16)
+        .backgroundColor($r('app.color.surface'))
+        .border({ width: 1, color: $r('app.color.card_border') })
+        .onClick(() => this.openLogin())
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ left: 14, right: 14, top: 12, bottom: PAGE_CONTENT_BOTTOM_PADDING })
+    .scrollBar(BarState.Off)
+  }
+
   private selectSystem(id: string): void {
     if (id === this.controller.selectedId && this.topDestinationName() === 'detail') {
       this.cancelDetailSwitchAnimation()
@@ -446,6 +507,26 @@ export struct DashboardView {
     }
   }
 
+  private openLogin(): void {
+    if (this.topDestinationName() !== 'login') {
+      this.loginVisible = true
+      this.pathStack.pushPath({ name: 'login', param: new DashboardDestinationParam() })
+    }
+  }
+
+  private closeLogin(): void {
+    this.loginVisible = false
+    this.pathStack.pop()
+  }
+
+  private async connectToHub(request: LoginRequest): Promise<void> {
+    await this.controller.login(request)
+    if (this.isSignedIn() && this.topDestinationName() === 'login') {
+      this.closeLogin()
+      this.ensureDetailForSplit()
+    }
+  }
+
   private openSmartDetails(): void {
     if (this.controller.detailState.smartHealth.isVisible() && this.topDestinationName() !== 'smart') {
       this.pathStack.pushPath({ name: 'smart', param: new DashboardDestinationParam(this.controller.selectedId) })
@@ -515,6 +596,15 @@ export struct DashboardView {
 
   // Fires on every controller write; both branches are cheap guards.
   private onModelChanged(): void {
+    if (!this.isSignedIn()) {
+      if (this.previouslySignedIn && this.topDestinationName() !== 'login') {
+        this.pathStack.clear(false)
+      }
+      this.previouslySignedIn = false
+      this.syncDetailVisibility()
+      return
+    }
+    this.previouslySignedIn = true
     if (this.controller.systems.length === 0) {
       this.pathStack.removeByName('detail')
       this.syncDetailVisibility()
@@ -543,6 +633,10 @@ export struct DashboardView {
   private navigationBarWidth(): number {
     if (this.windowWidthVp <= 0) return NAVIGATION_MAX_WIDTH_VP
     return Math.min(NAVIGATION_MAX_WIDTH_VP, this.windowWidthVp * 0.35)
+  }
+
+  private isSignedIn(): boolean {
+    return this.controller.session.token.length > 0
   }
 
 }

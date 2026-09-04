@@ -1,7 +1,5 @@
 import { DashboardView } from '../components/DashboardView'
-import { LoginView } from '../components/LoginView'
 import { DashboardController } from '../controller/DashboardController'
-import { LoginRequest } from '../model/ConnectionModels'
 
 @Entry
 @Component
@@ -47,17 +45,6 @@ struct Index {
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .backgroundColor($r('app.color.surface_header'))
-      } else if (this.dashboard.session.token.length === 0) {
-        LoginView({
-          loading: this.dashboard.signingIn,
-          errorMessage: this.dashboard.loginError,
-          initialConnectionMode: this.dashboard.savedConnectionMode,
-          initialServerUrl: this.dashboard.savedServerUrl,
-          initialEmail: this.dashboard.savedEmail,
-          initialGatewayKey: this.dashboard.savedGatewayKey,
-          initialIrohPairingJson: this.dashboard.savedIrohPairingJson,
-          onLogin: (request: LoginRequest) => this.dashboard.login(request)
-        })
       } else {
         DashboardView({
           controller: this.dashboard,
