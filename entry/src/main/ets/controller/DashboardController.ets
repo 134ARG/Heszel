@@ -950,19 +950,7 @@ export class DashboardController {
         return
       }
     }
-    await this.closeConnection(this.connectionProfile.mode)
-    this.client = null
-    this.connectionPhase = ConnectionPhase.STOPPED
-    this.session = new BeszelSession()
-    this.sessionRefreshPending = false
-    this.systems = []
-    this.selectSystem('')
-    this.clearDetailStates()
-    this.setDetailVisible(false)
-    this.setLiveMetrics(false)
-    this.dashboardError = ''
-    this.lastRefresh = ''
-    await this.clearWidgetSnapshot()
+    await this.teardownSession(true)
   }
 
   private async restoreSession(): Promise<void> {
@@ -1515,19 +1503,26 @@ export class DashboardController {
         // The rejected in-memory token is still discarded for this process.
       }
     }
+    await this.teardownSession(false)
+    this.loginError = this.localized(
+      'error_session_rejected', 'Your saved session was rejected by Beszel. Sign in again.')
+  }
+
+  private async teardownSession(clearSelectedSystem: boolean): Promise<void> {
     await this.closeConnection(this.connectionProfile.mode)
     this.client = null
     this.connectionPhase = ConnectionPhase.STOPPED
     this.session = new BeszelSession()
     this.sessionRefreshPending = false
     this.systems = []
+    if (clearSelectedSystem) {
+      this.selectSystem('')
+    }
     this.clearDetailStates()
     this.setDetailVisible(false)
     this.setLiveMetrics(false)
     this.dashboardError = ''
     this.lastRefresh = ''
-    this.loginError = this.localized(
-      'error_session_rejected', 'Your saved session was rejected by Beszel. Sign in again.')
     await this.clearWidgetSnapshot()
   }
 
