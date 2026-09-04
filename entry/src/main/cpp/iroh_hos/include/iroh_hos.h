@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#define IROH_HOS_ABI_VERSION 2u
+#define IROH_HOS_ABI_VERSION 3u
 #define IROH_HOS_SECRET_KEY_LENGTH 32u
 #define IROH_HOS_ENDPOINT_ID_CAPACITY 128u
 
@@ -28,6 +28,12 @@ enum IrohHosTunnelState {
     IROH_HOS_STATE_CONNECTED = 3,
     IROH_HOS_STATE_RECONNECTING = 4,
     IROH_HOS_STATE_SUSPENDED = 5,
+};
+
+enum IrohHosTunnelRoute {
+    IROH_HOS_ROUTE_UNKNOWN = 0,
+    IROH_HOS_ROUTE_DIRECT = 1,
+    IROH_HOS_ROUTE_RELAY = 2,
 };
 
 typedef struct IrohHosTunnel IrohHosTunnel;
@@ -51,7 +57,7 @@ typedef struct IrohHosStartConfig {
 typedef struct IrohHosTunnelInfo {
     uint32_t state;
     uint16_t local_port;
-    uint16_t reserved;
+    uint16_t route;
     char local_endpoint_id[IROH_HOS_ENDPOINT_ID_CAPACITY];
 } IrohHosTunnelInfo;
 

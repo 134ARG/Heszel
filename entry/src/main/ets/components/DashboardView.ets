@@ -180,6 +180,7 @@ export struct DashboardView {
           connectionMode: this.controller.savedConnectionMode,
           connectionLabel: this.controller.connectionLabel(),
           connectionDetail: this.controller.connectionDetail(),
+          irohRoute: this.controller.irohRoute,
           email: this.controller.session.email,
           expanded: this.expanded,
           errorMessage: this.controller.dashboardError,
@@ -230,11 +231,13 @@ export struct DashboardView {
       .backgroundColor($r('app.color.background'))
       .onShown(() => {
         if (name === 'login') this.loginVisible = true
+        if (name === 'settings') this.controller.setSettingsVisible(true)
         this.syncDetailVisibility()
         if (name === 'metricCharts') this.controller.setMetricChartsVisible(true)
       })
       .onHidden(() => {
         if (name === 'login') this.loginVisible = false
+        if (name === 'settings') this.controller.setSettingsVisible(false)
         if (name === 'metricCharts') {
           this.controller.setMetricChartsVisible(false)
           if (!this.pathStack.getAllPathName().includes('metricCharts')) {

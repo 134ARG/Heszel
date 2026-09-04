@@ -1,4 +1,4 @@
-import iroh, { TunnelConfig, TunnelInfo } from 'libiroh_hos.so'
+import iroh, { TunnelConfig, TunnelInfo, TunnelRoute } from 'libiroh_hos.so'
 import { connection } from '@kit.NetworkKit'
 import { ConnectionMode, ConnectionProfile } from '../model/ConnectionModels'
 import { SessionRepository } from '../repository/SessionRepository'
@@ -57,6 +57,15 @@ export class ConnectionRuntimeService {
       if (this.closeTask === task) {
         this.closeTask = null
       }
+    }
+  }
+
+  irohRoute(): TunnelRoute {
+    if (!this.irohRunning) return 'unknown'
+    try {
+      return iroh.getTunnelInfo().route
+    } catch (_) {
+      return 'unknown'
     }
   }
 

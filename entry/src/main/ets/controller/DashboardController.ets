@@ -51,6 +51,7 @@ const METRIC_HISTORY_RANGES: MetricChartRange[] = [
 // only exists to abandon a resume wedged in native or storage calls so later
 // resumes are not queued behind it forever.
 const RESUME_DEADLINE_MS = 120000
+const IROH_ROUTE_REFRESH_MS = 2000
 
 class MetricChartHistoryTarget {
   kind: MetricChartPanelKind
@@ -92,6 +93,7 @@ export class DashboardController {
   savedGatewayKey: string = ''
   savedConnectionMode: ConnectionMode = ConnectionMode.HTTP
   savedIrohPairingJson: string = ''
+  irohRoute: string = 'unknown'
   private context: common.Context | null = null
   private sessionRepository: SessionRepository | null = null
   private widgetRepository: WidgetSnapshotRepository | null = null
@@ -122,6 +124,8 @@ export class DashboardController {
   private detailLoadSequence: number = 0
   private detailLoadTokens: Map<string, number> = new Map<string, number>()
   private detailLoader: SystemDetailLoader = new SystemDetailLoader()
+  private settingsVisible: boolean = false
+  private irohRouteRefreshTimer: number = -1
 
   aboutToAppear(context: common.Context): void {
     this.context = context
@@ -133,10 +137,12 @@ export class DashboardController {
     if (this.session.token.length > 0) {
       this.resumeConnection()
     }
+    this.startIrohRouteRefresh()
   }
 
   onPageHide(): void {
     this.pageVisible = false
+    this.stopIrohRouteRefresh()
     this.flushSelectedId()
     this.invalidateDataWork()
     this.stopRealtime()
@@ -145,6 +151,7 @@ export class DashboardController {
 
   aboutToDisappear(): void {
     this.pageVisible = false
+    this.stopIrohRouteRefresh()
     this.invalidateDataWork()
     this.stopRealtime()
     this.stopBackgroundConnection()
@@ -279,6 +286,15 @@ export class DashboardController {
   setChartsScrolling(scrolling: boolean): void {
     this.detailScrolling = scrolling
     this.metricChartsState.setLivePaused(scrolling && !this.updateWhileScrolling)
+  }
+
+  setSettingsVisible(visible: boolean): void {
+    this.settingsVisible = visible
+    if (visible) {
+      this.startIrohRouteRefresh()
+    } else {
+      this.stopIrohRouteRefresh()
+    }
   }
 
   async login(request: LoginRequest): Promise<void> {
@@ -1628,6 +1644,35 @@ export class DashboardController {
   connectionDetail(): string {
     return this.connectionProfile.mode === ConnectionMode.IROH ?
       this.connectionProfile.iroh.serverEndpointId : ''
+  }
+
+  private startIrohRouteRefresh(): void {
+    this.stopIrohRouteRefresh()
+    if (!this.pageVisible || !this.settingsVisible ||
+      this.connectionProfile.mode !== ConnectionMode.IROH || this.session.token.length === 0) {
+      this.setIrohRoute('unknown')
+      return
+    }
+    this.refreshIrohRoute()
+    this.irohRouteRefreshTimer = setTimeout(() => {
+      this.irohRouteRefreshTimer = -1
+      this.startIrohRouteRefresh()
+    }, IROH_ROUTE_REFRESH_MS)
+  }
+
+  private stopIrohRouteRefresh(): void {
+    if (this.irohRouteRefreshTimer >= 0) {
+      clearTimeout(this.irohRouteRefreshTimer)
+      this.irohRouteRefreshTimer = -1
+    }
+  }
+
+  private refreshIrohRoute(): void {
+    this.setIrohRoute(this.connectionRuntime?.irohRoute() ?? 'unknown')
+  }
+
+  private setIrohRoute(route: string): void {
+    if (this.irohRoute !== route) this.irohRoute = route
   }
 
   private applyColorMode(mode: AppColorMode): boolean {

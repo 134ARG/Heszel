@@ -18,6 +18,7 @@ export struct SettingsView {
   @Prop connectionMode: ConnectionMode = ConnectionMode.HTTP
   @Prop connectionLabel: string = ''
   @Prop connectionDetail: string = ''
+  @Prop irohRoute: string = 'unknown'
   @Prop email: string = ''
   @Prop expanded: boolean = false
   @Prop errorMessage: string = ''
@@ -351,8 +352,7 @@ export struct SettingsView {
                   Text($r('app.string.connection'))
                     .fontSize(11)
                     .fontColor($r('app.color.text_tertiary'))
-                  Text(this.connectionMode === ConnectionMode.IROH ?
-                    $r('app.string.connection_iroh') : $r('app.string.connection_http'))
+                  Text(this.connectionLabelValue())
                     .fontSize(14)
                     .fontColor($r('app.color.text_primary'))
                     .maxLines(1)
@@ -475,6 +475,13 @@ export struct SettingsView {
       return 'en'
     }
     return 'default'
+  }
+
+  private connectionLabelValue(): ResourceStr {
+    if (this.connectionMode !== ConnectionMode.IROH) return $r('app.string.connection_http')
+    if (this.irohRoute === 'direct') return $r('app.string.connection_iroh_direct')
+    if (this.irohRoute === 'relay') return $r('app.string.connection_iroh_relay')
+    return $r('app.string.connection_iroh_detecting')
   }
 
   private languageIndex(): number {

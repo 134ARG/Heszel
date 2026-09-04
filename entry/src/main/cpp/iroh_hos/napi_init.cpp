@@ -325,17 +325,32 @@ const char *StateName(uint32_t state) {
     }
 }
 
+const char *RouteName(uint16_t route) {
+    switch (route) {
+        case IROH_HOS_ROUTE_DIRECT:
+            return "direct";
+        case IROH_HOS_ROUTE_RELAY:
+            return "relay";
+        case IROH_HOS_ROUTE_UNKNOWN:
+        default:
+            return "unknown";
+    }
+}
+
 napi_value TunnelInfoValue(napi_env env, const IrohHosTunnelInfo &info) {
     napi_value result = nullptr;
     napi_value state = nullptr;
     napi_value port = nullptr;
+    napi_value route = nullptr;
     napi_value endpointId = nullptr;
     napi_create_object(env, &result);
     napi_create_string_utf8(env, StateName(info.state), NAPI_AUTO_LENGTH, &state);
     napi_create_uint32(env, info.local_port, &port);
+    napi_create_string_utf8(env, RouteName(info.route), NAPI_AUTO_LENGTH, &route);
     napi_create_string_utf8(env, info.local_endpoint_id, NAPI_AUTO_LENGTH, &endpointId);
     napi_set_named_property(env, result, "state", state);
     napi_set_named_property(env, result, "localPort", port);
+    napi_set_named_property(env, result, "route", route);
     napi_set_named_property(env, result, "localEndpointId", endpointId);
     return result;
 }

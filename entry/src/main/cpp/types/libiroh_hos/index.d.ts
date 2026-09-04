@@ -6,6 +6,8 @@ export type TunnelState =
   | 'reconnecting'
   | 'suspended';
 
+export type TunnelRoute = 'unknown' | 'direct' | 'relay';
+
 export interface TunnelConfig {
   serverEndpointId: string;
   secretKey: ArrayBuffer | Uint8Array;
@@ -20,6 +22,7 @@ export interface TunnelConfig {
 
 export interface TunnelInfo {
   state: TunnelState;
+  route: TunnelRoute;
   localPort: number;
   localEndpointId: string;
 }
