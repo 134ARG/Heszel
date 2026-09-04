@@ -108,6 +108,12 @@ export struct DashboardView {
       this.connectHubList()
     } else if (this.controller.systems.length === 0) {
       Column({ space: 12 }) {
+        if (this.controller.refreshing) {
+          LoadingProgress()
+            .width(32)
+            .height(32)
+            .color($r('app.color.action'))
+        }
         Text(this.controller.refreshing ? $r('app.string.loading_systems') : $r('app.string.no_shared_systems'))
           .fontSize(20)
           .fontWeight(FontWeight.Medium)

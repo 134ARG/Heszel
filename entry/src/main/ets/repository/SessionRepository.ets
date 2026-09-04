@@ -359,7 +359,8 @@ export class SessionRepository {
   }
 
   private async replaceSecret(alias: string, secret: string): Promise<void> {
-    await this.replaceSecretBytes(alias, this.encoder.encodeInto(secret))
+    const encoded = secret.length === 0 ? new Uint8Array(0) : this.encoder.encodeInto(secret)
+    await this.replaceSecretBytes(alias, encoded)
   }
 
   private async replaceSecretBytes(alias: string, secret: Uint8Array): Promise<void> {

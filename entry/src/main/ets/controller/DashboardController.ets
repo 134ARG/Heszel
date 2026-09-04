@@ -968,52 +968,50 @@ export class DashboardController {
       if (!this.isDataWorkCurrent(generation)) {
         return
       }
-      this.savedServerUrl = stored.baseUrl
-      this.savedEmail = stored.email
-      this.savedGatewayKey = stored.gatewayKey
-      this.savedConnectionMode = stored.connectionMode
-      this.savedIrohPairingJson = IrohPairingCodec.stringify(stored.irohPairing)
-      this.connectionProfile = stored.connectionProfile()
-      this.updateWhileScrolling = stored.updateWhileScrolling
-      this.colorMode = stored.colorMode
-      this.cpuChartHeight = stored.cpuChartHeight
-      this.metricChartHeight = stored.metricChartHeight
-      this.metricInspectionSort = stored.metricInspectionSort
-      this.chartLineWidth = stored.chartLineWidth
-      this.chartLineOpacity = stored.chartLineOpacity
-      this.applyColorMode(stored.colorMode)
-      this.pendingSelectedId = stored.selectedSystemId
-      this.lastPersistedSelectedId = stored.selectedSystemId
-      this.selectSystem(stored.selectedSystemId)
+      this.applyStoredState(stored)
       if (!stored.canRestore()) {
         return
       }
 
-      this.connectionPhase = ConnectionPhase.CONNECTING
-      const activeBaseUrl = await this.openConnection(this.connectionProfile)
-      if (!this.isDataWorkCurrent(generation)) {
-        await this.closeConnection(this.connectionProfile.mode)
-        return
-      }
-      this.client = new BeszelClient(activeBaseUrl, this.connectionProfile.gatewayKey)
-      this.session = this.toSession(stored, activeBaseUrl)
+      const restoredBaseUrl = stored.connectionMode === ConnectionMode.HTTP ? stored.baseUrl : ''
+      this.session = this.toSession(stored, restoredBaseUrl)
       this.sessionRefreshPending = true
-
-      const sessionReady = await this.retrySessionRefresh(generation)
-      if (sessionReady) {
-        const refreshed = await this.refreshSystems(true, false)
-        if (refreshed && this.pageVisible && this.session.token.length > 0) {
-          this.startRealtime()
-        }
+      this.connectionPhase = ConnectionPhase.CONNECTING
+      this.refreshing = true
+      // Local session state is ready. Let the dashboard render while the normal
+      // foreground connection path refreshes authentication and system data.
+      this.restoringSession = false
+      if (this.pageVisible) {
+        await this.resumeConnection()
       }
     } catch (error) {
-      this.markRestFailure(error)
-      await this.closeConnection(this.connectionProfile.mode)
-      this.loginError = this.describeError(error,
-        this.localized('error_restore_session', 'Unable to restore the saved session.'))
+      if (this.isDataWorkCurrent(generation)) {
+        this.loginError = this.describeError(error,
+          this.localized('error_restore_session', 'Unable to restore the saved session.'))
+      }
     } finally {
       this.restoringSession = false
     }
+  }
+
+  private applyStoredState(stored: StoredSession): void {
+    this.savedServerUrl = stored.baseUrl
+    this.savedEmail = stored.email
+    this.savedGatewayKey = stored.gatewayKey
+    this.savedConnectionMode = stored.connectionMode
+    this.savedIrohPairingJson = IrohPairingCodec.stringify(stored.irohPairing)
+    this.connectionProfile = stored.connectionProfile()
+    this.updateWhileScrolling = stored.updateWhileScrolling
+    this.colorMode = stored.colorMode
+    this.cpuChartHeight = stored.cpuChartHeight
+    this.metricChartHeight = stored.metricChartHeight
+    this.metricInspectionSort = stored.metricInspectionSort
+    this.chartLineWidth = stored.chartLineWidth
+    this.chartLineOpacity = stored.chartLineOpacity
+    this.applyColorMode(stored.colorMode)
+    this.pendingSelectedId = stored.selectedSystemId
+    this.lastPersistedSelectedId = stored.selectedSystemId
+    this.selectSystem(stored.selectedSystemId)
   }
 
   private async persistSession(session: BeszelSession): Promise<void> {
@@ -1597,6 +1595,7 @@ export class DashboardController {
         return
       }
     }
+    const generation = this.dataGeneration
     const task = this.performResumeConnection()
     this.connectionResumeTask = task
     try {
@@ -1604,6 +1603,9 @@ export class DashboardController {
     } finally {
       if (this.connectionResumeTask === task) {
         this.connectionResumeTask = null
+      }
+      if (this.isDataWorkCurrent(generation) && !this.refreshInFlight) {
+        this.refreshing = false
       }
     }
   }
@@ -1622,17 +1624,17 @@ export class DashboardController {
     if (!this.pageVisible || this.session.token.length === 0) {
       return
     }
-    this.connectionPhase = ConnectionPhase.CONNECTING
-    if (this.connectionProfile.mode === ConnectionMode.HTTP) {
-      if (this.client === null) {
-        this.client = new BeszelClient(this.session.baseUrl, this.session.gatewayKey)
-      }
-      await this.resumeData()
-      return
-    }
-
     const generation = this.dataGeneration
+    this.connectionPhase = ConnectionPhase.CONNECTING
     try {
+      if (this.connectionProfile.mode === ConnectionMode.HTTP) {
+        if (this.client === null) {
+          this.client = new BeszelClient(this.session.baseUrl, this.session.gatewayKey)
+        }
+        await this.resumeData()
+        return
+      }
+
       const activeBaseUrl = await this.openConnection(this.connectionProfile)
       if (!this.pageVisible || !this.isDataWorkCurrent(generation)) {
         await this.closeConnection(ConnectionMode.IROH)
@@ -1649,8 +1651,13 @@ export class DashboardController {
     } catch (error) {
       if (this.pageVisible && this.isDataWorkCurrent(generation)) {
         this.markRestFailure(error)
+        this.client = null
+        const fallback = this.connectionProfile.mode === ConnectionMode.IROH ?
+          this.localized('error_resume_iroh', 'Unable to reconnect the Iroh tunnel.') :
+          this.localized('error_network_saved_session',
+            'Beszel is unreachable. Your saved session is safe; restore the network or gateway, then retry.')
         this.dashboardError = this.describeError(error,
-          this.localized('error_resume_iroh', 'Unable to reconnect the Iroh tunnel.'))
+          fallback)
       }
     }
   }
