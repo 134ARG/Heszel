@@ -139,6 +139,7 @@
     { "name": "load_interval_15m", "value": "15m" },
     { "name": "load_intervals_compact", "value": "1m       5m       15m" },
     { "name": "temperature", "value": "温度" },
+    { "name": "humidity", "value": "湿度" },
     { "name": "uptime_value", "value": "运行时间 %s" },
 
     { "name": "cpu_detail", "value": "CPU 详情" },
@@ -202,9 +203,12 @@
     { "name": "power", "value": "功耗" },
 
     { "name": "health", "value": "健康状态" },
+    { "name": "fans", "value": "风扇" },
     { "name": "history_chart", "value": "历史  ›" },
     { "name": "health_history", "value": "健康状态历史" },
     { "name": "temperature_history", "value": "温度" },
+    { "name": "humidity_history", "value": "湿度" },
+    { "name": "fan_speed_history", "value": "风扇转速" },
     { "name": "chart_cpu_usage", "value": "CPU 占用" },
     { "name": "chart_cpu_cores", "value": "CPU 核心" },
     { "name": "chart_mode_line", "value": "折线" },

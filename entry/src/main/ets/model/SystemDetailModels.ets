@@ -64,6 +64,8 @@ export interface BeszelSystemStatsWire {
   nr?: number
   b?: number[] | null
   t?: Record<string, number> | null
+  f?: Record<string, number> | null
+  hum?: Record<string, number> | null
   efs?: Record<string, BeszelFilesystemStatsWire> | null
   g?: Record<string, BeszelGpuStatsWire> | null
   bat?: number[] | null
@@ -261,6 +263,30 @@ export class SensorMetric {
   update(name: string, temperatureCelsius: number): void {
     if (this.name !== name) this.name = name
     if (this.temperatureCelsius !== temperatureCelsius) this.temperatureCelsius = temperatureCelsius
+  }
+}
+
+@Observed
+export class HumidityMetric {
+  name: string = ''
+  relativeHumidityPercent: number = 0
+
+  update(name: string, relativeHumidityPercent: number): void {
+    if (this.name !== name) this.name = name
+    if (this.relativeHumidityPercent !== relativeHumidityPercent) {
+      this.relativeHumidityPercent = relativeHumidityPercent
+    }
+  }
+}
+
+@Observed
+export class FanMetric {
+  name: string = ''
+  rpm: number = 0
+
+  update(name: string, rpm: number): void {
+    if (this.name !== name) this.name = name
+    if (this.rpm !== rpm) this.rpm = rpm
   }
 }
 
@@ -674,15 +700,18 @@ export class GpuMetricsState {
 @Observed
 export class HealthMetricsState {
   sensorsAvailable: boolean = false
+  humidityAvailable: boolean = false
   batteryAvailable: boolean = false
   servicesAvailable: boolean = false
   sensors: SensorMetric[] = []
+  humidities: HumidityMetric[] = []
   batteryPercent: number = 0
   batteryState: number = 0
   servicesTotal: number = 0
   servicesFailed: number = 0
   initialize(wire: BeszelSystemStatsWire): void {
     this.sensorsAvailable = wire.t !== undefined && wire.t !== null && Object.keys(wire.t).length > 0
+    this.humidityAvailable = wire.hum !== undefined && wire.hum !== null && Object.keys(wire.hum).length > 0
     this.batteryAvailable = this.batteryAvailable || wire.bat !== undefined && wire.bat !== null
   }
 
@@ -692,7 +721,6 @@ export class HealthMetricsState {
   }
 
   update(wire: BeszelSystemStatsWire): void {
-    if (!this.isVisible()) return
     this.applyWire(wire)
   }
 
@@ -727,8 +755,13 @@ export class HealthMetricsState {
   }
 
   private applyWire(wire: BeszelSystemStatsWire): void {
-    if (this.sensorsAvailable && wire.t !== undefined && wire.t !== null && Object.keys(wire.t).length > 0) {
+    if (wire.t !== undefined && wire.t !== null && Object.keys(wire.t).length > 0) {
+      this.sensorsAvailable = true
       this.updateSensors(wire.t)
+    }
+    if (wire.hum !== undefined && wire.hum !== null && Object.keys(wire.hum).length > 0) {
+      this.humidityAvailable = true
+      this.updateHumidities(wire.hum)
     }
     if (this.batteryAvailable && wire.bat !== undefined && wire.bat !== null) {
       if (wire.bat.length > 0 && this.batteryPercent !== arrayNumber(wire.bat, 0)) {
@@ -741,9 +774,10 @@ export class HealthMetricsState {
   }
 
   isVisible(): boolean {
-    return this.sensorsAvailable || this.batteryAvailable || this.servicesAvailable
+    return this.sensorsAvailable || this.humidityAvailable || this.batteryAvailable || this.servicesAvailable
   }
-  cardVisible(): boolean { return this.sensorsAvailable || this.batteryAvailable }
+  cardVisible(): boolean { return this.sensorsAvailable || this.humidityAvailable || this.batteryAvailable }
+  historyVisible(): boolean { return this.sensorsAvailable || this.humidityAvailable }
   batteryVisible(): boolean { return this.batteryAvailable }
   servicesVisible(): boolean { return this.servicesAvailable }
 
@@ -756,6 +790,41 @@ export class HealthMetricsState {
       this.sensors = next
     }
   }
+
+  private updateHumidities(wire: Record<string, number>): void {
+    const next = syncKeyedList(this.humidities, wire,
+      (item: HumidityMetric): string => item.name,
+      (): HumidityMetric => new HumidityMetric(),
+      (item: HumidityMetric, name: string, value: number): void =>
+        item.update(name, Math.min(100, safeNumber(value))))
+    if (next !== null) {
+      this.humidities = next
+    }
+  }
+}
+
+@Observed
+export class FanMetricsState {
+  available: boolean = false
+  fans: FanMetric[] = []
+
+  initialize(wire: BeszelSystemStatsWire): void {
+    this.available = wire.f !== undefined && wire.f !== null && Object.keys(wire.f).length > 0
+  }
+
+  update(wire: BeszelSystemStatsWire): void {
+    if (wire.f === undefined || wire.f === null || Object.keys(wire.f).length === 0) return
+    this.available = true
+    const next = syncKeyedList(this.fans, wire.f,
+      (item: FanMetric): string => item.name,
+      (): FanMetric => new FanMetric(),
+      (item: FanMetric, name: string, value: number): void => item.update(name, safeNumber(value)))
+    if (next !== null) {
+      this.fans = next
+    }
+  }
+
+  isVisible(): boolean { return this.available }
 }
 
 @Observed
@@ -819,6 +888,7 @@ export class SystemDetailState {
   networkMetrics: NetworkMetricsState = new NetworkMetricsState()
   gpuMetrics: GpuMetricsState = new GpuMetricsState()
   healthMetrics: HealthMetricsState = new HealthMetricsState()
+  fanMetrics: FanMetricsState = new FanMetricsState()
   smartHealth: SmartHealthState = new SmartHealthState()
   containerMetrics: ContainerMetricsState = new ContainerMetricsState()
   private capabilitiesInitialized: boolean = false
@@ -852,6 +922,7 @@ export class SystemDetailState {
       this.networkMetrics.initialize(stats)
       this.gpuMetrics.initialize(stats)
       this.healthMetrics.initialize(stats)
+      this.fanMetrics.initialize(stats)
     }
     this.containerMetrics.initialize(containers)
     this.smartHealth.update(smartDevices)
@@ -889,6 +960,7 @@ export class SystemDetailState {
   applyRealtime(info: BeszelSystemInfoWire | undefined, stats: BeszelSystemStatsWire | undefined,
     containers: BeszelContainerStatsWire[] | null | undefined): void {
     const healthWasVisible = this.healthMetrics.cardVisible()
+    const fansWereVisible = this.fanMetrics.isVisible()
     this.overview.updateRealtime(info, stats)
     if (info !== undefined) this.healthMetrics.updateInfo(info)
     if (stats !== undefined) {
@@ -896,7 +968,8 @@ export class SystemDetailState {
     } else {
       this.containerMetrics.update(containers)
     }
-    if (healthWasVisible !== this.healthMetrics.cardVisible()) this.layoutVersion += 1
+    if (healthWasVisible !== this.healthMetrics.cardVisible() ||
+      fansWereVisible !== this.fanMetrics.isVisible()) this.layoutVersion += 1
   }
 
   private updateMetricGroups(stats: BeszelSystemStatsWire,
@@ -907,6 +980,7 @@ export class SystemDetailState {
     this.networkMetrics.update(stats)
     this.gpuMetrics.update(stats)
     this.healthMetrics.update(stats)
+    this.fanMetrics.update(stats)
     this.containerMetrics.update(containers)
   }
 

@@ -14,7 +14,8 @@ export enum MetricChartKind {
   MEMORY,
   NETWORK,
   GPU,
-  STORAGE
+  STORAGE,
+  FANS
 }
 
 export enum MetricChartPanelKind {
@@ -29,7 +30,9 @@ export enum MetricChartPanelKind {
   GPU_POWER,
   STORAGE_USAGE,
   STORAGE_READ,
-  STORAGE_WRITE
+  STORAGE_WRITE,
+  HEALTH_HUMIDITY,
+  FAN_SPEED
 }
 
 export class MetricChartLabels {

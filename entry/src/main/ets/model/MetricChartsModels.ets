@@ -1,4 +1,5 @@
 import { CpuMetricChartSource } from './CpuMetricChartSource'
+import { FanMetricChartSource } from './FanMetricChartSource'
 import { GpuMetricChartSource } from './GpuMetricChartSource'
 import { HealthMetricChartSource } from './HealthMetricChartSource'
 import { MemoryMetricChartSource } from './MemoryMetricChartSource'
@@ -141,7 +142,7 @@ export class MetricChartsState {
     this.systemName = systemName
     this.entryLiveEnabled = entryLiveEnabled
     this.labels = labels
-    this.source = this.sourceFor(kind)
+    this.source = this.sourceFor(kind, detail)
     this.panels = this.source.panelDefinitions().map((definition: MetricChartPanelDefinition) =>
       new MetricChartPanelState(definition))
     this.panels.forEach((panel: MetricChartPanelState) =>
@@ -324,12 +325,13 @@ export class MetricChartsState {
     this.source = null
   }
 
-  private sourceFor(kind: MetricChartKind): MetricChartSource {
-    if (kind === MetricChartKind.HEALTH) return new HealthMetricChartSource()
+  private sourceFor(kind: MetricChartKind, detail: SystemDetailState): MetricChartSource {
+    if (kind === MetricChartKind.HEALTH) return new HealthMetricChartSource(detail)
     if (kind === MetricChartKind.CPU) return new CpuMetricChartSource()
     if (kind === MetricChartKind.MEMORY) return new MemoryMetricChartSource()
     if (kind === MetricChartKind.NETWORK) return new NetworkMetricChartSource()
     if (kind === MetricChartKind.STORAGE) return new StorageMetricChartSource()
+    if (kind === MetricChartKind.FANS) return new FanMetricChartSource()
     return new GpuMetricChartSource()
   }
 

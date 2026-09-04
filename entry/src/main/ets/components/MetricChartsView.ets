@@ -51,10 +51,10 @@ struct MetricChartPanelView {
       stacked: this.panel.stacked,
       stackNormalize: this.panel.stackNormalize,
       stackOutlineKey: this.panel.stackOutlineKey,
-      metricHint: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
+      metricHint: this.sensorPanel() ?
         $r('app.string.chart_metric_hint', MAX_SELECTED_METRIC_SERIES) :
         $r('app.string.chart_metric_generic_hint', MAX_SELECTED_METRIC_SERIES),
-      searchPlaceholder: this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ?
+      searchPlaceholder: this.sensorPanel() ?
         $r('app.string.chart_search_metrics') : $r('app.string.chart_search_metrics_generic'),
       onRangeChange: (range: MetricChartRange) => this.onRangeChange(this.panel.kind, range),
       onStackedChange: (stacked: boolean) => this.onStackedChange(this.panel.kind, stacked),
@@ -67,6 +67,8 @@ struct MetricChartPanelView {
     if (this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE) {
       return $r('app.string.temperature_history')
     }
+    if (this.panel.kind === MetricChartPanelKind.HEALTH_HUMIDITY) return $r('app.string.humidity_history')
+    if (this.panel.kind === MetricChartPanelKind.FAN_SPEED) return $r('app.string.fan_speed_history')
     if (this.panel.kind === MetricChartPanelKind.CPU_USAGE) return $r('app.string.chart_cpu_usage')
     if (this.panel.kind === MetricChartPanelKind.CPU_CORES) return $r('app.string.chart_cpu_cores')
     if (this.panel.kind === MetricChartPanelKind.MEMORY_USAGE) return $r('app.string.chart_memory_usage')
@@ -78,6 +80,12 @@ struct MetricChartPanelView {
     if (this.panel.kind === MetricChartPanelKind.GPU_USAGE) return $r('app.string.chart_gpu_usage')
     if (this.panel.kind === MetricChartPanelKind.GPU_MEMORY) return $r('app.string.gpu_memory')
     return $r('app.string.power')
+  }
+
+  private sensorPanel(): boolean {
+    return this.panel.kind === MetricChartPanelKind.HEALTH_TEMPERATURE ||
+      this.panel.kind === MetricChartPanelKind.HEALTH_HUMIDITY ||
+      this.panel.kind === MetricChartPanelKind.FAN_SPEED
   }
 }
 
@@ -156,6 +164,7 @@ export struct MetricChartsView {
     if (this.state.kind === MetricChartKind.MEMORY) return $r('app.string.memory')
     if (this.state.kind === MetricChartKind.NETWORK) return $r('app.string.network')
     if (this.state.kind === MetricChartKind.STORAGE) return $r('app.string.storage')
+    if (this.state.kind === MetricChartKind.FANS) return $r('app.string.fans')
     return $r('app.string.metric_gpu')
   }
 }

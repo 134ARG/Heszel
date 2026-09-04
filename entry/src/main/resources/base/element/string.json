@@ -139,6 +139,7 @@
     { "name": "load_interval_15m", "value": "15m" },
     { "name": "load_intervals_compact", "value": "1m       5m       15m" },
     { "name": "temperature", "value": "TEMPERATURE" },
+    { "name": "humidity", "value": "HUMIDITY" },
     { "name": "uptime_value", "value": "Uptime %s" },
 
     { "name": "cpu_detail", "value": "CPU detail" },
@@ -202,9 +203,12 @@
     { "name": "power", "value": "Power" },
 
     { "name": "health", "value": "Health" },
+    { "name": "fans", "value": "Fans" },
     { "name": "history_chart", "value": "History  ›" },
     { "name": "health_history", "value": "Health history" },
     { "name": "temperature_history", "value": "Temperature" },
+    { "name": "humidity_history", "value": "Humidity" },
+    { "name": "fan_speed_history", "value": "Fan speed" },
     { "name": "chart_cpu_usage", "value": "CPU usage" },
     { "name": "chart_cpu_cores", "value": "CPU cores" },
     { "name": "chart_mode_line", "value": "Lines" },

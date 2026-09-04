@@ -8,6 +8,7 @@ import {
 import { SystemDetailState } from '../model/SystemDetailModels'
 import { ContainersCard } from './ContainersCard'
 import { CpuCard } from './CpuCard'
+import { FanCard } from './FanCard'
 import { GpuCard } from './GpuCard'
 import { HardwareCard } from './HardwareCard'
 import { HealthCard } from './HealthCard'
@@ -44,6 +45,7 @@ export struct SystemDetail {
   onOpenStorageCharts: () => void = () => {}
   onOpenNetworkCharts: () => void = () => {}
   onOpenGpuCharts: () => void = () => {}
+  onOpenFanCharts: () => void = () => {}
 
   build() {
     Column() {
@@ -206,6 +208,12 @@ export struct SystemDetail {
 
   @Builder
   private secondaryDetailCards() {
+    if (this.detail.fanMetrics.isVisible()) {
+      FanCard({
+        state: this.detail.fanMetrics,
+        onOpenHistory: () => this.onOpenFanCharts()
+      })
+    }
     if (this.detail.networkMetrics.isVisible()) {
       NetworkCard({
         state: this.detail.networkMetrics,

@@ -1,4 +1,4 @@
-import { HealthMetricsState, SensorMetric } from '../model/SystemDetailModels'
+import { HealthMetricsState, HumidityMetric, SensorMetric } from '../model/SystemDetailModels'
 import { DetailCardHeader } from './DetailCardHeader'
 import { DetailValueRow } from './DetailValueRow'
 
@@ -16,6 +16,18 @@ struct SensorRow {
 }
 
 @Component
+struct HumidityRow {
+  @ObjectLink humidity: HumidityMetric
+
+  build() {
+    DetailValueRow({
+      label: this.humidity.name,
+      value: `${this.humidity.relativeHumidityPercent.toFixed(1)}% RH`
+    })
+  }
+}
+
+@Component
 export struct HealthCard {
   @ObjectLink state: HealthMetricsState
   onOpenHistory: () => void = () => {}
@@ -24,7 +36,7 @@ export struct HealthCard {
     Column({ space: 11 }) {
       DetailCardHeader({
         title: $r('app.string.health'),
-        showAction: this.state.sensorsAvailable,
+        showAction: this.state.historyVisible(),
         actionLabel: $r('app.string.history_chart'),
         onAction: () => this.onOpenHistory()
       })
@@ -36,9 +48,26 @@ export struct HealthCard {
           warning: this.batteryPercent() < 20
         })
       }
-      ForEach(this.state.sensors, (sensor: SensorMetric) => {
-        SensorRow({ sensor: sensor })
-      }, (sensor: SensorMetric) => sensor.name)
+      if (this.state.humidityAvailable && this.state.sensorsAvailable) {
+        Text($r('app.string.temperature'))
+          .fontSize(11)
+          .fontColor($r('app.color.text_tertiary'))
+          .width('100%')
+      }
+      if (this.state.sensorsAvailable) {
+        ForEach(this.state.sensors, (sensor: SensorMetric) => {
+          SensorRow({ sensor: sensor })
+        }, (sensor: SensorMetric) => sensor.name)
+      }
+      if (this.state.humidityAvailable) {
+        Text($r('app.string.humidity'))
+          .fontSize(11)
+          .fontColor($r('app.color.text_tertiary'))
+          .width('100%')
+        ForEach(this.state.humidities, (humidity: HumidityMetric) => {
+          HumidityRow({ humidity: humidity })
+        }, (humidity: HumidityMetric) => humidity.name)
+      }
     }
     .width('100%')
     .padding(18)

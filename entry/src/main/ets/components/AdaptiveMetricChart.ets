@@ -646,6 +646,9 @@ export struct AdaptiveMetricChart {
     if (this.state.valueFormat === MetricChartValueFormat.BYTES_PER_SECOND) {
       return this.inspectionByteLabel(value, true)
     }
+    if (this.state.valueFormat === MetricChartValueFormat.INTEGER) {
+      return `${value.toFixed(0)}${this.state.unit}`
+    }
     const digits = Math.abs(value) > 0 && Math.abs(value) < 1 ? 2 : 1
     return `${value.toFixed(digits)}${this.state.unit}`
   }
@@ -1205,6 +1208,7 @@ export struct AdaptiveMetricChart {
   private yLabel(value: number): string {
     if (this.state.valueFormat === MetricChartValueFormat.BYTES) return this.byteLabel(value, false)
     if (this.state.valueFormat === MetricChartValueFormat.BYTES_PER_SECOND) return this.byteLabel(value, true)
+    if (this.state.valueFormat === MetricChartValueFormat.INTEGER) return `${value.toFixed(0)}${this.state.unit}`
     const step = this.bounds().step
     const digits = step < 1 ? 1 : 0
     return `${value.toFixed(digits)}${this.state.unit}`

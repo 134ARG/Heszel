@@ -283,7 +283,8 @@ export struct DashboardView {
             onOpenMemoryCharts: () => this.openMetricCharts(MetricChartKind.MEMORY),
             onOpenStorageCharts: () => this.openMetricCharts(MetricChartKind.STORAGE),
             onOpenNetworkCharts: () => this.openMetricCharts(MetricChartKind.NETWORK),
-            onOpenGpuCharts: () => this.openMetricCharts(MetricChartKind.GPU)
+            onOpenGpuCharts: () => this.openMetricCharts(MetricChartKind.GPU),
+            onOpenFanCharts: () => this.openMetricCharts(MetricChartKind.FANS)
           })
         }
       }

@@ -19,7 +19,8 @@ export enum MetricChartAxisPolicy {
 export enum MetricChartValueFormat {
   NUMBER,
   BYTES,
-  BYTES_PER_SECOND
+  BYTES_PER_SECOND,
+  INTEGER
 }
 
 export function chartRangeDurationMs(range: MetricChartRange): number {
