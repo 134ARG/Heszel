@@ -96,7 +96,7 @@
     { "name": "beszel_hub", "value": "Beszel hub" },
     { "name": "signed_in_as", "value": "Signed in as" },
     { "name": "sign_out", "value": "Sign out" },
-    { "name": "app_version", "value": "Version 1.0.1" },
+    { "name": "app_version", "value": "Version 1.0.2" },
 
     { "name": "no_host_label", "value": "No host label" },
     { "name": "status_up", "value": "UP" },
