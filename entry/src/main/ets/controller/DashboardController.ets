@@ -63,6 +63,41 @@ class MetricChartHistoryTarget {
   }
 }
 
+// Realtime delivery bookkeeping is intentionally kept outside DashboardController's
+// observed first-level properties. These values coordinate sample application but
+// never describe UI state, so changing them must not invalidate DashboardView.
+class RealtimeMetricsCoordinator {
+  private systemId: string = ''
+  private metrics: BeszelRealtimeMetrics | null = null
+  private version: number = 0
+  private appliedVersion: number = 0
+
+  capture(systemId: string, metrics: BeszelRealtimeMetrics): void {
+    this.systemId = systemId
+    this.metrics = metrics
+    this.version += 1
+  }
+
+  pendingFor(systemId: string, force: boolean): BeszelRealtimeMetrics | null {
+    if (this.metrics === null || this.systemId !== systemId ||
+      (!force && this.appliedVersion === this.version)) {
+      return null
+    }
+    return this.metrics
+  }
+
+  markApplied(): void {
+    this.appliedVersion = this.version
+  }
+
+  reset(): void {
+    this.systemId = ''
+    this.metrics = null
+    this.version = 0
+    this.appliedVersion = 0
+  }
+}
+
 @Observed
 export class DashboardController {
   session: BeszelSession = new BeszelSession()
@@ -105,10 +140,7 @@ export class DashboardController {
   private connectionResetTask: Promise<void> | null = null
   private pageVisible: boolean = false
   private detailScrolling: boolean = false
-  private latestRealtimeSystemId: string = ''
-  private latestRealtimeMetrics: BeszelRealtimeMetrics | null = null
-  private latestRealtimeVersion: number = 0
-  private appliedRealtimeVersion: number = 0
+  private realtimeCoordinator: RealtimeMetricsCoordinator = new RealtimeMetricsCoordinator()
   private refreshInFlight: boolean = false
   private manualRefreshPending: boolean = false
   private sessionRefreshPending: boolean = false
@@ -576,9 +608,7 @@ export class DashboardController {
   }
 
   private handleRealtimeMetrics(systemId: string, metrics: BeszelRealtimeMetrics): void {
-    this.latestRealtimeSystemId = systemId
-    this.latestRealtimeMetrics = metrics
-    this.latestRealtimeVersion += 1
+    this.realtimeCoordinator.capture(systemId, metrics)
     // Charts keep receiving samples here so their scrolling gate can either
     // apply them immediately or preserve them in a timestamped buffer.
     if (this.metricChartsState.active && this.metricChartsState.systemId === systemId) {
@@ -595,13 +625,13 @@ export class DashboardController {
   }
 
   private applyLatestRealtimeToVisibleDetail(force: boolean = false): void {
-    const metrics = this.latestRealtimeMetrics
     const detail = this.detailState
-    if (!this.detailIsVisible() || metrics === null || detail.systemId !== this.latestRealtimeSystemId) return
-    if (!force && this.appliedRealtimeVersion === this.latestRealtimeVersion) return
+    if (!this.detailIsVisible()) return
+    const metrics = this.realtimeCoordinator.pendingFor(detail.systemId, force)
+    if (metrics === null) return
     detail.applyRealtime(metrics.info, metrics.stats, metrics.container)
     detail.appendRealtimeCpu(metrics.info, metrics.stats)
-    this.appliedRealtimeVersion = this.latestRealtimeVersion
+    this.realtimeCoordinator.markApplied()
   }
 
   refresh(): void {
@@ -1468,10 +1498,7 @@ export class DashboardController {
     this.manualRefreshPending = false
     this.refreshing = false
     this.detailScrolling = false
-    this.latestRealtimeSystemId = ''
-    this.latestRealtimeMetrics = null
-    this.latestRealtimeVersion = 0
-    this.appliedRealtimeVersion = 0
+    this.realtimeCoordinator.reset()
     this.detailLoadTokens.clear()
     this.detailStates.forEach((state: SystemDetailState) => {
       state.loading = false
