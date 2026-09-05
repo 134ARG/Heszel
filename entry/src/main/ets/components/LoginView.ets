@@ -3,6 +3,7 @@ import { ConnectionMode, IrohPairing, LoginRequest } from '../model/ConnectionMo
 import { IrohPairingCodec } from '../service/IrohPairingCodec'
 import { IrohPairingService } from '../service/IrohPairingService'
 import { HeszelTextInputStyle } from '../styles/HeszelTextInputStyle'
+import { IrohEndpointIdentity } from './IrohEndpointIdentity'
 import { PageHeader } from './PageHeader'
 
 enum LoginInputField {
@@ -22,6 +23,7 @@ export struct LoginView {
   @Prop initialEmail: string = ''
   @Prop initialGatewayKey: string = ''
   @Prop initialIrohPairingJson: string = ''
+  @Prop localIrohEndpointId: string = ''
   @Prop showBack: boolean = false
   @State private connectionMode: ConnectionMode = ConnectionMode.HTTP
   @State private serverUrl: string = ''
@@ -205,6 +207,16 @@ export struct LoginView {
   @Builder
   private irohConnectionFields() {
     Column({ space: 12 }) {
+      if (this.localIrohEndpointId.length > 0) {
+        Text($r('app.string.iroh_client'))
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.text_label'))
+          .width('100%')
+
+        IrohEndpointIdentity({ endpointId: this.localIrohEndpointId })
+      }
+
       Text($r('app.string.iroh_pairing'))
         .fontSize(12)
         .fontWeight(FontWeight.Medium)

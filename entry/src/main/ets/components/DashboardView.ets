@@ -144,6 +144,7 @@ export struct DashboardView {
           initialEmail: this.controller.savedEmail,
           initialGatewayKey: this.controller.savedGatewayKey,
           initialIrohPairingJson: this.controller.savedIrohPairingJson,
+          localIrohEndpointId: this.controller.irohEndpointId,
           showBack: true,
           onBack: () => this.closeLogin(),
           onLogin: (request: LoginRequest) => this.connectToHub(request)
@@ -187,6 +188,7 @@ export struct DashboardView {
           connectionLabel: this.controller.connectionLabel(),
           connectionDetail: this.controller.connectionDetail(),
           irohRoute: this.controller.irohRoute,
+          irohEndpointId: this.controller.irohEndpointId,
           email: this.controller.session.email,
           expanded: this.expanded,
           errorMessage: this.controller.dashboardError,

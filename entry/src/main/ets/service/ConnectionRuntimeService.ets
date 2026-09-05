@@ -8,6 +8,7 @@ const IROH_SECRET_BYTES = 32
 export class ConnectionRuntimeService {
   private readonly repository: SessionRepository
   private irohRunning: boolean = false
+  private secretKeyTask: Promise<Uint8Array> | null = null
   private openTask: Promise<string> | null = null
   private closeTask: Promise<void> | null = null
   private networkMonitor: connection.NetConnection | null = null
@@ -67,6 +68,10 @@ export class ConnectionRuntimeService {
     } catch (_) {
       return 'unknown'
     }
+  }
+
+  async localEndpointId(): Promise<string> {
+    return iroh.endpointId(await this.loadOrCreateSecretKey())
   }
 
   private async openIroh(profile: ConnectionProfile, connectTimeoutMs?: number): Promise<string> {
@@ -135,6 +140,22 @@ export class ConnectionRuntimeService {
   }
 
   private async loadOrCreateSecretKey(): Promise<Uint8Array> {
+    if (this.secretKeyTask !== null) {
+      return await this.secretKeyTask
+    }
+    const task = this.readOrCreateSecretKey()
+    this.secretKeyTask = task
+    try {
+      return await task
+    } catch (error) {
+      if (this.secretKeyTask === task) {
+        this.secretKeyTask = null
+      }
+      throw error instanceof Error ? error : new Error('Unable to load the Iroh phone identity.')
+    }
+  }
+
+  private async readOrCreateSecretKey(): Promise<Uint8Array> {
     const stored = await this.repository.loadIrohSecret()
     if (stored.length === IROH_SECRET_BYTES) {
       return stored

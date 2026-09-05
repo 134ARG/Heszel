@@ -128,6 +128,7 @@ export class DashboardController {
   savedGatewayKey: string = ''
   savedConnectionMode: ConnectionMode = ConnectionMode.HTTP
   savedIrohPairingJson: string = ''
+  irohEndpointId: string = ''
   irohRoute: string = 'unknown'
   private context: common.Context | null = null
   private sessionRepository: SessionRepository | null = null
@@ -962,7 +963,9 @@ export class DashboardController {
       }
       const repository = new SessionRepository(context)
       this.sessionRepository = repository
-      this.connectionRuntime = new ConnectionRuntimeService(repository)
+      const connectionRuntime = new ConnectionRuntimeService(repository)
+      this.connectionRuntime = connectionRuntime
+      this.loadIrohEndpointId(connectionRuntime)
       this.widgetRepository = new WidgetSnapshotRepository(context)
       const stored = await repository.load()
       if (!this.isDataWorkCurrent(generation)) {
@@ -1572,9 +1575,22 @@ export class DashboardController {
       if (this.sessionRepository === null) {
         throw new Error('Heszel storage is not ready.')
       }
-      this.connectionRuntime = new ConnectionRuntimeService(this.sessionRepository)
+      const connectionRuntime = new ConnectionRuntimeService(this.sessionRepository)
+      this.connectionRuntime = connectionRuntime
+      this.loadIrohEndpointId(connectionRuntime)
     }
     return this.connectionRuntime.open(profile)
+  }
+
+  private async loadIrohEndpointId(connectionRuntime: ConnectionRuntimeService): Promise<void> {
+    try {
+      const endpointId = await connectionRuntime.localEndpointId()
+      if (this.connectionRuntime === connectionRuntime && this.irohEndpointId !== endpointId) {
+        this.irohEndpointId = endpointId
+      }
+    } catch (_) {
+      // Identity display is supplementary; tunnel startup will surface storage errors if Iroh is used.
+    }
   }
 
   private async closeConnection(mode: ConnectionMode): Promise<void> {

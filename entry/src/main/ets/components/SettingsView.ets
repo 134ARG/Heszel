@@ -10,6 +10,7 @@ import {
 } from '../model/AppearanceModels'
 import { ConnectionMode } from '../model/ConnectionModels'
 import { HeszelTextInputStyle } from '../styles/HeszelTextInputStyle'
+import { IrohEndpointIdentity } from './IrohEndpointIdentity'
 import { PageHeader } from './PageHeader'
 
 @Component
@@ -19,6 +20,7 @@ export struct SettingsView {
   @Prop connectionLabel: string = ''
   @Prop connectionDetail: string = ''
   @Prop irohRoute: string = 'unknown'
+  @Prop irohEndpointId: string = ''
   @Prop email: string = ''
   @Prop expanded: boolean = false
   @Prop errorMessage: string = ''
@@ -335,6 +337,19 @@ export struct SettingsView {
               .backgroundColor($r('app.color.surface'))
               .border({ width: 1, color: $r('app.color.card_border') })
               .borderRadius(16)
+            }
+            .width('100%')
+          }
+
+          if (this.connectionMode === ConnectionMode.IROH && this.irohEndpointId.length > 0) {
+            Column({ space: 10 }) {
+              Text($r('app.string.iroh_client'))
+                .fontSize(11)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.text_tertiary'))
+                .width('100%')
+
+              IrohEndpointIdentity({ endpointId: this.irohEndpointId })
             }
             .width('100%')
           }
