@@ -1,0 +1,3 @@
+[submodule "iroh-heszel"]
+	path = third-party/iroh-heszel
+	url = git@github.com:134ARG/iroh-heszel.git
